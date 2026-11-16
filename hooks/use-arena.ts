@@ -15,6 +15,7 @@ import type {
   ScoreEntry,
 } from "@/lib/arena-types";
 import { initialArena, newEvent, newId } from "@/lib/arena-data";
+import { validBannerUrl } from "@/lib/banner";
 import {
   ARENA_STORAGE_KEY,
   LEGACY_STORAGE_KEY,
@@ -210,6 +211,7 @@ export function useArena() {
       title: `${source.title} (Salinan)`,
       status: "draft",
       published: false,
+      featured: false,
       createdAt: new Date().toISOString(),
       finishedAt: undefined,
       entries: [],
@@ -263,6 +265,12 @@ export function useArena() {
     update((e) => (!canSwitchMode(e) ? e : { ...e, mode: value }));
   const setTie = (value: TieBreaker, bonusId: string | null) =>
     update((e) => ({ ...e, tieBreaker: value, tieBonusId: bonusId }));
+  const banner = (value: string) => {
+    if (!validBannerUrl(value)) return;
+    update((e) => ({ ...e, bannerUrl: value }), true);
+  };
+  const feature = (value: boolean) =>
+    update((e) => ({ ...e, featured: value }), true);
   const publish = (value: boolean) =>
     update((e) => ({ ...e, published: value }), true);
   const status = (value: EventStatus) =>
@@ -621,6 +629,8 @@ export function useArena() {
     mode,
     setTie,
     publish,
+    banner,
+    feature,
     status,
     setDuration,
     toggleTimer,

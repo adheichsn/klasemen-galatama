@@ -17,6 +17,8 @@ export function newEvent(
     mode,
     status: "draft",
     published: false,
+    bannerUrl: "",
+    featured: false,
     tieBreaker: "catches",
     tieBonusId: null,
     fish: [],

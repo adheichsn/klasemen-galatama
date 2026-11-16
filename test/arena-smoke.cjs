@@ -40,6 +40,27 @@ const { standings, secondsLeft, isReversed } = load("lib/arena-utils.ts");
 const data = initialArena();
 assert.equal(validArena(data), true);
 assert.equal(data.events.length, 1);
+assert.equal(data.events[0].featured, false);
+const v22Snapshot = structuredClone(data);
+delete v22Snapshot.events[0].featured;
+delete v22Snapshot.events[0].bannerUrl;
+assert.equal(
+  validArena(v22Snapshot),
+  true,
+  "V2.2 server snapshots remain valid",
+);
+const promoSnapshot = structuredClone(data);
+promoSnapshot.events[0].featured = true;
+promoSnapshot.events[0].bannerUrl =
+  "/api/assets/123e4567-e89b-42d3-a456-426614174000";
+assert.equal(validArena(promoSnapshot), true);
+promoSnapshot.events[0].bannerUrl = "javascript:alert(1)";
+assert.equal(
+  validArena(promoSnapshot),
+  false,
+  "server rejects unsafe banner URL",
+);
+
 const event = newEvent("Edisi Uji");
 assert.equal(event.fish.length, 0);
 assert.equal(event.bonuses.length, 0);

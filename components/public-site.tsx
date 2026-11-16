@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import type { ArenaEvent, EventMode } from "@/lib/arena-types";
 import { fmt, standings } from "@/lib/arena-utils";
+import { validBannerUrl } from "@/lib/banner";
 
 export const dateLabel = (date: string) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return "Jadwal menyusul";
@@ -229,6 +230,15 @@ export function EventCard({
         href={`/turnamen/${encodeURIComponent(event.id)}`}
         className={`weji-event-art relative flex h-44 flex-col justify-between overflow-hidden bg-gradient-to-br ${coverStyles[index % coverStyles.length]} p-5 text-white`}
       >
+        {event.bannerUrl && validBannerUrl(event.bannerUrl) && (
+          <>
+            <div
+              className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
+              style={{ backgroundImage: `url("${event.bannerUrl}")` }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#051A42]/90 via-[#0B2D66]/25 to-[#041A3F]/25" />
+          </>
+        )}
         <div className="pointer-events-none absolute -right-12 -top-16 h-48 w-48 rounded-full border-[25px] border-white/10" />
         <div className="pointer-events-none absolute bottom-[-70px] left-[16%] h-44 w-44 rounded-full border-[22px] border-white/10" />
         <Waves
@@ -247,6 +257,11 @@ export function EventCard({
           </span>
         </div>
         <div className="relative">
+          {event.featured && (
+            <span className="mb-2 inline-flex rounded-md bg-amber-400 px-2 py-0.5 text-[10px] font-black text-amber-950">
+              ★ FEATURED
+            </span>
+          )}
           <div className="text-[10px] font-extrabold tracking-[.19em] text-blue-100">
             WEJI ARENA • FISH IT
           </div>

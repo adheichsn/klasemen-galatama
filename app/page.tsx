@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { FeaturedCarousel } from "@/components/featured-carousel";
+import { Search } from "lucide-react";
 import {
   ArrowRight,
   Archive,
@@ -87,7 +89,9 @@ export default async function HomePage() {
         a.finishedAt || a.eventDate || "",
       ),
     );
-  const showcase = [...live, ...upcoming, ...recent].slice(0, 6);
+  const showcase = [...live, ...upcoming, ...recent]
+    .sort((a, b) => Number(!!b.featured) - Number(!!a.featured))
+    .slice(0, 6);
   const totalPlayers = events.reduce((n, e) => n + e.participants.length, 0);
   const faqs = events
     .flatMap((e) => e.faqs)
@@ -97,76 +101,28 @@ export default async function HomePage() {
     <div className="weji-public min-h-screen bg-[#f5f8ff] text-[#172b4d]">
       <PublicHeader />
       <main>
-        <section className="relative overflow-hidden bg-[#eef4ff] pb-8 pt-7 sm:pb-11 sm:pt-9">
-          <div className="mx-auto max-w-[1260px] px-4 sm:px-6">
-            <div className="weji-hero relative overflow-hidden rounded-[30px] bg-gradient-to-r from-[#0F2D75] via-[#2257CF] to-[#2378EB] p-7 text-white shadow-[0_25px_65px_rgba(32,83,193,.16)] sm:p-11 lg:min-h-[365px]">
-              <div className="weji-hero-orbit pointer-events-none absolute -right-12 -top-28 h-96 w-96 rounded-full border-[55px] border-white/[.065]" />
-              <div className="pointer-events-none absolute -bottom-40 right-[18%] h-72 w-72 rounded-full border-[44px] border-sky-200/[.10]" />
-              <div className="pointer-events-none absolute right-16 top-[23%] hidden rounded-full border border-blue-200/25 p-9 lg:block">
-                <Waves
-                  size={120}
-                  strokeWidth={0.65}
-                  className="text-white/25"
-                />
-              </div>
-              <div className="pointer-events-none absolute right-[27%] top-20 hidden rounded-full bg-sky-300/10 p-5 lg:block">
-                <Fish
-                  size={86}
-                  strokeWidth={1.1}
-                  className="-rotate-12 text-white/25"
-                />
-              </div>
-              <div className="relative z-10 max-w-[680px]">
-                <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-[10px] font-extrabold tracking-[.2em] text-blue-100">
-                  <Sparkles size={13} /> WELCOME TO THE ARENA
-                </span>
-                <h1 className="mt-5 text-[38px] font-black leading-[1.08] tracking-[-.06em] sm:text-[53px] lg:text-[62px]">
-                  Your Arena.
-                  <br />
-                  <span className="text-[#92D9FF]">Your Glory.</span>
-                </h1>
-                <p className="mt-5 max-w-[500px] text-sm leading-7 text-blue-100 sm:text-base">
-                  Bukan sekadar memancing. Jelajahi turnamen Fish It, pantau
-                  klasemen secara publik, dan abadikan kemenanganmu di WEJI
-                  ARENA.
-                </p>
-                <div className="mt-7 flex flex-wrap gap-3">
-                  <Link
-                    href="/turnamen"
-                    className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-xs font-extrabold text-blue-700 shadow-lg transition hover:-translate-y-0.5"
-                  >
-                    <Trophy size={17} /> Explore Tournaments{" "}
-                    <ArrowRight size={16} />
-                  </Link>
-                  <Link
-                    href="/hall-of-fame"
-                    className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-5 py-3 text-xs font-extrabold text-white transition hover:bg-white/20"
-                  >
-                    Hall of Fame <ChevronRight size={16} />
-                  </Link>
-                </div>
-              </div>
-              <div className="relative mt-8 grid max-w-[480px] grid-cols-3 gap-2 border-t border-white/15 pt-5 text-white sm:gap-4">
-                <div>
-                  <b className="block text-xl font-black">{events.length}</b>
-                  <span className="text-[10px] text-blue-200">
-                    Turnamen publik
-                  </span>
-                </div>
-                <div>
-                  <b className="block text-xl font-black">{live.length}</b>
-                  <span className="text-[10px] text-blue-200">Live Event</span>
-                </div>
-                <div>
-                  <b className="block text-xl font-black">{totalPlayers}</b>
-                  <span className="text-[10px] text-blue-200">
-                    Pendaftaran pemain
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+        <FeaturedCarousel
+          events={[...events]
+            .sort(
+              (a, b) =>
+                Number(!!b.featured) - Number(!!a.featured) ||
+                Number(b.status === "live") - Number(a.status === "live"),
+            )
+            .filter((e) => e.featured || e.status === "live")
+            .slice(0, 4)
+            .map((e) => ({
+              id: e.id,
+              title: e.title,
+              subtitle: e.subtitle,
+              location: e.location,
+              mode: e.mode,
+              status: e.status,
+              bannerUrl: e.bannerUrl,
+            }))}
+          eventCount={events.length}
+          liveCount={live.length}
+          playerCount={totalPlayers}
+        />
         <div className="mx-auto max-w-[1260px] space-y-14 px-4 py-10 sm:space-y-20 sm:px-6 sm:py-14">
           {unavailable && (
             <div
@@ -176,6 +132,36 @@ export default async function HomePage() {
               Data turnamen belum bisa dimuat. Coba lagi nanti.
             </div>
           )}
+          <form
+            action="/turnamen"
+            className="-mt-3 flex flex-col items-stretch gap-3 rounded-2xl border border-blue-100 bg-white p-3 shadow-[0_15px_40px_rgba(18,52,125,.04)] sm:flex-row sm:items-center sm:p-4"
+          >
+            <label className="flex flex-1 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-500">
+              <Search size={20} className="text-blue-600" />
+              <span className="sr-only">Cari event atau pulau</span>
+              <input
+                name="q"
+                maxLength={100}
+                className="min-w-0 w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                placeholder="Cari turnamen, map, atau pulau..."
+              />
+            </label>
+            <select
+              name="mode"
+              aria-label="Filter mode"
+              className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-600"
+            >
+              <option value="all">Semua Mode</option>
+              <option value="solo">SOLO</option>
+              <option value="squad">SQUAD</option>
+            </select>
+            <button
+              type="submit"
+              className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-extrabold !text-white transition hover:bg-blue-700"
+            >
+              Cari Event <ArrowRight size={16} className="ml-1 inline" />
+            </button>
+          </form>
           <section>
             <SectionTitle
               eyebrow="CHOOSE YOUR ADVENTURE"

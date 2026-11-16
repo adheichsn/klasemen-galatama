@@ -7,6 +7,7 @@ import type {
   BonusRule,
 } from "./arena-types";
 import { newId } from "./arena-data";
+import { validBannerUrl } from "./banner";
 export const ARENA_STORAGE_KEY = "galatama-arena-v2";
 export const LEGACY_STORAGE_KEY = "galatama-nextjs-mvp-v1";
 type RecordMap = Record<string, unknown>;
@@ -38,6 +39,8 @@ export function validArena(x: unknown): x is ArenaData {
         !["solo", "squad"].includes(String(e.mode)) ||
         !["draft", "live", "finished"].includes(String(e.status)) ||
         !isBool(e.published) ||
+        (e.bannerUrl !== undefined && !validBannerUrl(e.bannerUrl)) ||
+        (e.featured !== undefined && !isBool(e.featured)) ||
         !["catches", "bonus", "alphabetical"].includes(String(e.tieBreaker)) ||
         !(e.tieBonusId === null || isString(e.tieBonusId)) ||
         !isString(e.createdAt)

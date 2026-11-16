@@ -22,6 +22,7 @@ import {
   stageText,
 } from "@/components/public-site";
 import { fmt, squadContribution } from "@/lib/arena-utils";
+import { validBannerUrl } from "@/lib/banner";
 export const dynamic = "force-dynamic";
 export default async function EventDetail({
   params,
@@ -38,6 +39,15 @@ export default async function EventDetail({
       <main className="mx-auto max-w-[1260px] px-4 py-10 sm:px-6">
         <Breadcrumb label={e.title} />
         <section className="relative mb-8 overflow-hidden rounded-[27px] bg-gradient-to-r from-[#142D70] via-[#2152C1] to-[#2980E6] p-7 text-white sm:p-10">
+          {e.bannerUrl && validBannerUrl(e.bannerUrl) && (
+            <>
+              <div
+                className="absolute inset-0 bg-cover bg-center"
+                style={{ backgroundImage: `url("${e.bannerUrl}")` }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#081B42]/95 via-[#081B42]/80 to-[#081B42]/30" />
+            </>
+          )}
           <div className="pointer-events-none absolute -right-12 -top-16 rounded-full border-[48px] border-white/10 p-20" />
           <div className="relative z-10 max-w-[780px]">
             <div className="mb-4 inline-flex gap-2 rounded-full bg-white/15 px-3 py-1 text-[11px] font-extrabold">

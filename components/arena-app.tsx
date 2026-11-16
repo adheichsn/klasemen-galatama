@@ -61,6 +61,7 @@ import type { ArenaEvent, EventMode, EventStatus } from "@/lib/arena-types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "motion/react";
+import { validBannerUrl } from "@/lib/banner";
 import ArenaBuilder from "./arena-builder";
 import ScoreModal from "./arena-score-modal";
 
@@ -135,6 +136,15 @@ function EventTile({
         onClick={onOpen}
         aria-label={`Buka ${e.title}`}
       >
+        {e.bannerUrl && validBannerUrl(e.bannerUrl) && (
+          <>
+            <span
+              className="absolute inset-0 bg-cover bg-center"
+              style={{ backgroundImage: `url("${e.bannerUrl}")` }}
+            />
+            <span className="absolute inset-0 bg-gradient-to-t from-[#0a214a]/90 to-[#0a214a]/10" />
+          </>
+        )}
         <span className="cover-grid" />
         <span className="cover-ring" />
         <Fish size={65} className="cover-fish" />

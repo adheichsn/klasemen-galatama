@@ -87,3 +87,25 @@ export async function saveArenaSnapshot(
     client.release();
   }
 }
+
+/** Media lives outside the revisioned tournament JSON; readable only via our own API. */
+export async function uploadArenaAsset(
+  id: string,
+  mime: "image/jpeg" | "image/png" | "image/webp",
+  bytes: Buffer,
+): Promise<void> {
+  await db().query(
+    "INSERT INTO weji_arena_assets (id, mime_type, bytes) VALUES ($1::uuid, $2, $3)",
+    [id, mime, bytes],
+  );
+}
+export async function getArenaAsset(id: string): Promise<{
+  mime_type: string;
+  bytes: Buffer;
+} | null> {
+  const result = await db().query<{ mime_type: string; bytes: Buffer }>(
+    "SELECT mime_type, bytes FROM weji_arena_assets WHERE id = $1::uuid",
+    [id],
+  );
+  return result.rows[0] ?? null;
+}

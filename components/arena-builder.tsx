@@ -7,6 +7,10 @@ import {
   Fish,
   Info,
   LockKeyhole,
+  ImagePlus,
+  UploadCloud,
+  ExternalLink,
+  Star,
   Plus,
   Settings2,
   ShieldCheck,
@@ -24,9 +28,11 @@ import { Card } from "@/components/ui/card";
 import type { ArenaStore } from "@/hooks/use-arena";
 import { fmt, validPoints } from "@/lib/arena-utils";
 import { canSwitchMode } from "@/lib/arena-rules";
+import { validBannerUrl } from "@/lib/banner";
 
 const sections: { id: EditorSection; text: string; icon: typeof Fish }[] = [
   { id: "general", text: "Informasi", icon: Settings2 },
+  { id: "marketing", text: "Banner & Promosi", icon: ImagePlus },
   { id: "fish", text: "Katalog Ikan", icon: Fish },
   { id: "bonuses", text: "Bonus Poin", icon: Sparkles },
   { id: "rules", text: "Peraturan", icon: BookOpen },
@@ -53,8 +59,43 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
   const [squadId, setSquadId] = useState("");
   const [squadName, setSquadName] = useState("");
   const [squadFilter, setSquadFilter] = useState("all");
+  const [bannerInput, setBannerInput] = useState("");
+  const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [bannerMessage, setBannerMessage] = useState("");
   const modeLocked = !canSwitchMode(e);
   const locked = e.status === "finished";
+  const uploadBanner = async (file?: File) => {
+    if (!file) return;
+    if (
+      !["image/png", "image/jpeg", "image/webp"].includes(file.type) ||
+      file.size > 1_000_000
+    ) {
+      setBannerMessage("Gunakan gambar JPG, PNG atau WebP maksimal 1 MB.");
+      return;
+    }
+    setUploadingBanner(true);
+    setBannerMessage("");
+    try {
+      const response = await fetch("/api/admin/assets", {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+        credentials: "same-origin",
+      });
+      const payload: { url?: string; error?: string } = await response.json();
+      if (!response.ok || !payload.url)
+        throw new Error(payload.error || "Upload gagal");
+      store.banner(payload.url);
+      setBannerInput("");
+      setBannerMessage(
+        "Banner diunggah. Klik Simpan ke Server agar tampil di website publik.",
+      );
+    } catch (error) {
+      setBannerMessage(error instanceof Error ? error.message : "Upload gagal");
+    } finally {
+      setUploadingBanner(false);
+    }
+  };
   const addCatalog = () => {
     const n = parsePoints(points);
     if (n === null || !name.trim()) return;
@@ -297,6 +338,132 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                 Mode SOLO dan SQUAD terpisah sepenuhnya. Pilih format sebelum
                 mendaftarkan pemain atau squad. Mengganti durasi akan mereset
                 timer event ini.
+              </div>
+            </div>
+          )}
+          {tab === "marketing" && (
+            <div className="space-y-6">
+              <div className="block-title">
+                <h3>Banner & Event Unggulan</h3>
+                <p>
+                  Kelola cover turnamen, kartu katalog, dan promo carousel
+                  homepage. Gambar tidak mengubah hasil pertandingan.
+                </p>
+              </div>
+              <div className="relative flex h-56 items-center justify-center overflow-hidden rounded-3xl bg-gradient-to-br from-[#112E75] via-[#215CD3] to-[#38A0F3] text-white">
+                {e.bannerUrl && validBannerUrl(e.bannerUrl) ? (
+                  <>
+                    {/* Image URL is validated before being persisted. */}
+                    <div
+                      className="absolute inset-0 bg-cover bg-center"
+                      style={{ backgroundImage: `url("${e.bannerUrl}")` }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#061C47]/90 via-[#061C47]/20 to-transparent" />
+                  </>
+                ) : (
+                  <Fish size={78} className="opacity-30" />
+                )}
+                <div className="absolute bottom-5 left-5 right-5">
+                  <span className="rounded-full bg-white/20 px-3 py-1 text-[11px] font-extrabold">
+                    {e.mode.toUpperCase()} • {e.status.toUpperCase()}
+                  </span>
+                  <h4 className="mt-2 text-xl font-black">{e.title}</h4>
+                </div>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50 p-6 text-center text-sm font-bold text-blue-700 hover:bg-blue-100">
+                  <UploadCloud size={26} />{" "}
+                  {uploadingBanner
+                    ? "Sedang mengunggah..."
+                    : "Upload gambar banner"}
+                  <span className="text-xs font-normal text-slate-500">
+                    JPG / PNG / WebP, maks. 1 MB. Rekomendasi rasio 16:9.
+                  </span>
+                  <input
+                    type="file"
+                    className="sr-only"
+                    accept="image/png,image/jpeg,image/webp"
+                    disabled={uploadingBanner}
+                    onChange={(v) => {
+                      void uploadBanner(v.target.files?.[0]);
+                      v.target.value = "";
+                    }}
+                  />
+                </label>
+                <div className="space-y-3 rounded-2xl border border-slate-200 p-4">
+                  <label className="block text-xs font-bold text-slate-600">
+                    Atau tautan gambar HTTPS
+                  </label>
+                  <input
+                    aria-label="URL banner HTTPS"
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                    placeholder="https://.../banner.webp"
+                    value={bannerInput}
+                    maxLength={500}
+                    onChange={(v) => setBannerInput(v.target.value)}
+                  />
+                  <button
+                    type="button"
+                    disabled={!bannerInput || !validBannerUrl(bannerInput)}
+                    className="btn secondary"
+                    onClick={() => {
+                      store.banner(bannerInput);
+                      setBannerInput("");
+                      setBannerMessage(
+                        "URL banner siap. Klik Simpan ke Server.",
+                      );
+                    }}
+                  >
+                    Pakai URL gambar <ExternalLink size={15} />
+                  </button>
+                </div>
+              </div>
+              {bannerMessage && (
+                <p
+                  role="status"
+                  className="rounded-xl bg-blue-50 px-4 py-3 text-xs font-bold text-blue-800"
+                >
+                  {bannerMessage}
+                </p>
+              )}
+              {e.bannerUrl && (
+                <button
+                  type="button"
+                  className="btn secondary"
+                  onClick={() => {
+                    store.banner("");
+                    setBannerMessage(
+                      "Banner dilepas dari event. Klik Simpan ke Server.",
+                    );
+                  }}
+                >
+                  Hapus cover dari event
+                </button>
+              )}
+              <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-blue-100 bg-white p-4">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4"
+                  checked={!!e.featured}
+                  onChange={(v) => store.feature(v.target.checked)}
+                />
+                <span>
+                  <b className="flex items-center gap-2 text-sm text-slate-900">
+                    <Star size={16} className="text-amber-500" /> Jadikan Event
+                    Unggulan
+                  </b>
+                  <span className="mt-1 block text-xs leading-6 text-slate-500">
+                    Jika Published, event ini mendapat prioritas pada banner
+                    carousel dan katalog homepage. Boleh diubah walaupun event
+                    sudah selesai.
+                  </span>
+                </span>
+              </label>
+              <div className="notice">
+                <Info size={18} /> Upload gambar tersimpan di tabel{" "}
+                <code>weji_arena_assets</code>. Metadata cover dan pilihan
+                featured baru terbit setelah klik Simpan ke Server. Jalankan
+                ulang db/schema.sql sebelum upload pertama.
               </div>
             </div>
           )}

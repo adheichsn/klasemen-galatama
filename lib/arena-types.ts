@@ -55,6 +55,9 @@ export type ArenaEvent = {
   mode: EventMode;
   status: EventStatus;
   published: boolean;
+  /** Optional marketing fields for existing database snapshots/backups. */
+  bannerUrl?: string;
+  featured?: boolean;
   tieBreaker: TieBreaker;
   tieBonusId: string | null;
   fish: FishRule[];
@@ -75,6 +78,7 @@ export type ArenaData = {
 };
 export type EditorSection =
   | "general"
+  | "marketing"
   | "fish"
   | "bonuses"
   | "rules"
