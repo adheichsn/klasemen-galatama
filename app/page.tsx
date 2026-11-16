@@ -1,4 +1,4 @@
-import EventDashboard from "@/components/event-dashboard";
+import ArenaApp from "@/components/arena-app";
 export default function HomePage() {
-  return <EventDashboard />;
+  return <ArenaApp />;
 }
