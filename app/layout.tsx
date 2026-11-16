@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import "./globals.css";
 export const metadata: Metadata = {
-  title: "Galatama Arena | Fish It Tournament Platform",
+  title: {
+    default: "WEJI ARENA | Fish It Tournament Platform",
+    template: "%s | WEJI ARENA",
+  },
   description:
-    "Platform turnamen Fish It: custom scoring, leaderboard, FAQ, archives, dan Hall of Fame.",
+    "WEJI ARENA - portal turnamen Fish It. Temukan kompetisi SOLO dan SQUAD, pantau klasemen, jelajahi arsip dan Hall of Fame.",
 };
 export default function RootLayout({
   children,
@@ -11,7 +14,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="id">
+    <html lang="id" data-scroll-behavior="smooth">
       <body>{children}</body>
     </html>
   );

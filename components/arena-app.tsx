@@ -139,7 +139,7 @@ function EventTile({
         <span className="cover-ring" />
         <Fish size={65} className="cover-fish" />
         <span className="cover-label">
-          GALATAMA <b>ARENA</b>
+          WEJI <b>ARENA</b>
         </span>
         <span className="cover-bottom">
           <span className={`status-chip ${e.status}`}>
@@ -204,7 +204,7 @@ export default function ArenaApp() {
   const store = useArena();
   const e = store.active;
   const [page, setPage] = useState<Page>("home");
-  const [admin, setAdmin] = useState(true);
+  const admin = true;
   const [mobileMenu, setMobileMenu] = useState(false);
   const [scoreOpen, setScoreOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -273,7 +273,7 @@ export default function ArenaApp() {
       const parsed: unknown = JSON.parse(await file.text());
       if (
         !window.confirm(
-          "Import backup akan mengganti SEMUA turnamen pada browser ini. Pastikan sudah export backup terlebih dahulu. Lanjutkan?",
+          "Import backup akan mengganti data yang sedang diedit. Data server belum berubah sampai klik Simpan ke Server. Lanjutkan?",
         )
       )
         return;
@@ -281,7 +281,9 @@ export default function ArenaApp() {
         throw new Error(
           "Format JSON tidak sesuai Arena V2 atau versi lama V1.",
         );
-      setNotice("Backup berhasil diimpor.");
+      setNotice(
+        "Backup dimuat. Klik Simpan ke Server untuk mempublikasikan perubahan.",
+      );
       go("home");
     } catch (err) {
       setNotice(err instanceof Error ? err.message : "Gagal membaca JSON.");
@@ -336,9 +338,17 @@ export default function ArenaApp() {
       <div className="loading-screen">
         <Fish size={36} />
         <b>
-          GALATAMA <span>ARENA</span>
+          WEJI <span>ARENA</span>
         </b>
-        <p>Menyiapkan klasemen...</p>
+        <p>{store.connectionError || "Mengambil data dari server..."}</p>
+        {store.connectionError && (
+          <button
+            className="btn secondary"
+            onClick={() => window.location.reload()}
+          >
+            Coba Lagi
+          </button>
+        )}
       </div>
     );
   return (
@@ -357,7 +367,7 @@ export default function ArenaApp() {
           </div>
           <div className="brand-name">
             <strong>
-              GALATAMA<span>ARENA</span>
+              WEJI<span>ARENA</span>
             </strong>
             <small>FISH IT TOURNAMENTS</small>
           </div>
@@ -387,8 +397,8 @@ export default function ArenaApp() {
           <div className="storage-warning">
             <CloudOff size={18} />
             <div>
-              <strong>Mode Lokal</strong>
-              <span>Data di browser ini saja</span>
+              <strong>Database Terpusat</strong>
+              <span>Simpan perubahan melalui header</span>
             </div>
           </div>
           <div className="sidebar-signoff">
@@ -406,7 +416,7 @@ export default function ArenaApp() {
             <Menu size={22} />
           </button>
           <div className="breadcrumbs">
-            <span>GALATAMA ARENA</span>
+            <span>WEJI ARENA</span>
             <ChevronRight size={15} />
             <b>
               {
@@ -425,23 +435,37 @@ export default function ArenaApp() {
           </div>
           <div className="topbar-end">
             <span className="topbar-date">FISH IT COMMUNITY HUB</span>
-            <div
-              className="view-switch"
-              title="Hanya mode tampilan; tidak menyediakan autentikasi"
+            <a
+              href="/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn secondary !hidden sm:!inline-flex"
             >
-              <button
-                className={!admin ? "selected" : ""}
-                onClick={() => setAdmin(false)}
-              >
-                <Eye size={15} /> Publik
-              </button>
-              <button
-                className={admin ? "selected" : ""}
-                onClick={() => setAdmin(true)}
-              >
-                <ShieldCheck size={15} /> Panitia
-              </button>
-            </div>
+              <Eye size={15} /> Lihat Publik
+            </a>
+            <button
+              className="btn primary"
+              disabled={!store.dirty || store.saving}
+              onClick={() => void store.save()}
+            >
+              <CheckCircle2 size={16} />
+              {store.saving
+                ? "Menyimpan..."
+                : store.dirty
+                  ? "Simpan ke Server"
+                  : "Tersimpan"}
+            </button>
+            <button
+              className="icon-button"
+              aria-label="Logout"
+              title="Logout Panitia"
+              onClick={async () => {
+                await fetch("/api/admin/logout", { method: "POST" });
+                window.location.assign("/admin/login");
+              }}
+            >
+              <LockKeyhole size={18} />
+            </button>
           </div>
         </header>
         <main className="main-content">
@@ -465,11 +489,21 @@ export default function ArenaApp() {
               </button>
             </div>
           )}
-          {!admin && (
-            <div className="notice">
-              <Info size={18} /> Ini hanya pratinjau UI publik pada browser yang
-              sama. Mode Panitia belum dilindungi login; jangan gunakan sebagai
-              akses publik produksi.
+          {store.dirty && (
+            <div className="notice warning">
+              <Info size={18} /> Ada perubahan yang belum dikirim ke server.
+              Klik <b>Simpan ke Server</b> sebelum membagikan klasemen.
+            </div>
+          )}
+          {store.saveError && (
+            <div className="notice warning">
+              <Info size={18} /> {store.saveError}{" "}
+              <button
+                className="btn secondary"
+                onClick={() => window.location.reload()}
+              >
+                Muat Ulang
+              </button>
             </div>
           )}
           {page === "home" && (
@@ -1537,10 +1571,9 @@ export default function ArenaApp() {
             </div>
           )}
           <footer className="site-footer">
-            <span>© GALATAMA ARENA • COMMUNITY TOURNAMENT SYSTEM</span>
+            <span>© WEJI ARENA • STAFF DASHBOARD</span>
             <span>
-              <CloudOff size={14} /> Versi prototipe lokal • Belum sinkron
-              realtime
+              Perubahan tersimpan di PostgreSQL setelah klik Simpan ke Server.
             </span>
           </footer>
         </main>
@@ -1559,12 +1592,32 @@ export default function ArenaApp() {
             onClick={() =>
               downloadArena(
                 store.data,
-                `galatama-arena-backup-${new Date().toISOString().slice(0, 10)}.json`,
+                `weji-arena-backup-${new Date().toISOString().slice(0, 10)}.json`,
               )
             }
           >
             <Download size={17} />
             <span>Backup</span>
+          </button>
+          <button
+            title="Pulihkan data V2.1 dari localStorage browser"
+            onClick={() => {
+              if (
+                window.confirm(
+                  "Pulihkan data dari browser versi lama? Data kerja yang belum disimpan akan terganti. Segera simpan ke server setelah memeriksa hasilnya.",
+                )
+              ) {
+                const ok = store.restoreBrowserBackup();
+                setNotice(
+                  ok
+                    ? "Data browser lama berhasil dimuat. Klik Simpan ke Server."
+                    : "Tidak ada data lokal valid ditemukan. Coba Import JSON.",
+                );
+              }
+            }}
+          >
+            <History size={17} />
+            <span>Migrasi Browser</span>
           </button>
           <button
             title="Import backup JSON"

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   ArenaData,
   ArenaEvent,
@@ -33,36 +33,118 @@ export function useArena() {
   const [ready, setReady] = useState(false);
   const [migrated, setMigrated] = useState(false);
   const [now, setNow] = useState(0);
+  const [revision, setRevision] = useState(0);
+  const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [connectionError, setConnectionError] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const hydrated = useRef(false);
+  const dataRef = useRef(data);
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(ARENA_STORAGE_KEY);
-      const parsed: unknown = stored ? JSON.parse(stored) : null;
-      if (validArena(parsed) && parsed.events.length) {
-        setData(parsed);
-      } else if (!stored) {
-        const legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
-        const old: unknown = legacy ? JSON.parse(legacy) : null;
-        const converted = migrateLegacy(old);
-        if (converted) {
-          setData(converted);
-          setMigrated(true);
-        }
+    dataRef.current = data;
+  }, [data]);
+  useEffect(() => {
+    let cancelled = false;
+    async function loadServer() {
+      try {
+        const response = await fetch("/api/admin/state", {
+          cache: "no-store",
+          credentials: "same-origin",
+        });
+        if (!response.ok)
+          throw new Error(
+            response.status === 401
+              ? "Sesi panitia habis. Login ulang."
+              : "Tidak bisa terhubung ke database. Pastikan DATABASE_URL dan db/schema.sql sudah disiapkan.",
+          );
+        const snapshot: { data: unknown; revision: number } =
+          await response.json();
+        if (
+          !validArena(snapshot.data) ||
+          !snapshot.data.events.length ||
+          !Number.isSafeInteger(snapshot.revision)
+        )
+          throw new Error("Data dari server tidak valid.");
+        if (cancelled) return;
+        setData(snapshot.data);
+        setRevision(snapshot.revision);
+        setNow(Date.now());
+        setReady(true);
+      } catch (error) {
+        if (!cancelled)
+          setConnectionError(
+            error instanceof Error
+              ? error.message
+              : "Gagal memuat data server.",
+          );
       }
-    } catch {
-      /* invalid local data is ignored without touching legacy backup */
     }
-    setNow(Date.now());
-    setReady(true);
+    void loadServer();
+    return () => {
+      cancelled = true;
+    };
   }, []);
   useEffect(() => {
-    if (ready) {
-      try {
-        localStorage.setItem(ARENA_STORAGE_KEY, JSON.stringify(data));
-      } catch {
-        /* browser storage unavailable */
-      }
+    if (!ready) return;
+    if (!hydrated.current) {
+      hydrated.current = true;
+      return;
     }
+    setDirty(true);
   }, [ready, data]);
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
+  const save = async () => {
+    if (!ready || saving || !dirty) return false;
+    const snapshot = dataRef.current;
+    setSaving(true);
+    setSaveError("");
+    try {
+      const response = await fetch("/api/admin/state", {
+        method: "PUT",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ revision, data: snapshot }),
+      });
+      const result = await response.json();
+      if (!response.ok)
+        throw new Error(result.error || "Gagal menyimpan data.");
+      setRevision(result.revision);
+      if (dataRef.current === snapshot) setDirty(false);
+      return true;
+    } catch (error) {
+      setSaveError(
+        error instanceof Error ? error.message : "Gagal menyimpan data.",
+      );
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+  const restoreBrowserBackup = () => {
+    if (typeof window === "undefined") return false;
+    try {
+      const current = localStorage.getItem(ARENA_STORAGE_KEY);
+      const legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
+      const raw = current || legacy;
+      if (!raw) return false;
+      const parsed: unknown = JSON.parse(raw);
+      const converted = validArena(parsed) ? parsed : migrateLegacy(parsed);
+      if (!converted || !converted.events.length) return false;
+      setData(converted);
+      setMigrated(true);
+      return true;
+    } catch {
+      return false;
+    }
+  };
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
@@ -523,6 +605,13 @@ export function useArena() {
     active,
     ready,
     migrated,
+    revision,
+    dirty,
+    saving,
+    connectionError,
+    saveError,
+    save,
+    restoreBrowserBackup,
     remaining,
     setActive,
     create,

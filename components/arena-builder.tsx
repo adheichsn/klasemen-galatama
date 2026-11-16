@@ -75,7 +75,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
           </p>
         </div>
         <span className="pill neutral">
-          {locked ? "Arsip terkunci" : "Perubahan tersimpan otomatis"}
+          {locked ? "Arsip terkunci" : "Klik Simpan ke Server di header"}
         </span>
       </div>
       <div className="builder-layout">

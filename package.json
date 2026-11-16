@@ -1,13 +1,15 @@
 {
-  "name": "galatama-scoreboard-nextjs",
-  "version": "2.1.0",
+  "name": "weji-arena",
+  "version": "2.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test:smoke": "node tests/arena-smoke.cjs"
+    "test:smoke": "node test/arena-smoke.cjs && node test/security-smoke.cjs",
+    "admin:hash": "node scripts/hash-password.cjs",
+    "test:security": "node test/security-smoke.cjs"
   },
   "dependencies": {
     "next": "^16.0.0",
@@ -19,7 +21,8 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "tailwind-merge": "^3.3.1",
-    "motion": "^12.0.0"
+    "motion": "^12.0.0",
+    "pg": "^8.13.1"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
@@ -28,6 +31,7 @@
     "typescript": "^5.8.0",
     "tailwindcss": "^4.1.0",
     "@tailwindcss/postcss": "^4.1.0",
-    "postcss": "^8.5.0"
+    "postcss": "^8.5.0",
+    "@types/pg": "^8.11.11"
   }
 }
