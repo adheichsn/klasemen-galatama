@@ -1,3 +1,4 @@
+import "@/styles/public-effects.css";
 import Link from "next/link";
 import {
   ArrowRight,

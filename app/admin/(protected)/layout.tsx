@@ -1,3 +1,4 @@
+import "@/styles/admin-interactions.css";
 import { redirect } from "next/navigation";
 import { isAdminAuthenticated } from "@/lib/auth";
 export const dynamic = "force-dynamic";

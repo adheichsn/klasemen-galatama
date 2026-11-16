@@ -2,6 +2,8 @@
 import { useState } from "react";
 import {
   BookOpen,
+  ArrowLeft,
+  ArrowRight,
   Check,
   CircleHelp,
   Fish,
@@ -29,6 +31,7 @@ import type { ArenaStore } from "@/hooks/use-arena";
 import { fmt, validPoints } from "@/lib/arena-utils";
 import { canSwitchMode } from "@/lib/arena-rules";
 import { validBannerUrl } from "@/lib/banner";
+import { BuilderProgress, builderSteps } from "@/components/admin/builder-progress";
 
 const sections: { id: EditorSection; text: string; icon: typeof Fish }[] = [
   { id: "general", text: "Informasi", icon: Settings2 },
@@ -63,6 +66,12 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [bannerMessage, setBannerMessage] = useState("");
   const modeLocked = !canSwitchMode(e);
+  const currentStep = builderSteps.findIndex((s) => s.id === tab);
+  const navigate = (section: EditorSection) => {
+    setTab(section);
+    setName("");
+    setPoints("1");
+  };
   const locked = e.status === "finished";
   const uploadBanner = async (file?: File) => {
     if (!file) return;
@@ -106,33 +115,31 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
   };
   return (
     <section className="section-stack">
-      <div className="page-heading">
+      <div className="page-heading flex justify-between items-center gap-[20px]">
         <div>
-          <div className="kicker">TOURNAMENT BUILDER</div>
+          <div className="kicker text-[10px] text-[#477bce] tracking-[1.6px] font-extrabold mb-[8px]">TOURNAMENT BUILDER</div>
           <h2>Atur pertandingan sesukamu.</h2>
           <p>
             Semua konfigurasi hanya berlaku untuk <b>{e.title}</b> dan tidak
             mengubah turnamen lain.
           </p>
         </div>
-        <span className="pill neutral">
+        <span className="pill inline-flex items-center gap-[6px] p-[8px_11px] rounded-[100px] text-[11px] font-extrabold whitespace-nowrap neutral">
           {locked ? "Arsip terkunci" : "Klik Simpan ke Server di header"}
         </span>
       </div>
-      <div className="builder-layout">
-        <nav className="builder-tabs" aria-label="Bagian pengaturan turnamen">
+      <BuilderProgress event={e} active={tab} onNavigate={navigate} />
+      <div className="builder-layout grid grid-cols-[220px_minmax(0,_1fr)] gap-[18px] [align-items:start]">
+        <nav className="builder-tabs bg-[#fff] [border:1px_solid_var(--line)] rounded-[16px] p-[9px] flex flex-col gap-[4px]" aria-label="Bagian pengaturan turnamen">
           {sections.map((s) => {
             const Icon = s.icon;
             return (
               <button
                 key={s.id}
                 type="button"
-                className={`builder-tab ${tab === s.id ? "selected" : ""}`}
-                onClick={() => {
-                  setTab(s.id);
-                  setName("");
-                  setPoints("1");
-                }}
+                className={`builder-tab bg-white w-full flex items-center gap-[12px] p-[13px] text-[#7588a3] text-left rounded-[9px] font-extrabold text-[12px] ${tab === s.id ? "selected" : ""}`}
+                aria-current={tab === s.id ? "step" : undefined}
+                onClick={() => navigate(s.id)}
               >
                 <Icon size={18} />
                 {s.text}
@@ -140,16 +147,16 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
             );
           })}
         </nav>
-        <div className="panel builder-body">
+        <div className="panel bg-[#fff] [border:1px_solid_var(--line)] rounded-[17px] shadow-[var(--shadow)] min-w-[0] builder-body p-[25px]">
           {locked && (
-            <div className="notice warning">
+            <div className="notice p-[12px_15px] bg-[#eef5ff] [border:1px_solid_#d8e6ff] text-[#3263a9] rounded-[10px] flex items-center gap-[10px] text-[12px] leading-[1.6] warning">
               <ShieldCheck size={18} />
               Turnamen selesai telah dikunci. Buka kembali melalui daftar event
               bila perlu koreksi.
             </div>
           )}
           {tab === "general" && (
-            <div className="stack-lg">
+            <div className="stack-lg flex flex-col gap-[22px]">
               <div className="block-title">
                 <h3>Identitas Turnamen</h3>
                 <p>
@@ -218,8 +225,8 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                   turnamen baru untuk format berbeda.
                 </p>
               )}
-              <div className="form-grid">
-                <label className="field span-2">
+              <div className="form-grid grid grid-cols-2 gap-[15px]">
+                <label className="field flex flex-col gap-[7px] text-[11px] text-[#4f6585] font-extrabold span-2">
                   Nama turnamen
                   <input
                     disabled={locked}
@@ -229,7 +236,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                     placeholder="Contoh: Galatama Season 5"
                   />
                 </label>
-                <label className="field span-2">
+                <label className="field flex flex-col gap-[7px] text-[11px] text-[#4f6585] font-extrabold span-2">
                   Deskripsi singkat
                   <input
                     disabled={locked}
@@ -239,7 +246,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                     placeholder="Deskripsi event"
                   />
                 </label>
-                <label className="field">
+                <label className="field flex flex-col gap-[7px] text-[11px] text-[#4f6585] font-extrabold">
                   Lokasi / Pulau
                   <input
                     disabled={locked}
@@ -248,7 +255,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                     placeholder="Bebas, bisa beberapa pulau"
                   />
                 </label>
-                <label className="field">
+                <label className="field flex flex-col gap-[7px] text-[11px] text-[#4f6585] font-extrabold">
                   Host / Panitia
                   <input
                     disabled={locked}
@@ -257,7 +264,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                     placeholder="Nama host"
                   />
                 </label>
-                <label className="field">
+                <label className="field flex flex-col gap-[7px] text-[11px] text-[#4f6585] font-extrabold">
                   Tanggal event
                   <input
                     disabled={locked}
@@ -266,7 +273,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                     onChange={(v) => store.field("eventDate", v.target.value)}
                   />
                 </label>
-                <label className="field">
+                <label className="field flex flex-col gap-[7px] text-[11px] text-[#4f6585] font-extrabold">
                   Durasi (menit)
                   <input
                     disabled={locked}
@@ -277,7 +284,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                     onChange={(v) => store.setDuration(Number(v.target.value))}
                   />
                 </label>
-                <label className="field">
+                <label className="field flex flex-col gap-[7px] text-[11px] text-[#4f6585] font-extrabold">
                   Visibilitas event
                   <select
                     disabled={locked}
@@ -290,7 +297,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                     <option value="published">Tampilkan di katalog</option>
                   </select>
                 </label>
-                <label className="field">
+                <label className="field flex flex-col gap-[7px] text-[11px] text-[#4f6585] font-extrabold">
                   Aturan jika poin seri
                   <select
                     disabled={locked}
@@ -314,7 +321,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                   </select>
                 </label>
                 {e.tieBreaker === "bonus" && (
-                  <label className="field">
+                  <label className="field flex flex-col gap-[7px] text-[11px] text-[#4f6585] font-extrabold">
                     Bonus penentu seri
                     <select
                       disabled={locked}
@@ -333,7 +340,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                   </label>
                 )}
               </div>
-              <div className="notice">
+              <div className="notice p-[12px_15px] bg-[#eef5ff] [border:1px_solid_#d8e6ff] text-[#3263a9] rounded-[10px] flex items-center gap-[10px] text-[12px] leading-[1.6]">
                 <Info size={18} />
                 Mode SOLO dan SQUAD terpisah sepenuhnya. Pilih format sebelum
                 mendaftarkan pemain atau squad. Mengganti durasi akan mereset
@@ -405,7 +412,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                   <button
                     type="button"
                     disabled={!bannerInput || !validBannerUrl(bannerInput)}
-                    className="btn secondary"
+                    className="btn inline-flex items-center justify-center gap-[9px] [border:1px_solid_transparent] rounded-[10px] min-h-[41px] p-[0_16px] whitespace-nowrap text-[12px] font-extrabold [transition:background_.2s,_transform_.2s,_box-shadow_.2s] secondary"
                     onClick={() => {
                       store.banner(bannerInput);
                       setBannerInput("");
@@ -429,7 +436,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
               {e.bannerUrl && (
                 <button
                   type="button"
-                  className="btn secondary"
+                  className="btn inline-flex items-center justify-center gap-[9px] [border:1px_solid_transparent] rounded-[10px] min-h-[41px] p-[0_16px] whitespace-nowrap text-[12px] font-extrabold [transition:background_.2s,_transform_.2s,_box-shadow_.2s] secondary"
                   onClick={() => {
                     store.banner("");
                     setBannerMessage(
@@ -459,7 +466,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                   </span>
                 </span>
               </label>
-              <div className="notice">
+              <div className="notice p-[12px_15px] bg-[#eef5ff] [border:1px_solid_#d8e6ff] text-[#3263a9] rounded-[10px] flex items-center gap-[10px] text-[12px] leading-[1.6]">
                 <Info size={18} /> Upload gambar tersimpan di tabel{" "}
                 <code>weji_arena_assets</code>. Metadata cover dan pilihan
                 featured baru terbit setelah klik Simpan ke Server. Jalankan
@@ -468,7 +475,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
             </div>
           )}
           {(tab === "fish" || tab === "bonuses") && (
-            <div className="stack-lg">
+            <div className="stack-lg flex flex-col gap-[22px]">
               <div className="block-title">
                 <h3>
                   {tab === "fish"
@@ -481,14 +488,14 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                     : "Tambahkan bonus bebas: Mutasi, Big, Shiny, atau jenis bonus buatan panitia."}
                 </p>
               </div>
-              <div className="catalog-header">
+              <div className="catalog-header text-[10px] font-extrabold text-[#9baac0] tracking-[.8px] p-[0_9px]">
                 <span>AKTIF</span>
                 <span>NAMA {tab === "fish" ? "IKAN" : "BONUS"}</span>
                 <span>POIN</span>
                 <span></span>
               </div>
               {(tab === "fish" ? e.fish : e.bonuses).length === 0 && (
-                <div className="empty-row">
+                <div className="empty-row p-[26px_16px] [border:1px_dashed_#d4e0ef] rounded-[12px] bg-[#f9fbff] flex gap-[5px] flex-col items-center text-center text-[#7495c9]">
                   <Fish size={24} />
                   <strong>Belum ada {tab === "fish" ? "ikan" : "bonus"}</strong>
                   <span>
@@ -497,7 +504,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                 </div>
               )}
               {(tab === "fish" ? e.fish : e.bonuses).map((item) => (
-                <div className="catalog-row" key={item.id}>
+                <div className="catalog-row p-[10px_7px] [border:1px_solid_#eaf0f7] rounded-[11px] mt-[-12px]" key={item.id}>
                   <input
                     disabled={locked}
                     aria-label={`Aktifkan ${item.name}`}
@@ -542,7 +549,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                   />
                   <button
                     disabled={locked}
-                    className="icon-button danger"
+                    className="icon-button w-[35px] h-[35px] inline-flex items-center justify-center rounded-[10px] bg-transparent text-[#7c8da8] danger"
                     title="Hapus"
                     onClick={() => {
                       if (
@@ -559,12 +566,12 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                   </button>
                 </div>
               ))}
-              <div className="add-row">
-                <div className="row-title">
+              <div className="add-row bg-[#f6f9ff] [border:1px_dashed_#cbdcf7] rounded-[12px] p-[18px] flex flex-col items-stretch gap-[13px]">
+                <div className="row-title flex items-center gap-[8px] text-[12px] font-extrabold text-[#3568c3]">
                   <Plus size={17} /> Tambahkan{" "}
                   {tab === "fish" ? "ikan" : "bonus"}
                 </div>
-                <div className="add-row-fields">
+                <div className="add-row-fields flex gap-[10px] items-center">
                   <input
                     disabled={locked}
                     value={name}
@@ -590,7 +597,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                     disabled={
                       locked || !name.trim() || parsePoints(points) === null
                     }
-                    className="btn primary"
+                    className="btn inline-flex items-center justify-center gap-[9px] [border:1px_solid_transparent] rounded-[10px] min-h-[41px] p-[0_16px] whitespace-nowrap text-[12px] font-extrabold [transition:background_.2s,_transform_.2s,_box-shadow_.2s] primary"
                     onClick={addCatalog}
                   >
                     <Plus size={16} />
@@ -598,7 +605,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                   </button>
                 </div>
               </div>
-              <div className="notice">
+              <div className="notice p-[12px_15px] bg-[#eef5ff] [border:1px_solid_#d8e6ff] text-[#3263a9] rounded-[10px] flex items-center gap-[10px] text-[12px] leading-[1.6]">
                 <ShieldCheck size={18} />
                 Perubahan poin hanya berlaku untuk tangkapan berikutnya. Skor
                 sebelumnya menyimpan nilai asli saat dicatat.
@@ -606,7 +613,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
             </div>
           )}
           {tab === "rules" && (
-            <div className="stack-lg">
+            <div className="stack-lg flex flex-col gap-[22px]">
               <div className="block-title">
                 <h3>Peraturan Tertulis</h3>
                 <p>
@@ -616,10 +623,10 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
               </div>
               {e.writtenRules.map((r, i) => (
                 <div className="editable-rule" key={r.id}>
-                  <div className="rule-order">
+                  <div className="rule-order w-[28px] h-[28px] flex items-center justify-center bg-[#eff5ff] text-[#5881cf] rounded-[8px] text-[10px] font-extrabold shrink-0 mt-[5px]">
                     {String(i + 1).padStart(2, "0")}
                   </div>
-                  <div className="rule-editor">
+                  <div className="rule-editor flex-1 flex flex-col gap-[8px] min-w-[0]">
                     <input
                       disabled={locked}
                       aria-label="Kategori aturan"
@@ -642,7 +649,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                   </div>
                   <button
                     disabled={locked}
-                    className="icon-button danger"
+                    className="icon-button w-[35px] h-[35px] inline-flex items-center justify-center rounded-[10px] bg-transparent text-[#7c8da8] danger"
                     onClick={() => store.removeRule(r.id)}
                     title="Hapus aturan"
                   >
@@ -651,18 +658,18 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                 </div>
               ))}
               {e.writtenRules.length === 0 && (
-                <div className="empty-row">
+                <div className="empty-row p-[26px_16px] [border:1px_dashed_#d4e0ef] rounded-[12px] bg-[#f9fbff] flex gap-[5px] flex-col items-center text-center text-[#7495c9]">
                   <BookOpen size={24} />
                   <strong>Belum ada aturan tertulis</strong>
                   <span>Atur sendiri sesuai kebutuhan event.</span>
                 </div>
               )}
-              <div className="add-row">
-                <div className="row-title">
+              <div className="add-row bg-[#f6f9ff] [border:1px_dashed_#cbdcf7] rounded-[12px] p-[18px] flex flex-col items-stretch gap-[13px]">
+                <div className="row-title flex items-center gap-[8px] text-[12px] font-extrabold text-[#3568c3]">
                   <Plus size={17} /> Buat peraturan
                 </div>
-                <div className="form-grid">
-                  <label className="field">
+                <div className="form-grid grid grid-cols-2 gap-[15px]">
+                  <label className="field flex flex-col gap-[7px] text-[11px] text-[#4f6585] font-extrabold">
                     Kategori
                     <input
                       disabled={locked}
@@ -672,7 +679,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                       placeholder="Diizinkan, Dilarang, Teknis..."
                     />
                   </label>
-                  <label className="field span-2">
+                  <label className="field flex flex-col gap-[7px] text-[11px] text-[#4f6585] font-extrabold span-2">
                     Isi peraturan
                     <textarea
                       disabled={locked}
@@ -686,7 +693,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                 </div>
                 <button
                   disabled={locked || !ruleText.trim()}
-                  className="btn primary"
+                  className="btn inline-flex items-center justify-center gap-[9px] [border:1px_solid_transparent] rounded-[10px] min-h-[41px] p-[0_16px] whitespace-nowrap text-[12px] font-extrabold [transition:background_.2s,_transform_.2s,_box-shadow_.2s] primary"
                   onClick={() => {
                     store.addRule(ruleGroup, ruleText);
                     setRuleText("");
@@ -698,7 +705,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
             </div>
           )}
           {tab === "participants" && (
-            <div className="stack-lg">
+            <div className="stack-lg flex flex-col gap-[22px]">
               <div className="block-title">
                 <h3>
                   {e.mode === "squad"
@@ -730,10 +737,10 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                 </span>
               </div>
               {e.mode === "squad" && (
-                <div className="squad-editor">
+                <div className="squad-editor p-[18px] bg-[#f8faff] rounded-[13px] flex flex-col gap-[10px]">
                   <h4>Daftar Squad</h4>
                   {e.squads.map((s) => (
-                    <div className="squad-row" key={s.id}>
+                    <div className="squad-row flex items-center gap-[8px]" key={s.id}>
                       <input
                         aria-label="Warna squad"
                         disabled={locked}
@@ -756,7 +763,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                           locked ||
                           e.participants.some((p) => p.squadId === s.id)
                         }
-                        className="icon-button danger"
+                        className="icon-button w-[35px] h-[35px] inline-flex items-center justify-center rounded-[10px] bg-transparent text-[#7c8da8] danger"
                         title="Hapus squad kosong"
                         onClick={() => store.removeSquad(s.id)}
                       >
@@ -764,7 +771,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                       </button>
                     </div>
                   ))}
-                  <div className="add-row-fields">
+                  <div className="add-row-fields flex gap-[10px] items-center">
                     <input
                       disabled={locked}
                       value={squadName}
@@ -773,7 +780,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                     />
                     <button
                       disabled={locked || !squadName.trim()}
-                      className="btn secondary"
+                      className="btn inline-flex items-center justify-center gap-[9px] [border:1px_solid_transparent] rounded-[10px] min-h-[41px] p-[0_16px] whitespace-nowrap text-[12px] font-extrabold [transition:background_.2s,_transform_.2s,_box-shadow_.2s] secondary"
                       onClick={() => {
                         store.addSquad(squadName);
                         setSquadName("");
@@ -807,7 +814,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                   ))}
                 </div>
               )}
-              <div className="participant-list">
+              <div className="participant-list flex flex-col gap-[8px]">
                 {e.participants
                   .filter(
                     (p) =>
@@ -817,11 +824,11 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                       p.squadId === squadFilter,
                   )
                   .map((p) => (
-                    <div className="participant-edit" key={p.id}>
-                      <div className="participant-avatar">
+                    <div className="participant-edit flex items-center gap-[11px] p-[11px] bg-[#fbfcff] [border:1px_solid_#e9eef8] rounded-[10px]" key={p.id}>
+                      <div className="participant-avatar w-[36px] h-[36px] text-[12px]">
                         {p.name.slice(0, 1).toUpperCase()}
                       </div>
-                      <div className="participant-fields">
+                      <div className="participant-fields flex gap-[8px] flex-1 min-w-[0]">
                         <input
                           disabled={locked}
                           value={p.name}
@@ -876,7 +883,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                           </select>
                         )}
                       </div>
-                      <label className="check-label">
+                      <label className="check-label text-[10px] text-[#667e9f] flex gap-[6px] items-center whitespace-nowrap">
                         <input
                           disabled={locked}
                           type="checkbox"
@@ -894,7 +901,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                           locked ||
                           e.entries.some((x) => x.participantId === p.id)
                         }
-                        className="icon-button danger"
+                        className="icon-button w-[35px] h-[35px] inline-flex items-center justify-center rounded-[10px] bg-transparent text-[#7c8da8] danger"
                         title="Hapus peserta tanpa riwayat"
                         onClick={() => store.removeParticipant(p.id)}
                       >
@@ -903,19 +910,19 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                     </div>
                   ))}
                 {e.participants.length === 0 && (
-                  <div className="empty-row">
+                  <div className="empty-row p-[26px_16px] [border:1px_dashed_#d4e0ef] rounded-[12px] bg-[#f9fbff] flex gap-[5px] flex-col items-center text-center text-[#7495c9]">
                     <Users size={24} />
                     <strong>Belum ada peserta</strong>
                     <span>Daftarkan peserta sebelum mencatat tangkapan.</span>
                   </div>
                 )}
               </div>
-              <div className="add-row">
-                <div className="row-title">
+              <div className="add-row bg-[#f6f9ff] [border:1px_dashed_#cbdcf7] rounded-[12px] p-[18px] flex flex-col items-stretch gap-[13px]">
+                <div className="row-title flex items-center gap-[8px] text-[12px] font-extrabold text-[#3568c3]">
                   <Plus size={17} /> Tambah peserta
                 </div>
-                <div className="form-grid">
-                  <label className="field">
+                <div className="form-grid grid grid-cols-2 gap-[15px]">
+                  <label className="field flex flex-col gap-[7px] text-[11px] text-[#4f6585] font-extrabold">
                     Nama tampil
                     <input
                       disabled={locked}
@@ -924,7 +931,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                       placeholder="Nama peserta"
                     />
                   </label>
-                  <label className="field">
+                  <label className="field flex flex-col gap-[7px] text-[11px] text-[#4f6585] font-extrabold">
                     Username Roblox
                     <input
                       disabled={locked}
@@ -934,7 +941,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                     />
                   </label>
                   {e.mode === "squad" && (
-                    <label className="field">
+                    <label className="field flex flex-col gap-[7px] text-[11px] text-[#4f6585] font-extrabold">
                       Squad
                       <select
                         disabled={locked}
@@ -955,7 +962,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                   disabled={
                     locked || !person.trim() || (e.mode === "squad" && !squadId)
                   }
-                  className="btn primary"
+                  className="btn inline-flex items-center justify-center gap-[9px] [border:1px_solid_transparent] rounded-[10px] min-h-[41px] p-[0_16px] whitespace-nowrap text-[12px] font-extrabold [transition:background_.2s,_transform_.2s,_box-shadow_.2s] primary"
                   onClick={() => {
                     store.addParticipant(person, username, squadId || null);
                     setPerson("");
@@ -968,7 +975,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
             </div>
           )}
           {tab === "faq" && (
-            <div className="stack-lg">
+            <div className="stack-lg flex flex-col gap-[22px]">
               <div className="block-title">
                 <h3>FAQ Turnamen</h3>
                 <p>
@@ -978,10 +985,10 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
               </div>
               {e.faqs.map((f, i) => (
                 <div className="editable-faq" key={f.id}>
-                  <div className="rule-order">
+                  <div className="rule-order w-[28px] h-[28px] flex items-center justify-center bg-[#eff5ff] text-[#5881cf] rounded-[8px] text-[10px] font-extrabold shrink-0 mt-[5px]">
                     {String(i + 1).padStart(2, "0")}
                   </div>
-                  <div className="rule-editor">
+                  <div className="rule-editor flex-1 flex flex-col gap-[8px] min-w-[0]">
                     <input
                       disabled={locked}
                       aria-label="Pertanyaan"
@@ -1004,7 +1011,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                   </div>
                   <button
                     disabled={locked}
-                    className="icon-button danger"
+                    className="icon-button w-[35px] h-[35px] inline-flex items-center justify-center rounded-[10px] bg-transparent text-[#7c8da8] danger"
                     title="Hapus FAQ"
                     onClick={() => store.removeFaq(f.id)}
                   >
@@ -1013,17 +1020,17 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                 </div>
               ))}
               {e.faqs.length === 0 && (
-                <div className="empty-row">
+                <div className="empty-row p-[26px_16px] [border:1px_dashed_#d4e0ef] rounded-[12px] bg-[#f9fbff] flex gap-[5px] flex-col items-center text-center text-[#7495c9]">
                   <CircleHelp size={24} />
                   <strong>Belum ada FAQ</strong>
                   <span>Kamu bebas menambahkan pertanyaan sesuai event.</span>
                 </div>
               )}
-              <div className="add-row">
-                <div className="row-title">
+              <div className="add-row bg-[#f6f9ff] [border:1px_dashed_#cbdcf7] rounded-[12px] p-[18px] flex flex-col items-stretch gap-[13px]">
+                <div className="row-title flex items-center gap-[8px] text-[12px] font-extrabold text-[#3568c3]">
                   <Plus size={17} /> Tambah FAQ
                 </div>
-                <label className="field">
+                <label className="field flex flex-col gap-[7px] text-[11px] text-[#4f6585] font-extrabold">
                   Pertanyaan
                   <input
                     disabled={locked}
@@ -1033,7 +1040,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                     placeholder="Apa yang ingin diketahui peserta?"
                   />
                 </label>
-                <label className="field">
+                <label className="field flex flex-col gap-[7px] text-[11px] text-[#4f6585] font-extrabold">
                   Jawaban
                   <textarea
                     disabled={locked}
@@ -1045,7 +1052,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                   />
                 </label>
                 <button
-                  className="btn primary"
+                  className="btn inline-flex items-center justify-center gap-[9px] [border:1px_solid_transparent] rounded-[10px] min-h-[41px] p-[0_16px] whitespace-nowrap text-[12px] font-extrabold [transition:background_.2s,_transform_.2s,_box-shadow_.2s] primary"
                   disabled={locked || !question.trim() || !answer.trim()}
                   onClick={() => {
                     store.addFaq(question, answer);
@@ -1058,7 +1065,28 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
               </div>
             </div>
           )}
-          <div className="builder-foot">
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <span className="text-xs font-bold text-slate-500">Langkah {currentStep + 1} dari {builderSteps.length}</span>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={currentStep === 0}
+                onClick={() => navigate(builderSteps[currentStep - 1].id)}
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-extrabold text-slate-700 hover:bg-slate-100 disabled:opacity-40"
+              >
+                <ArrowLeft size={15} /> Sebelumnya
+              </button>
+              <button
+                type="button"
+                disabled={currentStep === builderSteps.length - 1}
+                onClick={() => navigate(builderSteps[currentStep + 1].id)}
+                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-extrabold text-white hover:bg-blue-700 disabled:opacity-40"
+              >
+                Berikutnya <ArrowRight size={15} />
+              </button>
+            </div>
+          </div>
+          <div className="builder-foot [border-top:1px_solid_var(--line)] pt-[18px] mt-[25px] flex items-center gap-[9px] text-[11px] text-[#91a0b7]">
             <WandSparkles size={16} /> {fmt(e.fish.length)} ikan •{" "}
             {fmt(e.bonuses.length)} bonus • {fmt(e.participants.length)} peserta
             • {fmt(e.writtenRules.length)} peraturan

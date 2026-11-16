@@ -23,7 +23,7 @@ export default function Dialog({
   }, [onClose]);
   return (
     <div
-      className="modal-backdrop"
+      className="modal-backdrop fixed inset-[0] z-[70] [background:rgba(9,_21,_48,_.67)] [backdrop-filter:blur(5px)] flex items-center justify-center p-[20px]"
       role="presentation"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
@@ -44,7 +44,7 @@ export default function Dialog({
             type="button"
             onClick={onClose}
             aria-label="Tutup"
-            className="icon-button"
+            className="icon-button w-[35px] h-[35px] inline-flex items-center justify-center rounded-[10px] bg-transparent text-[#7c8da8]"
           >
             <X size={21} />
           </button>

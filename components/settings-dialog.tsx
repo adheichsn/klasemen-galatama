@@ -135,7 +135,9 @@ export default function SettingsDialog({
         </span>
       </div>
       <div className="section-rule" />
-      <h3 className="section-heading danger-text">Zona Reset</h3>
+      <h3 className="section-heading danger-text !text-[#df4b61]">
+        Zona Reset
+      </h3>
       <div className="settings-actions">
         <button
           className="danger-button"

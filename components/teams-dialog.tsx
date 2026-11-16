@@ -44,7 +44,7 @@ export default function TeamsDialog({
                     : "Hapus clan"
                 }
                 disabled={locked || store.data.teams.length <= 1}
-                className="icon-button danger-icon"
+                className="icon-button w-[35px] h-[35px] inline-flex items-center justify-center rounded-[10px] bg-transparent text-[#7c8da8] danger-icon"
                 onClick={() => {
                   if (window.confirm(`Hapus ${team.name}?`))
                     store.removeTeam(team.id);

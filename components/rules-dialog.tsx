@@ -102,7 +102,7 @@ export default function RulesDialog({
               }
             />
             <button
-              className="icon-button danger-icon"
+              className="icon-button w-[35px] h-[35px] inline-flex items-center justify-center rounded-[10px] bg-transparent text-[#7c8da8] danger-icon"
               aria-label={`Hapus ${rule.name}`}
               onClick={() => {
                 if (

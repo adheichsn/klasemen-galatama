@@ -1,0 +1,25 @@
+.weji-public {
+    font-family: "Plus Jakarta Sans", "DM Sans", sans-serif;
+}
+
+.weji-public .weji-hero {
+    isolation: isolate;
+}
+
+.weji-public .weji-hero-orbit {
+    animation: weji-orbit 16s ease-in-out infinite alternate;
+}
+
+.weji-public .weji-event-art svg {
+    transition: transform .35s ease;
+}
+
+.weji-public .weji-event-art:hover svg {
+    transform: translateY(-4px) rotate(-8deg);
+}
+
+@keyframes weji-orbit {
+    to {
+        transform: translate(-38px, 18px) rotate(20deg);
+    }
+}

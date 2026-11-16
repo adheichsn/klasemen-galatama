@@ -53,7 +53,7 @@ export default function EventDashboard() {
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
       <div className="content-shell">
-        <header className="topbar">
+        <header className="topbar bg-[#fff] [border-bottom:1px_solid_var(--line)] h-[76px] flex items-center justify-between p-[0_34px] gap-[16px] sticky top-[0] z-[20]">
           <div className="brand">
             <div className="brand-icon">
               <Fish size={27} />
@@ -122,7 +122,7 @@ export default function EventDashboard() {
               <span>
                 <Clock3 size={16} /> MATCH TIMER
               </span>
-              <strong className={store.remaining === 0 ? "danger-text" : ""}>
+              <strong className={store.remaining === 0 ? "danger-text !text-[#df4b61]" : ""}>
                 {formatTime(store.remaining)}
               </strong>
             </div>
@@ -180,7 +180,7 @@ export default function EventDashboard() {
             <span>{store.data.entries.length} Transaksi</span>
           </div>
         </section>
-        <div className="section-top">
+        <div className="section-top flex items-end justify-between gap-[16px]">
           <div>
             <span className="eyebrow">LIVE SCOREBOARD</span>
             <h2>Daftar Clan & Peserta</h2>

@@ -72,7 +72,7 @@ export default function CatchDialog({
           </div>
         ))}
         {ordered.length === 0 && (
-          <p className="empty-state">
+          <p className="empty-state flex items-center flex-col text-center justify-center p-[42px_22px] gap-[7px]">
             Belum ada aturan aktif. Buka Pengaturan Poin untuk menambahnya.
           </p>
         )}

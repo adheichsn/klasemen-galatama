@@ -60,7 +60,7 @@ export default function HistoryDialog({
               !isReversed(store.data.entries, e.id) ? (
                 <button
                   title="Batalkan transaksi dengan catatan pembalik"
-                  className="icon-button"
+                  className="icon-button w-[35px] h-[35px] inline-flex items-center justify-center rounded-[10px] bg-transparent text-[#7c8da8]"
                   aria-label="Batalkan transaksi"
                   onClick={() => {
                     if (
@@ -82,7 +82,7 @@ export default function HistoryDialog({
           ))}
         </div>
       ) : (
-        <p className="empty-state">
+        <p className="empty-state flex items-center flex-col text-center justify-center p-[42px_22px] gap-[7px]">
           Belum ada penilaian. Catat tarikan ikan atau masukkan poin manual
           untuk memulai.
         </p>
