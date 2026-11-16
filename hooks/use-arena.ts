@@ -22,6 +22,11 @@ import {
   migrateLegacy,
 } from "@/lib/arena-storage";
 import { isReversed, secondsLeft, validPoints } from "@/lib/arena-utils";
+import {
+  canAssignSquad,
+  canSwitchMode,
+  calculateCatch,
+} from "@/lib/arena-rules";
 
 export function useArena() {
   const [data, setData] = useState<ArenaData>(initialArena);
@@ -98,8 +103,11 @@ export function useArena() {
         ? { ...prev, activeEventId: id }
         : prev,
     );
-  const create = () => {
-    const e = newEvent();
+  const create = (mode: EventMode = "solo") => {
+    const e = newEvent(
+      mode === "solo" ? "Galatama Solo Baru" : "Galatama Squad Baru",
+      mode,
+    );
     setData((prev) => ({
       ...prev,
       activeEventId: e.id,
@@ -110,6 +118,10 @@ export function useArena() {
   const duplicate = (id: string) => {
     const source = data.events.find((e) => e.id === id);
     if (!source) return;
+    const copiedBonuses = source.bonuses.map((b) => ({ ...b, id: newId() }));
+    const tieBonusIndex = source.bonuses.findIndex(
+      (b) => b.id === source.tieBonusId,
+    );
     const copy: ArenaEvent = {
       ...source,
       id: newId(),
@@ -121,7 +133,8 @@ export function useArena() {
       entries: [],
       participants: [],
       fish: source.fish.map((f) => ({ ...f, id: newId() })),
-      bonuses: source.bonuses.map((b) => ({ ...b, id: newId() })),
+      bonuses: copiedBonuses,
+      tieBonusId: tieBonusIndex >= 0 ? copiedBonuses[tieBonusIndex].id : null,
       writtenRules: source.writtenRules.map((r) => ({ ...r, id: newId() })),
       faqs: source.faqs.map((q) => ({ ...q, id: newId() })),
       squads: source.squads.map((s) => ({ ...s, id: newId() })),
@@ -165,7 +178,7 @@ export function useArena() {
       [key]: value.slice(0, key === "subtitle" ? 180 : 100),
     }));
   const mode = (value: EventMode) =>
-    update((e) => (e.entries.length ? e : { ...e, mode: value }));
+    update((e) => (!canSwitchMode(e) ? e : { ...e, mode: value }));
   const setTie = (value: TieBreaker, bonusId: string | null) =>
     update((e) => ({ ...e, tieBreaker: value, tieBonusId: bonusId }));
   const publish = (value: boolean) =>
@@ -326,13 +339,17 @@ export function useArena() {
     update((e) => ({ ...e, faqs: e.faqs.filter((f) => f.id !== id) }));
   const addSquad = (name: string) => {
     if (!name.trim()) return;
-    update((e) => ({
-      ...e,
-      squads: [
-        ...e.squads,
-        { id: newId(), name: name.trim().slice(0, 70), color: "#3478F6" },
-      ],
-    }));
+    update((e) =>
+      e.mode !== "squad"
+        ? e
+        : {
+            ...e,
+            squads: [
+              ...e.squads,
+              { id: newId(), name: name.trim().slice(0, 70), color: "#3478F6" },
+            ],
+          },
+    );
   };
   const changeSquad = (id: string, fields: Partial<Squad>) =>
     update((e) => ({
@@ -352,7 +369,8 @@ export function useArena() {
   ) => {
     if (!name.trim()) return;
     update((e) =>
-      e.participants.length >= 2000
+      e.participants.length >= 2000 ||
+      (e.mode === "squad" && !e.squads.some((s) => s.id === squadId))
         ? e
         : {
             ...e,
@@ -370,12 +388,34 @@ export function useArena() {
     );
   };
   const changeParticipant = (id: string, fields: Partial<Participant>) =>
-    update((e) => ({
-      ...e,
-      participants: e.participants.map((p) =>
-        p.id === id ? { ...p, ...fields } : p,
-      ),
-    }));
+    update((e) => {
+      const existing = e.participants.find((p) => p.id === id);
+      if (!existing) return e;
+      // Historical team ownership must not change when roster edits are made.
+      if (
+        fields.squadId !== undefined &&
+        fields.squadId !== existing.squadId &&
+        !canAssignSquad(e, id, fields.squadId)
+      )
+        return e;
+      return {
+        ...e,
+        participants: e.participants.map((p) =>
+          p.id === id
+            ? {
+                ...p,
+                ...fields,
+                squadId:
+                  e.mode === "solo"
+                    ? null
+                    : fields.squadId === undefined
+                      ? p.squadId
+                      : fields.squadId,
+              }
+            : p,
+        ),
+      };
+    });
   const removeParticipant = (id: string) =>
     update((e) =>
       e.entries.some((s) => s.participantId === id)
@@ -388,28 +428,25 @@ export function useArena() {
     bonusIds: string[],
     quantity: number,
   ) => {
-    if (!Number.isSafeInteger(quantity) || quantity < 1 || quantity > 99)
-      return false;
     const e = active;
-    const fish = e?.fish.find((f) => f.id === fishId && f.enabled);
     if (
       !e ||
-      !fish ||
       !e.participants.some((p) => p.id === participantId) ||
       e.status !== "live" ||
       (e.mode === "squad" &&
         !e.participants.find((p) => p.id === participantId)?.squadId)
     )
       return false;
-    const bonuses = e.bonuses
-      .filter((b) => b.enabled && bonusIds.includes(b.id))
-      .map((b) => ({ id: b.id, name: b.name, points: b.points }));
-    const delta =
-      (fish.points + bonuses.reduce((sum, b) => sum + b.points, 0)) * quantity;
-    if (!validPoints(delta)) return false;
+    const result = calculateCatch(e, fishId, bonusIds, quantity);
+    if (!result) return false;
+    const { fish, bonuses, delta } = result;
     const entry: ScoreEntry = {
       id: newId(),
       participantId,
+      squadId:
+        e.mode === "squad"
+          ? e.participants.find((p) => p.id === participantId)?.squadId
+          : null,
       kind: "catch",
       delta,
       description: `${fish.name} ×${quantity}${bonuses.length ? ` • ${bonuses.map((b) => b.name).join(", ")}` : ""}`,
@@ -430,12 +467,19 @@ export function useArena() {
       !reason.trim() ||
       !active ||
       active.status !== "live" ||
-      !active.participants.some((p) => p.id === participantId)
+      !active.participants.some(
+        (p) =>
+          p.id === participantId && (active.mode === "solo" || !!p.squadId),
+      )
     )
       return false;
     const entry: ScoreEntry = {
       id: newId(),
       participantId,
+      squadId:
+        active.mode === "squad"
+          ? active.participants.find((p) => p.id === participantId)?.squadId
+          : null,
       kind: "manual",
       delta: points,
       description: reason.trim().slice(0, 300),
@@ -457,6 +501,9 @@ export function useArena() {
       const reversal: ScoreEntry = {
         id: newId(),
         participantId: original.participantId,
+        squadId:
+          original.squadId ??
+          e.participants.find((p) => p.id === original.participantId)?.squadId,
         kind: "reversal",
         delta: -original.delta,
         description: `Pembatalan: ${original.description}`,

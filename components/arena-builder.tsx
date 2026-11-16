@@ -6,17 +6,24 @@ import {
   CircleHelp,
   Fish,
   Info,
+  LockKeyhole,
   Plus,
   Settings2,
   ShieldCheck,
   Sparkles,
   Trash2,
+  UserRound,
   Users,
+  UsersRound,
   WandSparkles,
 } from "lucide-react";
-import type { EditorSection } from "@/lib/arena-types";
+import type { EditorSection, EventMode } from "@/lib/arena-types";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import type { ArenaStore } from "@/hooks/use-arena";
 import { fmt, validPoints } from "@/lib/arena-utils";
+import { canSwitchMode } from "@/lib/arena-rules";
 
 const sections: { id: EditorSection; text: string; icon: typeof Fish }[] = [
   { id: "general", text: "Informasi", icon: Settings2 },
@@ -45,6 +52,8 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
   const [username, setUsername] = useState("");
   const [squadId, setSquadId] = useState("");
   const [squadName, setSquadName] = useState("");
+  const [squadFilter, setSquadFilter] = useState("all");
+  const modeLocked = !canSwitchMode(e);
   const locked = e.status === "finished";
   const addCatalog = () => {
     const n = parsePoints(points);
@@ -106,6 +115,68 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                   Informasi yang tampil pada header, detail event dan arsip.
                 </p>
               </div>
+              <div
+                className="mb-6 grid gap-3 sm:grid-cols-2"
+                role="group"
+                aria-label="Pilih format turnamen"
+              >
+                {(
+                  [
+                    [
+                      "solo",
+                      "SOLO",
+                      "Kompetisi individual",
+                      "Skor, podium, dan ranking milik setiap pemain.",
+                      UserRound,
+                    ],
+                    [
+                      "squad",
+                      "SQUAD",
+                      "Kompetisi tim",
+                      "Daftarkan squad serta anggota; nilai anggota dijumlah ke tim.",
+                      UsersRound,
+                    ],
+                  ] as const
+                ).map(([value, title, subtitle, detail, Icon]) => (
+                  <Card
+                    key={value}
+                    className={`relative border-2 p-1 transition-all ${e.mode === value ? "!border-blue-500 bg-blue-50/80 shadow-blue-100" : "!border-slate-200 hover:!border-blue-200"}`}
+                  >
+                    <button
+                      type="button"
+                      aria-pressed={e.mode === value}
+                      disabled={modeLocked && e.mode !== value}
+                      onClick={() => store.mode(value as EventMode)}
+                      className="flex w-full items-start gap-3 rounded-xl p-4 text-left disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <div
+                        className={`rounded-xl p-2.5 ${e.mode === value ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}
+                      >
+                        <Icon size={23} />
+                      </div>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center gap-2 text-lg font-extrabold tracking-tight text-slate-900">
+                          {title}
+                          {e.mode === value && <Badge tone="blue">AKTIF</Badge>}
+                        </span>
+                        <span className="mt-1 block font-bold text-slate-700">
+                          {subtitle}
+                        </span>
+                        <span className="mt-1 block text-xs leading-5 text-slate-500">
+                          {detail}
+                        </span>
+                      </span>
+                    </button>
+                  </Card>
+                ))}
+              </div>
+              {modeLocked && (
+                <p className="mb-5 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-900">
+                  <LockKeyhole size={16} /> Format dikunci karena sudah ada
+                  roster, squad, skor, atau pertandingan bukan Draft. Buat
+                  turnamen baru untuk format berbeda.
+                </p>
+              )}
               <div className="form-grid">
                 <label className="field span-2">
                   Nama turnamen
@@ -166,19 +237,6 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                   />
                 </label>
                 <label className="field">
-                  Mode pertandingan
-                  <select
-                    disabled={locked || e.entries.length > 0}
-                    value={e.mode}
-                    onChange={(v) =>
-                      store.mode(v.target.value as "solo" | "squad")
-                    }
-                  >
-                    <option value="solo">SOLO / Individu</option>
-                    <option value="squad">SQUAD / Tim</option>
-                  </select>
-                </label>
-                <label className="field">
                   Visibilitas event
                   <select
                     disabled={locked}
@@ -236,8 +294,9 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
               </div>
               <div className="notice">
                 <Info size={18} />
-                Mode Solo/Squad hanya bisa diganti sebelum ada transaksi skor.
-                Mengganti durasi akan mereset timer event ini.
+                Mode SOLO dan SQUAD terpisah sepenuhnya. Pilih format sebelum
+                mendaftarkan pemain atau squad. Mengganti durasi akan mereset
+                timer event ini.
               </div>
             </div>
           )}
@@ -474,11 +533,34 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
           {tab === "participants" && (
             <div className="stack-lg">
               <div className="block-title">
-                <h3>Peserta {e.mode === "squad" ? "& Squad" : "Individu"}</h3>
+                <h3>
+                  {e.mode === "squad"
+                    ? "Manajemen Squad & Anggota"
+                    : "Peserta SOLO"}
+                </h3>
                 <p>
-                  Kelola nama, username Roblox, dan kehadiran. Peserta dengan
-                  riwayat skor tidak dapat dihapus.
+                  {e.mode === "squad"
+                    ? "Buat squad dahulu, daftarkan anggota ke squad, lalu catat kontribusi tiap anggota."
+                    : "Daftarkan peserta individu. Tidak ada tim atau penggabungan poin."}{" "}
+                  Pemain dengan riwayat skor tidak dapat dihapus atau dipindah
+                  tim.
                 </p>
+              </div>
+              <div
+                className={`flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold ${e.mode === "solo" ? "bg-blue-50 text-blue-800" : "bg-indigo-50 text-indigo-800"}`}
+              >
+                {e.mode === "solo" ? (
+                  <UserRound size={18} />
+                ) : (
+                  <UsersRound size={18} />
+                )}
+                <strong>MODE {e.mode.toUpperCase()}</strong>
+                <span className="font-normal">
+                  —{" "}
+                  {e.mode === "solo"
+                    ? "1 pemain = 1 peringkat"
+                    : "Poin seluruh anggota = poin squad"}
+                </span>
               </div>
               {e.mode === "squad" && (
                 <div className="squad-editor">
@@ -536,81 +618,123 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                   </div>
                 </div>
               )}
+              {e.mode === "squad" && (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    variant={squadFilter === "all" ? "default" : "secondary"}
+                    onClick={() => setSquadFilter("all")}
+                  >
+                    Semua anggota ({e.participants.length})
+                  </Button>
+                  {e.squads.map((s) => (
+                    <Button
+                      key={s.id}
+                      size="sm"
+                      variant={squadFilter === s.id ? "default" : "secondary"}
+                      onClick={() => setSquadFilter(s.id)}
+                    >
+                      {s.name} (
+                      {e.participants.filter((p) => p.squadId === s.id).length})
+                    </Button>
+                  ))}
+                </div>
+              )}
               <div className="participant-list">
-                {e.participants.map((p) => (
-                  <div className="participant-edit" key={p.id}>
-                    <div className="participant-avatar">
-                      {p.name.slice(0, 1).toUpperCase()}
-                    </div>
-                    <div className="participant-fields">
-                      <input
-                        disabled={locked}
-                        value={p.name}
-                        maxLength={80}
-                        aria-label="Nama peserta"
-                        onChange={(v) =>
-                          store.changeParticipant(p.id, {
-                            name: v.target.value,
-                          })
-                        }
-                      />
-                      <input
-                        disabled={locked}
-                        value={p.username}
-                        maxLength={80}
-                        aria-label="Username Roblox"
-                        placeholder="Username Roblox"
-                        onChange={(v) =>
-                          store.changeParticipant(p.id, {
-                            username: v.target.value,
-                          })
-                        }
-                      />
-                      {e.mode === "squad" && (
-                        <select
+                {e.participants
+                  .filter(
+                    (p) =>
+                      e.mode === "solo" ||
+                      squadFilter === "all" ||
+                      !e.squads.some((s) => s.id === squadFilter) ||
+                      p.squadId === squadFilter,
+                  )
+                  .map((p) => (
+                    <div className="participant-edit" key={p.id}>
+                      <div className="participant-avatar">
+                        {p.name.slice(0, 1).toUpperCase()}
+                      </div>
+                      <div className="participant-fields">
+                        <input
                           disabled={locked}
-                          value={p.squadId || ""}
+                          value={p.name}
+                          maxLength={80}
+                          aria-label="Nama peserta"
                           onChange={(v) =>
                             store.changeParticipant(p.id, {
-                              squadId: v.target.value || null,
+                              name: v.target.value,
                             })
                           }
-                        >
-                          <option value="">Pilih Squad</option>
-                          {e.squads.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              {s.name}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                    </div>
-                    <label className="check-label">
-                      <input
-                        disabled={locked}
-                        type="checkbox"
-                        checked={p.checkedIn}
-                        onChange={(v) =>
-                          store.changeParticipant(p.id, {
-                            checkedIn: v.target.checked,
-                          })
+                        />
+                        <input
+                          disabled={locked}
+                          value={p.username}
+                          maxLength={80}
+                          aria-label="Username Roblox"
+                          placeholder="Username Roblox"
+                          onChange={(v) =>
+                            store.changeParticipant(p.id, {
+                              username: v.target.value,
+                            })
+                          }
+                        />
+                        {e.mode === "squad" && (
+                          <select
+                            title={
+                              e.entries.some(
+                                (entry) => entry.participantId === p.id,
+                              )
+                                ? "Anggota dengan riwayat skor tidak boleh pindah squad"
+                                : "Pilih squad"
+                            }
+                            disabled={
+                              locked ||
+                              e.entries.some(
+                                (entry) => entry.participantId === p.id,
+                              )
+                            }
+                            value={p.squadId || ""}
+                            onChange={(v) =>
+                              store.changeParticipant(p.id, {
+                                squadId: v.target.value || null,
+                              })
+                            }
+                          >
+                            <option value="">Pilih Squad</option>
+                            {e.squads.map((s) => (
+                              <option key={s.id} value={s.id}>
+                                {s.name}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                      <label className="check-label">
+                        <input
+                          disabled={locked}
+                          type="checkbox"
+                          checked={p.checkedIn}
+                          onChange={(v) =>
+                            store.changeParticipant(p.id, {
+                              checkedIn: v.target.checked,
+                            })
+                          }
+                        />
+                        <span>Check-in</span>
+                      </label>
+                      <button
+                        disabled={
+                          locked ||
+                          e.entries.some((x) => x.participantId === p.id)
                         }
-                      />
-                      <span>Check-in</span>
-                    </label>
-                    <button
-                      disabled={
-                        locked ||
-                        e.entries.some((x) => x.participantId === p.id)
-                      }
-                      className="icon-button danger"
-                      title="Hapus peserta tanpa riwayat"
-                      onClick={() => store.removeParticipant(p.id)}
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                ))}
+                        className="icon-button danger"
+                        title="Hapus peserta tanpa riwayat"
+                        onClick={() => store.removeParticipant(p.id)}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
                 {e.participants.length === 0 && (
                   <div className="empty-row">
                     <Users size={24} />

@@ -193,6 +193,139 @@ tied.entries.unshift({
 });
 assert.equal(standings(tied)[0].name, "Yana");
 assert.equal(standings(tied).find((r) => r.id === "x").catches, 0);
+// V2.1: mode separation, team snapshots, and event-specific scoring rules.
+const { canSwitchMode, canAssignSquad, calculateCatch } =
+  load("lib/arena-rules.ts");
+const solo = newEvent("Solo Test", "solo");
+const squad = newEvent("Squad Test", "squad");
+assert.equal(solo.mode, "solo");
+assert.equal(squad.mode, "squad");
+assert.equal(canSwitchMode(solo), true);
+solo.participants = [
+  {
+    id: "solo1",
+    name: "Pemain Solo",
+    username: "solo",
+    checkedIn: false,
+    squadId: null,
+  },
+];
+assert.equal(
+  canSwitchMode(solo),
+  false,
+  "mode locked immediately after registration",
+);
+squad.squads = [
+  { id: "red", name: "Red", color: "#ff0000" },
+  { id: "blue", name: "Blue", color: "#0000ff" },
+];
+squad.participants = [
+  { id: "r1", name: "Red One", username: "", checkedIn: true, squadId: "red" },
+  { id: "r2", name: "Red Two", username: "", checkedIn: true, squadId: "red" },
+  {
+    id: "b1",
+    name: "Blue One",
+    username: "",
+    checkedIn: true,
+    squadId: "blue",
+  },
+];
+assert.equal(canSwitchMode(squad), false);
+assert.equal(canAssignSquad(squad, "r1", "blue"), true);
+assert.equal(canAssignSquad(squad, "r1", "unknown"), false);
+squad.fish = [{ id: "f", name: "Blob Shark", points: 1, enabled: true }];
+squad.bonuses = [
+  { id: "mut", name: "Mutasi", points: 3, enabled: true },
+  { id: "big", name: "Big", points: 1, enabled: true },
+];
+let calculated = calculateCatch(squad, "f", ["mut", "big"], 2);
+assert.equal(calculated.delta, 10, "1 + 3 + 1 per fish, times two");
+assert.equal(
+  calculateCatch(squad, "f", ["mut", "mut"], 1).delta,
+  4,
+  "duplicate bonus ID cannot count twice",
+);
+assert.equal(calculateCatch(squad, "f", [], 0), null);
+assert.equal(calculateCatch(squad, "missing", [], 1), null);
+squad.entries = [
+  {
+    id: "red1",
+    participantId: "r1",
+    squadId: "red",
+    kind: "catch",
+    delta: 10,
+    description: "Red",
+    quantity: 2,
+    bonuses: [{ id: "mut", name: "Mutasi", points: 3 }],
+    createdAt: "2026-11-16T00:00:00Z",
+  },
+  {
+    id: "red2",
+    participantId: "r2",
+    squadId: "red",
+    kind: "catch",
+    delta: 4,
+    description: "Red2",
+    quantity: 1,
+    createdAt: "2026-11-16T00:01:00Z",
+  },
+  {
+    id: "blue1",
+    participantId: "b1",
+    squadId: "blue",
+    kind: "catch",
+    delta: 7,
+    description: "Blue",
+    quantity: 1,
+    createdAt: "2026-11-16T00:01:00Z",
+  },
+];
+assert.equal(
+  canAssignSquad(squad, "r1", "blue"),
+  false,
+  "scored player must remain in original squad",
+);
+assert.equal(standings(squad).find((r) => r.id === "red").points, 14);
+assert.equal(standings(squad).find((r) => r.id === "blue").points, 7);
+assert.equal(standings(squad).find((r) => r.id === "red").catches, 3);
+// Even malformed UI code assigning a different roster squad must not transfer snapshotted scoring.
+squad.participants[0].squadId = "blue";
+assert.equal(
+  standings(squad).find((r) => r.id === "red").points,
+  14,
+  "historic team snapshot unaffected by roster edits",
+);
+squad.participants[0].squadId = "red";
+squad.entries.unshift({
+  id: "cancelred",
+  participantId: "r1",
+  squadId: "red",
+  kind: "reversal",
+  delta: -10,
+  reversesEntryId: "red1",
+  description: "Rollback",
+  createdAt: "2026-11-16T00:02:00Z",
+});
+assert.equal(standings(squad).find((r) => r.id === "red").points, 4);
+assert.equal(standings(squad).find((r) => r.id === "red").catches, 1);
+assert.equal(
+  validArena({ version: 2, activeEventId: squad.id, events: [squad] }),
+  true,
+  "score snapshot is backward-compatible",
+);
+const future = structuredClone(squad);
+future.bonuses[0].points = 99;
+assert.equal(
+  standings(future).find((r) => r.id === "red").points,
+  4,
+  "future scoring settings do not recalculate history",
+);
+assert.equal(standings(solo).length, 1, "SOLO leaderboard remains individual");
+assert.equal(
+  standings(squad).length,
+  2,
+  "SQUAD leaderboard contains teams, not individual players",
+);
 const corrupt = structuredClone(data);
 corrupt.events[0].entries = [
   {
@@ -207,5 +340,5 @@ corrupt.events[0].entries = [
 ];
 assert.equal(validArena(corrupt), false);
 console.log(
-  "PASS: arena smoke assertions (new event, configurable rules, rankings, history, rollback, V1 migration).",
+  "PASS: V2.1 smoke assertions (SOLO/SQUAD isolation, squad score snapshot, custom rules, rollback, rankings, V1 migration).",
 );

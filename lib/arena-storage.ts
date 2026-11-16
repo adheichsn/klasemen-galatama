@@ -133,6 +133,12 @@ export function validArena(x: unknown): x is ArenaData {
             return false;
           if (v.reversesEntryId !== undefined && !isString(v.reversesEntryId))
             return false;
+          if (
+            v.squadId !== undefined &&
+            v.squadId !== null &&
+            !isString(v.squadId)
+          )
+            return false;
           if (v.fishId !== undefined && !isString(v.fishId)) return false;
           if (v.fishName !== undefined && !isString(v.fishName)) return false;
           if (v.basePoints !== undefined && !validPoints(v.basePoints))
@@ -209,6 +215,7 @@ export function migrateLegacy(x: unknown): ArenaData | null {
     const entries: ScoreEntry[] = x.entries.map((e: RecordMap) => ({
       id: String(e.id),
       participantId: String(e.playerId),
+      squadId: e.teamId ? String(e.teamId) : undefined,
       kind: e.kind as ScoreEntry["kind"],
       delta: Number(e.delta),
       description: String(e.description || ""),

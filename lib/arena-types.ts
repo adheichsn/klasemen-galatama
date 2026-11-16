@@ -27,6 +27,8 @@ export type EntryBonus = { id: string; name: string; points: number };
 export type ScoreEntry = {
   id: string;
   participantId: string;
+  // Team snapshot for new Squad transactions. Legacy events may omit this field.
+  squadId?: string | null;
   kind: "catch" | "manual" | "reversal";
   delta: number;
   description: string;

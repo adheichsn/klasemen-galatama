@@ -53,11 +53,14 @@ import {
   downloadArena,
   fmt,
   isReversed,
-  participantPoints,
+  squadContribution,
   standings,
   timeLabel,
 } from "@/lib/arena-utils";
-import type { ArenaEvent, EventStatus } from "@/lib/arena-types";
+import type { ArenaEvent, EventMode, EventStatus } from "@/lib/arena-types";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { motion } from "motion/react";
 import ArenaBuilder from "./arena-builder";
 import ScoreModal from "./arena-score-modal";
 
@@ -120,7 +123,13 @@ function EventTile({
 }) {
   const rank = standings(e);
   return (
-    <article className="event-tile">
+    <motion.article
+      initial={{ opacity: 0, y: 9 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{ y: -4 }}
+      transition={{ duration: 0.24 }}
+      className="event-tile"
+    >
       <button
         className="event-cover"
         onClick={onOpen}
@@ -188,7 +197,7 @@ function EventTile({
           )}
         </div>
       </div>
-    </article>
+    </motion.article>
   );
 }
 export default function ArenaApp() {
@@ -202,6 +211,13 @@ export default function ArenaApp() {
   const [eventSearch, setEventSearch] = useState("");
   const [openFaq, setOpenFaq] = useState<string[]>([]);
   const [eventFilter, setEventFilter] = useState<"all" | EventStatus>("all");
+  const [eventModeFilter, setEventModeFilter] = useState<"all" | EventMode>(
+    "all",
+  );
+  const [archiveModeFilter, setArchiveModeFilter] = useState<"all" | EventMode>(
+    "all",
+  );
+  const [selectedSquad, setSelectedSquad] = useState("");
   const [notice, setNotice] = useState("");
   const [historyOpen, setHistoryOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -220,10 +236,14 @@ export default function ArenaApp() {
       next === "live" &&
       (!e.fish.some((f) => f.enabled) ||
         !e.participants.length ||
-        (e.mode === "squad" && !e.squads.length))
+        (e.mode === "squad" &&
+          (!e.squads.length ||
+            e.participants.some(
+              (p) => !p.squadId || !e.squads.some((s) => s.id === p.squadId),
+            ))))
     ) {
       setNotice(
-        "Lengkapi minimal satu ikan aktif dan satu peserta (beserta squad untuk mode Squad) sebelum memulai.",
+        "Lengkapi minimal satu ikan aktif, peserta, dan pastikan semua anggota SQUAD sudah terdaftar ke squad yang valid sebelum memulai.",
       );
       go("builder");
       return;
@@ -274,8 +294,11 @@ export default function ArenaApp() {
     `${p.name} ${p.subtitle}`.toLowerCase().includes(search.toLowerCase()),
   );
   const totalScore = e.entries.reduce((a, b) => a + b.delta, 0);
+  const cancelled = new Set(
+    e.entries.filter((x) => x.reversesEntryId).map((x) => x.reversesEntryId),
+  );
   const catchCount = e.entries
-    .filter((x) => x.kind === "catch")
+    .filter((x) => x.kind === "catch" && !cancelled.has(x.id))
     .reduce((a, x) => a + (x.quantity || 1), 0);
   const recent = e.entries.slice(0, 6);
   const finished = store.data.events.filter(
@@ -284,11 +307,16 @@ export default function ArenaApp() {
   const visibleEvents = store.data.events.filter(
     (x) =>
       (admin || x.published) &&
+      (eventModeFilter === "all" || x.mode === eventModeFilter) &&
       (eventFilter === "all" || x.status === eventFilter) &&
       `${x.title} ${x.location}`
         .toLowerCase()
         .includes(eventSearch.toLowerCase()),
   );
+  const squadView =
+    e.mode === "squad"
+      ? e.squads.find((x) => x.id === selectedSquad) || e.squads[0]
+      : undefined;
   const navItem = (item: { id: Page; label: string; icon: typeof Home }) => {
     const Icon = item.icon;
     return (
@@ -388,6 +416,12 @@ export default function ArenaApp() {
                 ].find((x) => x.id === page)?.label
               }
             </b>
+            <Badge
+              tone={e.mode === "solo" ? "blue" : "amber"}
+              className="hidden sm:inline-flex"
+            >
+              {e.mode.toUpperCase()}
+            </Badge>
           </div>
           <div className="topbar-end">
             <span className="topbar-date">FISH IT COMMUNITY HUB</span>
@@ -466,9 +500,9 @@ export default function ArenaApp() {
                       <CalendarDays size={15} />
                       {prettyDate(e.eventDate)}
                     </span>
-                    <span>
-                      <Users size={15} />
-                      {e.mode === "solo" ? "Solo" : "Squad"}
+                    <span className="!border !border-blue-300/40 !bg-blue-500/20 !text-white">
+                      <Users size={15} /> MODE{" "}
+                      {e.mode === "solo" ? "SOLO • INDIVIDU" : "SQUAD • TIM"}
                     </span>
                   </div>
                   <div className="hero-actions">
@@ -561,7 +595,8 @@ export default function ArenaApp() {
                     <div>
                       <div className="kicker">HALL OF CHAMPIONS</div>
                       <h2>
-                        <Crown size={20} /> Top 3 Standings
+                        <Crown size={20} /> Top 3{" "}
+                        {e.mode === "solo" ? "Peserta SOLO" : "SQUAD"}
                       </h2>
                     </div>
                     <span className={`status-chip ${e.status}`}>
@@ -775,11 +810,12 @@ export default function ArenaApp() {
                     <div className="kicker">THE LEADERBOARD</div>
                     <h2>
                       <Trophy size={20} /> Klasemen{" "}
-                      {e.mode === "solo" ? "Individu" : "Squad"}
+                      {e.mode === "solo" ? "SOLO • Individu" : "SQUAD • Tim"}
                     </h2>
                     <p>
-                      Peringkat otomatis berdasarkan total poin yang dicatat
-                      panitia.
+                      {e.mode === "solo"
+                        ? "Setiap pemain bertanding sendiri; tidak ada poin gabungan squad."
+                        : "Peringkat dihitung dari akumulasi tangkapan seluruh anggota dalam squad yang sama."}
                     </p>
                   </div>
                   <div className="leaderboard-tools">
@@ -891,6 +927,92 @@ export default function ArenaApp() {
                   />
                 )}
               </section>
+              {e.mode === "squad" && (
+                <section className="panel !overflow-visible">
+                  <div className="panel-heading">
+                    <div>
+                      <div className="kicker">
+                        SQUAD MODE • TEAM CONTRIBUTION
+                      </div>
+                      <h2>
+                        <Users size={19} /> Kontribusi Anggota Squad
+                      </h2>
+                      <p>
+                        Rincian poin setiap pemancing di dalam squad terpilih.
+                      </p>
+                    </div>
+                    <Badge tone="amber">KHUSUS SQUAD</Badge>
+                  </div>
+                  {e.squads.length ? (
+                    <div className="px-5 pb-5">
+                      <div className="mb-4 flex flex-wrap gap-2">
+                        {e.squads.map((team) => (
+                          <Button
+                            key={team.id}
+                            size="sm"
+                            variant={
+                              squadView?.id === team.id
+                                ? "default"
+                                : "secondary"
+                            }
+                            onClick={() => setSelectedSquad(team.id)}
+                          >
+                            {team.name}
+                          </Button>
+                        ))}
+                      </div>
+                      {squadView && (
+                        <div className="overflow-x-auto rounded-xl border border-slate-200">
+                          <table className="w-full min-w-[420px] text-left text-sm">
+                            <thead className="bg-slate-50 text-xs text-slate-500">
+                              <tr>
+                                <th className="px-4 py-3">ANGGOTA</th>
+                                <th className="px-4 py-3">TANGKAPAN</th>
+                                <th className="px-4 py-3 text-right">
+                                  KONTRIBUSI
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {squadContribution(e, squadView.id).map(
+                                (member) => (
+                                  <tr key={member.id}>
+                                    <td className="px-4 py-3 font-semibold text-slate-800">
+                                      {member.name}
+                                      <span className="ml-2 font-normal text-slate-400">
+                                        {member.username
+                                          ? "@" + member.username
+                                          : ""}
+                                      </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-slate-600">
+                                      {fmt(member.catches)} ikan
+                                    </td>
+                                    <td className="px-4 py-3 text-right font-extrabold text-blue-700">
+                                      {fmt(member.points)} PTS
+                                    </td>
+                                  </tr>
+                                ),
+                              )}
+                            </tbody>
+                          </table>
+                          {!squadContribution(e, squadView.id).length && (
+                            <p className="p-4 text-sm text-slate-500">
+                              Squad ini belum memiliki anggota.
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <Empty
+                      icon={Users}
+                      title="Squad belum dibuat"
+                      description="Daftarkan squad dan anggota terlebih dahulu pada Tournament Builder."
+                    />
+                  )}
+                </section>
+              )}
               <div className="dashboard-columns activity-layout">
                 <section className="panel">
                   <div className="panel-heading">
@@ -927,6 +1049,18 @@ export default function ArenaApp() {
                                 (p) => p.id === item.participantId,
                               )?.name || "Peserta lama"}
                             </strong>
+                            {e.mode === "squad" && (
+                              <small>
+                                {e.squads.find(
+                                  (s) =>
+                                    s.id ===
+                                    (item.squadId ||
+                                      e.participants.find(
+                                        (p) => p.id === item.participantId,
+                                      )?.squadId),
+                                )?.name || "Squad lama"}
+                              </small>
+                            )}
                             <span>{item.description}</span>
                             <small>
                               {new Date(item.createdAt).toLocaleString("id-ID")}
@@ -1067,15 +1201,25 @@ export default function ArenaApp() {
                   </p>
                 </div>
                 {admin && (
-                  <button
-                    className="btn primary"
-                    onClick={() => {
-                      store.create();
-                      go("builder");
-                    }}
-                  >
-                    <Plus size={18} /> Buat Turnamen
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      onClick={() => {
+                        store.create("solo");
+                        go("builder");
+                      }}
+                    >
+                      <Plus size={17} /> Turnamen SOLO
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        store.create("squad");
+                        go("builder");
+                      }}
+                    >
+                      <Users size={17} /> Turnamen SQUAD
+                    </Button>
+                  </div>
                 )}
               </div>
               <div className="filter-bar">
@@ -1087,6 +1231,17 @@ export default function ArenaApp() {
                     onChange={(v) => setEventSearch(v.target.value)}
                   />
                 </label>
+                <div className="flex flex-wrap items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
+                  {(["all", "solo", "squad"] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      className={`rounded-lg px-3 py-2 text-xs font-extrabold transition-colors ${eventModeFilter === mode ? "bg-blue-600 text-white shadow-sm" : "text-slate-600 hover:bg-blue-50"}`}
+                      onClick={() => setEventModeFilter(mode)}
+                    >
+                      {mode === "all" ? "SEMUA MODE" : mode.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
                 <div className="filter-buttons">
                   {(["all", "draft", "live", "finished"] as const).map((s) => (
                     <button
@@ -1139,12 +1294,12 @@ export default function ArenaApp() {
                       <button
                         className="btn primary"
                         onClick={() => {
-                          store.create();
+                          store.create("solo");
                           go("builder");
                         }}
                       >
                         <Plus size={16} />
-                        Buat Turnamen
+                        Buat SOLO
                       </button>
                     ) : undefined
                   }
@@ -1166,16 +1321,39 @@ export default function ArenaApp() {
                   <Archive size={14} /> {finished.length} arsip
                 </span>
               </div>
-              {finished.length ? (
+              <div className="flex flex-wrap gap-2">
+                {(["all", "solo", "squad"] as const).map((mode) => (
+                  <Button
+                    key={mode}
+                    size="sm"
+                    variant={
+                      archiveModeFilter === mode ? "default" : "secondary"
+                    }
+                    onClick={() => setArchiveModeFilter(mode)}
+                  >
+                    {mode === "all" ? "Semua Arsip" : mode.toUpperCase()}
+                  </Button>
+                ))}
+              </div>
+              {finished.filter(
+                (x) =>
+                  archiveModeFilter === "all" || x.mode === archiveModeFilter,
+              ).length ? (
                 <div className="event-grid">
-                  {finished.map((x) => (
-                    <EventTile
-                      key={x.id}
-                      e={x}
-                      admin={admin}
-                      onOpen={() => select(x.id)}
-                    />
-                  ))}
+                  {finished
+                    .filter(
+                      (x) =>
+                        archiveModeFilter === "all" ||
+                        x.mode === archiveModeFilter,
+                    )
+                    .map((x) => (
+                      <EventTile
+                        key={x.id}
+                        e={x}
+                        admin={admin}
+                        onOpen={() => select(x.id)}
+                      />
+                    ))}
                 </div>
               ) : (
                 <Empty
@@ -1218,7 +1396,8 @@ export default function ArenaApp() {
                             <h3>{ev.title}</h3>
                             <p>
                               {ev.location || "Map bebas"} •{" "}
-                              {prettyDate(ev.eventDate)}
+                              {prettyDate(ev.eventDate)} •{" "}
+                              <b>{ev.mode.toUpperCase()}</b>
                             </p>
                           </div>
                         </div>
@@ -1367,7 +1546,11 @@ export default function ArenaApp() {
         </main>
       </div>
       {scoreOpen && (
-        <ScoreModal store={store} onClose={() => setScoreOpen(false)} />
+        <ScoreModal
+          key={e.id}
+          store={store}
+          onClose={() => setScoreOpen(false)}
+        />
       )}
       {admin && (
         <div className="floating-tools">

@@ -1,8 +1,11 @@
-import type { ArenaData, ArenaEvent } from "./arena-types";
+import type { ArenaData, ArenaEvent, EventMode } from "./arena-types";
 export const newId = () =>
   globalThis.crypto?.randomUUID?.() ??
   `id-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-export function newEvent(title = "Turnamen Baru"): ArenaEvent {
+export function newEvent(
+  title = "Turnamen Baru",
+  mode: EventMode = "solo",
+): ArenaEvent {
   const id = newId();
   return {
     id,
@@ -11,7 +14,7 @@ export function newEvent(title = "Turnamen Baru"): ArenaEvent {
     location: "",
     host: "",
     eventDate: "",
-    mode: "solo",
+    mode,
     status: "draft",
     published: false,
     tieBreaker: "catches",

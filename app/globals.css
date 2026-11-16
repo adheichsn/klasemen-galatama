@@ -1,4 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+    --color-arena-blue: #2563eb;
+    --color-arena-ink: #142a55;
+    --color-arena-canvas: #f5f8ff;
+    --font-sans: "Plus Jakarta Sans", "DM Sans", sans-serif;
+}
 
 :root {
     --navy: #0d1937;
