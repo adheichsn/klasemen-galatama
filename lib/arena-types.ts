@@ -69,6 +69,8 @@ export type ArenaEvent = {
   entries: ScoreEntry[];
   timer: MatchTimer;
   createdAt: string;
+  /** First start timestamp (kept when pausing/resuming). */
+  startedAt?: string;
   finishedAt?: string;
 };
 export type ArenaData = {

@@ -5,6 +5,7 @@ import {
   PublicShell,
 } from "@/components/public-site";
 import { publicEvents } from "@/lib/public-events";
+import { LockKeyhole } from "lucide-react";
 export const dynamic = "force-dynamic";
 export default async function ArchivePage({
   searchParams,
@@ -33,6 +34,7 @@ export default async function ArchivePage({
         <p className="mt-2 text-sm text-slate-500">
           Kenang hasil akhir dan para juara dari seluruh edisi.
         </p>
+        <div className="mt-5 inline-flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-800"><LockKeyhole size={16} /> {finished.length} turnamen selesai • skor dan hasil final dikunci</div>
         <div className="my-7 flex flex-wrap gap-2">
           {[
             { label: "Semua", value: "" },

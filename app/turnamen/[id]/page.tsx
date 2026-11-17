@@ -1,4 +1,5 @@
 import PublicAutoRefresh from "@/components/public-auto-refresh";
+import LiveMatchClock from "@/components/live-match-clock";
 import { notFound } from "next/navigation";
 import {
   CalendarDays,
@@ -81,6 +82,7 @@ export default async function EventDetail({
             <PublicAutoRefresh />
           </div>
         )}
+        {(e.status === "live" || e.status === "finished") && <LiveMatchClock event={e} />}
         <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
           <div className="space-y-7">
             <PublicRanking event={e} />

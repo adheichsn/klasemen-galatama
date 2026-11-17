@@ -2,6 +2,7 @@ import "server-only";
 import { Pool } from "pg";
 import type { ArenaData } from "@/lib/arena-types";
 import { initialArena } from "@/lib/arena-data";
+import { validateMatchTransition } from "@/lib/match-operations";
 
 const globalForDb = globalThis as typeof globalThis & { __wejiPool?: Pool };
 function db() {
@@ -47,7 +48,8 @@ export async function getPublicEvents() {
 }
 export type SaveResult =
   | { ok: true; revision: number }
-  | { ok: false; conflict: true };
+  | { ok: false; conflict: true }
+  | { ok: false; invalid: string };
 export async function saveArenaSnapshot(
   value: ArenaData,
   expectedRevision: number,
@@ -55,7 +57,22 @@ export async function saveArenaSnapshot(
   const client = await db().connect();
   try {
     await client.query("BEGIN");
-    // Compare-and-swap protects against stale admin browser snapshots.
+    // Lock first, then validate historical final results against the authoritative
+    // database snapshot in the same transaction as the versioned write.
+    const locked = await client.query<{ revision: number; payload: ArenaData }>(
+      "SELECT revision, payload FROM weji_arena_state WHERE id = 1 FOR UPDATE",
+    );
+    if ((locked.rows[0]?.revision ?? 0) !== expectedRevision) {
+      await client.query("ROLLBACK");
+      return { ok: false, conflict: true };
+    }
+    if (locked.rows.length) {
+      const invalid = validateMatchTransition(locked.rows[0].payload, value);
+      if (invalid) {
+        await client.query("ROLLBACK");
+        return { ok: false, invalid };
+      }
+    }
     const result =
       expectedRevision === 0
         ? await client.query<{ revision: number }>(

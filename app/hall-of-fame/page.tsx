@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Crown, Medal, Trophy } from "lucide-react";
+import { Crown, LockKeyhole, Medal, Trophy } from "lucide-react";
 import { Breadcrumb, PublicShell, dateLabel } from "@/components/public-site";
 import { publicEvents } from "@/lib/public-events";
 import { standings, fmt } from "@/lib/arena-utils";
@@ -34,6 +34,7 @@ export default async function HallOfFame() {
                   <div className="mb-1 text-[10px] font-black text-blue-600">
                     {e.mode.toUpperCase()} • {dateLabel(e.eventDate)}
                   </div>
+                  <span className="mb-2 inline-flex items-center gap-1.5 rounded-md bg-emerald-50 px-2 py-1 text-[10px] font-extrabold text-emerald-700"><LockKeyhole size={12} /> Final Terkunci</span>
                   <h2 className="text-lg font-black text-[#142A55]">
                     {e.title}
                   </h2>

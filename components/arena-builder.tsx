@@ -276,7 +276,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                 <label className="field flex flex-col gap-[7px] text-[11px] text-[#4f6585] font-extrabold">
                   Durasi (menit)
                   <input
-                    disabled={locked}
+                    disabled={e.status !== "draft"}
                     type="number"
                     min={1}
                     max={1440}

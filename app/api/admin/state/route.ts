@@ -68,6 +68,11 @@ export async function PUT(request: NextRequest) {
     );
   try {
     const result = await saveArenaSnapshot(body.data, body.revision as number);
+    if (!result.ok && "invalid" in result)
+      return NextResponse.json(
+        { error: result.invalid },
+        { status: 422, headers: { "Cache-Control": "no-store" } },
+      );
     if (!result.ok)
       return NextResponse.json(
         {

@@ -64,13 +64,13 @@ export default function ScoreModal({
   const canSubmit =
     !!player &&
     e.status === "live" &&
-    (kind === "catch" ? !!calculated : manualValid);
+    (kind === "catch" ? !!calculated && store.remaining > 0 : manualValid);
 
   const submit = (keepOpen: boolean) => {
     setError("");
     setSavedMessage("");
     if (!canSubmit) {
-      setError("Pilih peserta dan lengkapi data. Input hanya tersedia saat turnamen LIVE.");
+      setError(kind === "catch" && store.remaining === 0 ? "Waktu pertandingan habis. Tangkapan baru tidak bisa ditambahkan; gunakan koreksi manual untuk penyesuaian yang sah sebelum finalisasi." : "Pilih peserta dan lengkapi data. Input hanya tersedia saat turnamen LIVE.");
       return;
     }
     const success = kind === "catch"

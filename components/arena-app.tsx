@@ -62,6 +62,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "motion/react";
 import { validBannerUrl } from "@/lib/banner";
+import { tournamentReadiness } from "@/lib/tournament-readiness";
 import ArenaBuilder from "./arena-builder";
 import { AdminCommandCenter } from "@/components/admin/admin-command-center";
 import ScoreModal from "./arena-score-modal";
@@ -243,38 +244,24 @@ export default function ArenaApp() {
     go("home");
   };
   const setEventStatus = (next: EventStatus) => {
-    if (
-      next === "live" &&
-      (!e.fish.some((f) => f.enabled) ||
-        !e.participants.length ||
-        (e.mode === "squad" &&
-          (!e.squads.length ||
-            e.participants.some(
-              (p) => !p.squadId || !e.squads.some((s) => s.id === p.squadId),
-            ))))
-    ) {
-      setNotice(
-        "Lengkapi minimal satu ikan aktif, peserta, dan pastikan semua anggota SQUAD sudah terdaftar ke squad yang valid sebelum memulai.",
-      );
-      go("builder");
+    if (e.status === "finished") {
+      setNotice("Hasil final sudah terkunci. Duplikat turnamen untuk membuat edisi baru.");
       return;
     }
-    if (
-      next === "finished" &&
-      !window.confirm(
-        "Akhiri turnamen dan kunci semua skor serta peraturan? Arsip akan tersedia di menu Arsip Galatama.",
-      )
-    )
-      return;
-    if (
-      e.status === "finished" &&
-      !window.confirm(
-        "Buka kembali event selesai? Status arsip dan hasil final bisa berubah jika skor dikoreksi.",
-      )
-    )
-      return;
+    if (next === "live" && e.status === "draft") {
+      if (!tournamentReadiness(e).canStart) {
+        setNotice("Lengkapi ikan aktif serta roster SOLO/SQUAD yang valid sebelum memulai pertandingan.");
+        go("builder");
+        return;
+      }
+      if (!window.confirm("Mulai pertandingan dan langsung jalankan hitung mundur? Setelah mulai, durasi tidak bisa diubah.")) return;
+    }
+    if (next === "finished") {
+      if (e.status !== "live") return;
+      if (!window.confirm("FINALISASI PERMANEN: akhiri pertandingan dan kunci poin, peserta, aturan serta timer? Hasil arsip tidak dapat dibuka lagi. Pastikan skor sudah benar.")) return;
+    }
     store.status(next);
-    setNotice("");
+    setNotice("Perubahan status belum diterbitkan. Klik Simpan ke Server agar terlihat di website publik.");
   };
   const load = async (file?: File) => {
     if (!file) return;
@@ -739,7 +726,7 @@ export default function ArenaApp() {
                         className={`live-indicator flex gap-[7px] items-center text-[10px] text-[#90a1b6] font-extrabold ${e.status === "live" ? "is-live" : ""}`}
                       >
                         <span />
-                        {e.status === "live" ? "LIVE" : e.status.toUpperCase()}
+                        {e.status === "finished" ? "FINAL" : e.status === "live" ? store.remaining === 0 ? "TIME UP" : e.timer.runningSince === null ? "PAUSED" : "LIVE" : "DRAFT"}
                       </div>
                     </div>
                     <div className="timer-face m-[3px_23px_13px] [background:linear-gradient(135deg,_#f4f8ff,_#eef5ff)] [border:1px_solid_#e5eefc] rounded-[13px] p-[15px_12px] text-center flex flex-col gap-[3px]">
@@ -749,13 +736,24 @@ export default function ArenaApp() {
                         Durasi {fmt(e.timer.durationSec / 60)} menit •{" "}
                         {e.mode.toUpperCase()}
                       </div>
+                      <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-blue-100" aria-label="Progres waktu pertandingan">
+                        <div className={`h-full rounded-full transition-[width] duration-500 ${store.remaining === 0 ? "bg-rose-500" : "bg-blue-600"}`} style={{ width: `${Math.min(100, Math.max(0, 100 * store.remaining / Math.max(1, e.timer.durationSec)))}%` }} />
+                      </div>
+                      {e.status === "finished" && (
+                        <div className="mt-3 inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-[11px] font-bold text-emerald-700">
+                          <LockKeyhole size={14} /> Hasil final terkunci {e.finishedAt ? `• ${new Date(e.finishedAt).toLocaleDateString("id-ID")}` : ""}
+                        </div>
+                      )}
                     </div>
                     {admin && (
                       <div className="timer-controls flex gap-[9px] m-[0_23px]">
                         <button
                           className="btn inline-flex items-center justify-center gap-[9px] [border:1px_solid_transparent] rounded-[10px] min-h-[41px] p-[0_16px] whitespace-nowrap text-[12px] font-extrabold [transition:background_.2s,_transform_.2s,_box-shadow_.2s] primary"
-                          disabled={e.status !== "live"}
-                          onClick={store.toggleTimer}
+                          disabled={e.status !== "live" || (store.remaining === 0 && e.timer.runningSince === null)}
+                          onClick={() => {
+                            store.toggleTimer();
+                            setNotice("Perubahan timer perlu Simpan ke Server agar sinkron dengan penonton.");
+                          }}
                         >
                           {e.timer.runningSince === null ? (
                             <Play size={17} />
@@ -769,9 +767,9 @@ export default function ArenaApp() {
                         <button
                           className="icon-button w-[35px] h-[35px] inline-flex items-center justify-center rounded-[10px] bg-transparent text-[#7c8da8] bordered"
                           title="Reset timer"
-                          disabled={e.status === "finished"}
+                          disabled={e.status !== "draft"}
                           onClick={() => {
-                            if (window.confirm("Reset timer event ini?"))
+                            if (window.confirm("Reset durasi draft ke awal?"))
                               store.resetTimer();
                           }}
                         >
@@ -800,10 +798,10 @@ export default function ArenaApp() {
                         ) : (
                           <button
                             className="text-action bg-transparent text-[#2864ee] inline-flex items-center gap-[8px] p-[7px_0] text-[12px] font-extrabold"
-                            onClick={() => setEventStatus("live")}
+                            disabled
+                            type="button"
                           >
-                            <LockKeyhole size={15} /> Buka kembali event{" "}
-                            <ArrowRight size={15} />
+                            <LockKeyhole size={15} /> Final terkunci • arsip permanen
                           </button>
                         )}
                       </div>

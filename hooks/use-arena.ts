@@ -23,6 +23,7 @@ import {
   migrateLegacy,
 } from "@/lib/arena-storage";
 import { isReversed, secondsLeft, validPoints } from "@/lib/arena-utils";
+import { startMatch, pauseMatch, resumeMatch, finishMatch, resetDraftClock } from "@/lib/match-operations";
 import {
   canAssignSquad,
   canSwitchMode,
@@ -210,10 +211,11 @@ export function useArena() {
       id: newId(),
       title: `${source.title} (Salinan)`,
       status: "draft",
+      startedAt: undefined,
+      finishedAt: undefined,
       published: false,
       featured: false,
       createdAt: new Date().toISOString(),
-      finishedAt: undefined,
       entries: [],
       participants: [],
       fish: source.fish.map((f) => ({ ...f, id: newId() })),
@@ -275,59 +277,21 @@ export function useArena() {
     update((e) => ({ ...e, published: value }), true);
   const status = (value: EventStatus) =>
     update((e) => {
-      const changed = {
-        ...e,
-        status: value,
-        finishedAt: value === "finished" ? new Date().toISOString() : undefined,
-      };
-      return value === "finished"
-        ? {
-            ...changed,
-            timer: {
-              ...e.timer,
-              remainingSec: secondsLeft(e.timer, Date.now()),
-              runningSince: null,
-            },
-          }
-        : changed;
-    }, true);
+      if (value === "live") return startMatch(e);
+      if (value === "finished") return finishMatch(e);
+      // Finished tournaments are final. No status rollback here.
+      return e;
+    });
   const setDuration = (mins: number) =>
     update((e) => {
       const sec = Math.round(mins * 60);
-      return Number.isSafeInteger(sec) && sec >= 60 && sec <= 86400
-        ? {
-            ...e,
-            timer: { durationSec: sec, remainingSec: sec, runningSince: null },
-          }
+      return e.status === "draft" && Number.isSafeInteger(sec) && sec >= 60 && sec <= 86400
+        ? { ...e, timer: { durationSec: sec, remainingSec: sec, runningSince: null } }
         : e;
     });
   const toggleTimer = () =>
-    update((e) => {
-      const t = e.timer;
-      if (e.status !== "live") return e;
-      return {
-        ...e,
-        timer:
-          t.runningSince === null
-            ? t.remainingSec > 0
-              ? { ...t, runningSince: Date.now() }
-              : t
-            : {
-                ...t,
-                remainingSec: secondsLeft(t, Date.now()),
-                runningSince: null,
-              },
-      };
-    });
-  const resetTimer = () =>
-    update((e) => ({
-      ...e,
-      timer: {
-        ...e.timer,
-        remainingSec: e.timer.durationSec,
-        runningSince: null,
-      },
-    }));
+    update((e) => e.timer.runningSince === null ? resumeMatch(e) : pauseMatch(e));
+  const resetTimer = () => update(resetDraftClock);
   const addFish = (name: string, points: number) => {
     if (!name.trim() || !validPoints(points)) return;
     update((e) =>
@@ -523,6 +487,7 @@ export function useArena() {
       !e ||
       !e.participants.some((p) => p.id === participantId) ||
       e.status !== "live" ||
+      secondsLeft(e.timer, Date.now()) <= 0 ||
       (e.mode === "squad" &&
         !e.participants.find((p) => p.id === participantId)?.squadId)
     )

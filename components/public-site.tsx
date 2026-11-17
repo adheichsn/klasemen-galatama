@@ -14,6 +14,7 @@ import {
   Radio,
   Search,
   ShieldCheck,
+  LockKeyhole,
   Sparkles,
   Trophy,
   Users,
@@ -22,6 +23,7 @@ import {
 import type { ArenaEvent, EventMode } from "@/lib/arena-types";
 import { fmt, standings } from "@/lib/arena-utils";
 import { validBannerUrl } from "@/lib/banner";
+import { LiveRanking } from "@/components/live-ranking";
 
 export const dateLabel = (date: string) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return "Jadwal menyusul";
@@ -324,8 +326,50 @@ export function PublicRanking({
 }) {
   const ranking = standings(event);
   const rows = typeof max === "number" ? ranking.slice(0, max) : ranking;
+  if (event.status === "live") return <LiveRanking event={event} max={max} />;
   return (
     <div className="overflow-hidden rounded-2xl border border-blue-100 bg-white">
+      {event.status === "finished" && (
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-100 bg-emerald-50 px-5 py-3 text-xs font-bold text-emerald-800">
+          <span className="inline-flex items-center gap-2">
+            <LockKeyhole size={15} /> Hasil final terkunci • arsip resmi
+          </span>
+          {event.finishedAt && (
+            <span>
+              {new Date(event.finishedAt).toLocaleDateString("id-ID", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })}
+            </span>
+          )}
+        </div>
+      )}
+      {event.status === "finished" && ranking.length > 0 && (
+        <div className="grid grid-cols-3 gap-2 border-b border-blue-100 bg-gradient-to-br from-white to-blue-50 p-3 sm:gap-3 sm:p-5">
+          {[1, 0, 2].map((index) => {
+            const r = ranking[index];
+            return (
+              <div
+                key={index}
+                className={`min-w-0 rounded-xl border p-3 text-center sm:p-4 ${index === 0 ? "border-amber-200 bg-amber-50" : "border-blue-100 bg-white"}`}
+              >
+                <span
+                  className={`mb-2 inline-flex size-8 items-center justify-center rounded-full text-xs font-black ${index === 0 ? "bg-amber-400 text-amber-950" : "bg-blue-100 text-blue-700"}`}
+                >
+                  {index + 1}
+                </span>
+                <p className="truncate text-xs font-black text-[#142A55] sm:text-sm">
+                  {r?.name ?? "—"}
+                </p>
+                <p className="mt-1 text-xs font-black text-blue-700">
+                  {r ? fmt(r.points) : "—"} PTS
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      )}
       <div className="flex items-center justify-between border-b border-blue-100 px-5 py-4">
         <h3 className="flex items-center gap-2 text-base font-black text-[#142A55]">
           <Trophy size={19} className="text-blue-600" /> Klasemen{" "}

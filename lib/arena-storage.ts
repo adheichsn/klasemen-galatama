@@ -43,7 +43,9 @@ export function validArena(x: unknown): x is ArenaData {
         (e.featured !== undefined && !isBool(e.featured)) ||
         !["catches", "bonus", "alphabetical"].includes(String(e.tieBreaker)) ||
         !(e.tieBonusId === null || isString(e.tieBonusId)) ||
-        !isString(e.createdAt)
+        !isString(e.createdAt) ||
+        (e.startedAt !== undefined && !isString(e.startedAt)) ||
+        (e.finishedAt !== undefined && !isString(e.finishedAt))
       )
         return false;
       if (
