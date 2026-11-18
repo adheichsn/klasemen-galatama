@@ -21,7 +21,7 @@ export default async function ArchivePage({
         e.status === "finished" &&
         (q.mode === "solo" || q.mode === "squad" ? e.mode === q.mode : true),
     )
-    .sort((a, b) => (b.finishedAt || "").localeCompare(a.finishedAt || ""));
+    .sort((a, b) => (b.finishedAt || b.eventDate || "").localeCompare(a.finishedAt || a.eventDate || ""));
   return (
     <PublicShell>
       <main className="mx-auto max-w-[1260px] px-4 py-10 sm:px-6">

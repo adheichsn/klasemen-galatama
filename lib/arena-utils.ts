@@ -8,9 +8,9 @@ export function secondsLeft(timer: MatchTimer, now: number) {
   return timer.runningSince === null
     ? timer.remainingSec
     : Math.max(
-        0,
-        timer.remainingSec - Math.floor((now - timer.runningSince) / 1000),
-      );
+      0,
+      timer.remainingSec - Math.floor((now - timer.runningSince) / 1000),
+    );
 }
 export function timeLabel(seconds: number) {
   const s = Math.max(0, seconds);
@@ -75,8 +75,18 @@ export function standings(event: ArenaEvent) {
             : 0) ||
         a.name.localeCompare(b.name),
     );
+  const applyHistoricalPodium = <T extends { id: string; points: number }>(rows: T[]): T[] => {
+    if (!event.historical || event.status !== "finished" || event.historicalPodium?.length !== 3)
+      return rows;
+    const selected = event.historicalPodium.map((id) => rows.find((row) => row.id === id));
+    if (selected.some((row) => !row) || new Set(event.historicalPodium).size !== 3 ||
+      selected.some((row, i) => !row || row.points < (rows[2]?.points ?? -Infinity) ||
+        (i > 0 && row.points > (selected[i - 1]?.points ?? -Infinity)))) return rows;
+    const chosen = new Set(event.historicalPodium);
+    return [...selected as T[], ...rows.filter((row) => !chosen.has(row.id))];
+  };
   if (event.mode === "solo")
-    return sort(
+    return applyHistoricalPodium(sort(
       event.participants.map((p) => ({
         id: p.id,
         name: p.name,
@@ -88,8 +98,8 @@ export function standings(event: ArenaEvent) {
         bonusCatches: bonusById.get(p.id) || 0,
         players: 1,
       })),
-    );
-  return sort(
+    ));
+  return applyHistoricalPodium(sort(
     event.squads.map((s) => {
       const members = event.participants.filter((p) => p.squadId === s.id);
       return {
@@ -102,7 +112,7 @@ export function standings(event: ArenaEvent) {
         bonusCatches: bonusById.get(s.id) || 0,
       };
     }),
-  );
+  ));
 }
 export function squadContribution(event: ArenaEvent, squadId: string) {
   if (event.mode !== "squad") return [];

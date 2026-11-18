@@ -65,6 +65,12 @@ export type ArenaEvent = {
   /** Optional marketing fields for existing database snapshots/backups. */
   bannerUrl?: string;
   featured?: boolean;
+  /** V3.1.1: manually recorded previous match (never started LIVE on this website). */
+  historical?: boolean;
+  /** Timestamp of archival recording, not the time the actual match ended. */
+  historicalRecordedAt?: string;
+  /** Server-confirmed official Juara 1–3 (participant IDs for SOLO, squad IDs for SQUAD). */
+  historicalPodium?: string[];
   /** Recycle Bin metadata. Only server-side lifecycle endpoint can change it. */
   trashedAt?: string;
   trashedBy?: string;

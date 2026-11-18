@@ -69,6 +69,8 @@ import ArenaBuilder from "./arena-builder";
 import { AdminCommandCenter } from "@/components/admin/admin-command-center";
 import ScoreModal from "./arena-score-modal";
 import FinalizationReview from "@/components/admin/finalization-review";
+import { HistoricalEntryPanel } from "@/components/admin/historical-entry-panel";
+import HistoricalFinalizationReview from "@/components/admin/historical-finalization-review";
 import ScoreAuditDialog from "@/components/admin/score-audit-dialog";
 import PermanentDeleteDialog from "@/components/admin/permanent-delete-dialog";
 
@@ -92,10 +94,10 @@ const mainNav: { id: Page; label: string; icon: typeof Home }[] = [
 const prettyDate = (iso: string) =>
   iso
     ? new Date(`${iso}T12:00:00`).toLocaleDateString("id-ID", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      })
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    })
     : "Tanggal fleksibel";
 const statusText: Record<EventStatus, string> = {
   draft: "Draft",
@@ -242,6 +244,7 @@ export default function ArenaApp() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [scoreOpen, setScoreOpen] = useState(false);
   const [finalReviewOpen, setFinalReviewOpen] = useState(false);
+  const [historicalReviewOpen, setHistoricalReviewOpen] = useState(false);
   const [auditOpen, setAuditOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [eventSearch, setEventSearch] = useState("");
@@ -300,6 +303,10 @@ export default function ArenaApp() {
       setNotice(
         "Hasil final sudah terkunci. Duplikat turnamen untuk membuat edisi baru.",
       );
+      return;
+    }
+    if (next === "live" && e.historical) {
+      setNotice("Event historis tidak boleh menjalankan timer. Gunakan Review & Finalisasi Arsip.");
       return;
     }
     if (next === "live" && e.status === "draft") {
@@ -664,6 +671,14 @@ export default function ArenaApp() {
                   </span>
                 </div>
               </div>
+              {e.historical && e.status === "draft" && (
+                <HistoricalEntryPanel
+                  store={store}
+                  onConfigure={() => go("builder")}
+                  onCatch={() => setScoreOpen(true)}
+                  onReview={() => setHistoricalReviewOpen(true)}
+                />
+              )}
               <AdminCommandCenter
                 event={e}
                 dirty={store.dirty}
@@ -861,6 +876,7 @@ export default function ArenaApp() {
                           }}
                         />
                       </div>
+                      {e.historical && <p className="mt-2 text-xs font-bold text-blue-700">Arsip historis · pertandingan asli {e.eventDate || "belum diberi tanggal"} · tidak memakai timer LIVE</p>}
                       {e.status === "finished" && (
                         <div className="mt-3 inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-[11px] font-bold text-emerald-700">
                           <LockKeyhole size={14} /> Hasil final terkunci{" "}
@@ -870,7 +886,7 @@ export default function ArenaApp() {
                         </div>
                       )}
                     </div>
-                    {admin && (
+                    {admin && !e.historical && (
                       <div className="timer-controls flex gap-[9px] m-[0_23px]">
                         <button
                           className="btn inline-flex items-center justify-center gap-[9px] [border:1px_solid_transparent] rounded-[10px] min-h-[41px] p-[0_16px] whitespace-nowrap text-[12px] font-extrabold [transition:background_.2s,_transform_.2s,_box-shadow_.2s] primary"
@@ -916,7 +932,11 @@ export default function ArenaApp() {
                     )}
                     {admin && (
                       <div className="event-status-control m-[5px_23px_0]">
-                        {e.status === "draft" ? (
+                        {e.status === "draft" && e.historical ? (
+                          <button type="button" className="text-action bg-transparent text-[#2864ee] inline-flex items-center gap-[8px] p-[7px_0] text-[12px] font-extrabold" onClick={() => setHistoricalReviewOpen(true)} disabled={store.dirty || store.eventBusy}>
+                            <Archive size={15} /> Review & Finalisasi Arsip <ArrowRight size={15} />
+                          </button>
+                        ) : e.status === "draft" ? (
                           <button
                             className="text-action bg-transparent text-[#2864ee] inline-flex items-center gap-[8px] p-[7px_0] text-[12px] font-extrabold"
                             onClick={() => setEventStatus("live")}
@@ -1022,7 +1042,7 @@ export default function ArenaApp() {
                     {admin && (
                       <button
                         className="btn inline-flex items-center justify-center gap-[9px] [border:1px_solid_transparent] rounded-[10px] min-h-[41px] p-[0_16px] whitespace-nowrap text-[12px] font-extrabold [transition:background_.2s,_transform_.2s,_box-shadow_.2s] primary"
-                        disabled={e.status !== "live"}
+                        disabled={e.status !== "live" && !(e.historical && e.status === "draft")}
                         onClick={() => setScoreOpen(true)}
                       >
                         <Plus size={17} /> Input Tangkapan
@@ -1089,8 +1109,8 @@ export default function ArenaApp() {
                                 <span className="ranking-label text-[9px] tracking-[.5px] font-extrabold text-[#90a0b7]">
                                   {rank <= 3
                                     ? ["TOP RANK", "RUNNER-UP", "TOP 3"][
-                                        rank - 1
-                                      ]
+                                    rank - 1
+                                    ]
                                     : "COMPETING"}
                                 </span>
                               </td>
@@ -1285,7 +1305,7 @@ export default function ArenaApp() {
                               {fmt(item.delta)} PTS
                             </strong>
                             {admin &&
-                              e.status === "live" &&
+                              (e.status === "live" || (e.historical && e.status === "draft")) &&
                               item.kind !== "reversal" &&
                               !isReversed(e.entries, item.id) && (
                                 <button
@@ -1473,6 +1493,24 @@ export default function ArenaApp() {
                     >
                       <Users size={17} /> Turnamen SQUAD
                     </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        store.createHistorical("solo");
+                        go("builder");
+                      }}
+                    >
+                      <Archive size={17} /> Arsip Historis SOLO
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        store.createHistorical("squad");
+                        go("builder");
+                      }}
+                    >
+                      <Archive size={17} /> Arsip Historis SQUAD
+                    </Button>
                   </div>
                 )}
               </div>
@@ -1519,9 +1557,9 @@ export default function ArenaApp() {
                       onDuplicate={
                         admin
                           ? () => {
-                              store.duplicate(x.id);
-                              go("builder");
-                            }
+                            store.duplicate(x.id);
+                            go("builder");
+                          }
                           : undefined
                       }
                       onDelete={admin ? () => void moveToTrash(x) : undefined}
@@ -1904,6 +1942,19 @@ export default function ArenaApp() {
             onDelete={(title) => manageEvent(deleteTarget, "delete", title)}
           />
         )}
+      {historicalReviewOpen && (
+        <HistoricalFinalizationReview
+          key={e.id}
+          event={e}
+          busy={store.eventBusy}
+          onClose={() => setHistoricalReviewOpen(false)}
+          onConfirm={async (title, podium) => {
+            const result = await store.finalizeHistorical(title, podium);
+            setNotice(result.ok ? "Arsip historis sudah FINISHED, dikunci dan tampil di website publik." : result.error || "Gagal finalisasi arsip.");
+            return result;
+          }}
+        />
+      )}
       {finalReviewOpen && (
         <FinalizationReview
           key={e.id}

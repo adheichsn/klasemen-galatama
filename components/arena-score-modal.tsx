@@ -71,9 +71,9 @@ export default function ScoreModal({
     reason.trim() !== "";
   const canSubmit =
     !!player &&
-    e.status === "live" &&
+    (e.status === "live" || (e.historical && e.status === "draft")) &&
     (kind === "catch"
-      ? !!calculated && store.remaining > 0 && e.timer.runningSince !== null
+      ? !!calculated && (e.historical || (store.remaining > 0 && e.timer.runningSince !== null))
       : manualValid);
 
   const submit = (keepOpen: boolean) => {
@@ -81,10 +81,10 @@ export default function ScoreModal({
     setSavedMessage("");
     if (!canSubmit) {
       setError(
-        kind === "catch" &&
+        kind === "catch" && !e.historical &&
           (store.remaining === 0 || e.timer.runningSince === null)
           ? "Timer harus berjalan dan belum habis untuk mencatat tangkapan. Koreksi manual tersedia sebelum finalisasi."
-          : "Pilih peserta dan lengkapi data. Input hanya tersedia saat turnamen LIVE.",
+          : "Pilih peserta dan lengkapi data. Arsip historis bisa diisi saat Draft; turnamen biasa harus LIVE.",
       );
       return;
     }
@@ -172,9 +172,11 @@ export default function ScoreModal({
               Input Poin {e.mode.toUpperCase()}
             </DialogTitle>
             <DialogDescription className="mt-1 text-xs leading-5 text-slate-500 sm:text-sm">
-              {e.mode === "solo"
-                ? "Pilih peserta, ikan dan bonus. Poin langsung masuk ke individu."
-                : "Pilih squad terlebih dahulu, kemudian anggota yang menangkap. Poin masuk ke klasemen tim."}
+              {e.historical
+                ? "Masukkan tangkapan yang benar-benar tercatat pada event lama. Input tidak menjalankan timer dan akan disimpan sebagai catatan historis."
+                : e.mode === "solo"
+                  ? "Pilih peserta, ikan dan bonus. Poin langsung masuk ke individu."
+                  : "Pilih squad terlebih dahulu, kemudian anggota yang menangkap. Poin masuk ke klasemen tim."}
             </DialogDescription>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <Badge tone={e.mode === "solo" ? "blue" : "amber"}>

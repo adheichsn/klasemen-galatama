@@ -48,8 +48,8 @@ const sections: { id: EditorSection; text: string; icon: typeof Fish }[] = [
 ];
 const parsePoints = (text: string) =>
   text.trim() !== "" &&
-  Number.isSafeInteger(Number(text)) &&
-  validPoints(Number(text))
+    Number.isSafeInteger(Number(text)) &&
+    validPoints(Number(text))
     ? Number(text)
     : null;
 export default function ArenaBuilder({ store }: { store: ArenaStore }) {
@@ -129,6 +129,12 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
           {locked ? "Arsip terkunci" : "Klik Simpan ke Server di header"}
         </span>
       </div>
+      {e.historical && (
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900">
+          <b>ARSIP HISTORIS — {e.status === "finished" ? "FINISHED" : "DRAFT PRIVAT"}</b>
+          <p>Isi tanggal pertandingan asli, lokasi, durasi, aturan ikan dan daftar peserta. Input tangkapan/poin resmi dilakukan dari Dashboard. Tidak ada Start/Timer LIVE. Finalisasi akan mengunci arsip.</p>
+        </div>
+      )}
       <BuilderProgress event={e} active={tab} onNavigate={navigate} />
       <div className="builder-layout grid grid-cols-[220px_minmax(0,_1fr)] gap-[18px] [align-items:start]">
         <nav
@@ -289,9 +295,9 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                   />
                 </label>
                 <label className="field flex flex-col gap-[7px] text-[11px] text-[#4f6585] font-extrabold">
-                  Visibilitas event
+                  Visibilitas event {e.historical && e.status === "draft" ? "(terkunci sampai finalisasi)" : ""}
                   <select
-                    disabled={locked}
+                    disabled={locked || (!!e.historical && e.status === "draft")}
                     value={e.published ? "published" : "private"}
                     onChange={(v) =>
                       store.publish(v.target.value === "published")
@@ -456,6 +462,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                   type="checkbox"
                   className="mt-1 h-4 w-4"
                   checked={!!e.featured}
+                  disabled={!!e.historical && e.status === "draft"}
                   onChange={(v) => store.feature(v.target.checked)}
                 />
                 <span>
@@ -520,11 +527,11 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                     onChange={(v) =>
                       tab === "fish"
                         ? store.changeFish(item.id, {
-                            enabled: v.target.checked,
-                          })
+                          enabled: v.target.checked,
+                        })
                         : store.changeBonus(item.id, {
-                            enabled: v.target.checked,
-                          })
+                          enabled: v.target.checked,
+                        })
                     }
                   />
                   <input

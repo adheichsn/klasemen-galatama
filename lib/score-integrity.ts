@@ -2,6 +2,7 @@ import type { ArenaData, ArenaEvent, ScoreEntry } from "./arena-types";
 import { calculateCatch } from "./arena-rules";
 import { secondsLeft } from "./arena-utils";
 import { validateRosterChange } from "./roster-management";
+import { validateHistoricalDraft } from "./historical-entry";
 
 /**
  * V2.6: Validate a full-snapshot edit against the row locked in PostgreSQL.
@@ -12,13 +13,13 @@ export type ScoreAuditChange = {
   eventId: string;
   eventTitle: string;
   action:
-    | "catch"
-    | "manual"
-    | "reversal"
-    | "start"
-    | "pause"
-    | "resume"
-    | "finish";
+  | "catch"
+  | "manual"
+  | "reversal"
+  | "start"
+  | "pause"
+  | "resume"
+  | "finish";
   entryId?: string;
   participantId?: string;
   delta?: number;
@@ -84,6 +85,13 @@ export function prepareSnapshot(
   }
   for (const event of next.events) {
     const before = existing.get(event.id);
+    if (event.historical !== undefined && typeof event.historical !== "boolean")
+      return fail("Tipe event historis tidak valid.");
+    if (before && !!before.historical !== !!event.historical)
+      return fail("Jenis turnamen historis tidak dapat diubah setelah dibuat.");
+    if (before && (event.historicalRecordedAt !== before.historicalRecordedAt ||
+      !same(event.historicalPodium, before.historicalPodium)))
+      return fail("Catatan final dan podium resmi hanya boleh ditetapkan server.");
     if (!before) {
       if (
         event.trashedAt ||
@@ -92,7 +100,10 @@ export function prepareSnapshot(
         event.entries.length ||
         event.timer.runningSince !== null ||
         event.startedAt ||
-        event.finishedAt
+        event.finishedAt ||
+        event.historicalRecordedAt ||
+        event.historicalPodium ||
+        (event.historical && (event.published || event.featured))
       )
         return fail(
           `Event baru ${event.title} harus dibuat sebagai Draft kosong, lalu disimpan sebelum mulai.`,
@@ -133,6 +144,23 @@ export function prepareSnapshot(
         `Durasi ${event.title} tidak boleh diganti setelah pertandingan dimulai.`,
       );
     if (event.status === "draft") {
+      if (event.historical) {
+        const check = validateHistoricalDraft(before, event);
+        if (!check.ok) return fail(check.error);
+        event.timer.remainingSec = event.timer.durationSec;
+        for (const entry of check.appended) {
+          entry.createdAt = new Date(now).toISOString();
+          addActivity(activity, event, entry.kind, {
+            description: entry.description,
+            historical: "true",
+            eventDate: event.eventDate,
+            fishName: entry.fishName || "",
+            reference: entry.catchRef || "",
+            reversesEntryId: entry.reversesEntryId || "",
+          }, entry);
+        }
+        continue;
+      }
       if (
         before.status !== "draft" ||
         event.entries.length !== before.entries.length
@@ -143,7 +171,10 @@ export function prepareSnapshot(
       if (
         event.timer.runningSince !== null ||
         event.startedAt ||
-        event.finishedAt
+        event.finishedAt ||
+        event.historicalRecordedAt ||
+        event.historicalPodium ||
+        (event.historical && (event.published || event.featured))
       )
         return fail(`Timer Draft ${event.title} harus dalam keadaan berhenti.`);
       if (
@@ -156,6 +187,8 @@ export function prepareSnapshot(
       continue;
     }
     if (before.status === "draft" && event.status === "live") {
+      if (before.historical || event.historical)
+        return fail("Arsip historis tidak boleh masuk mode LIVE. Gunakan finalisasi historis.");
       if (event.entries.length !== before.entries.length)
         return fail(
           `Simpan mulai pertandingan ${event.title} terlebih dahulu, baru input skor.`,
@@ -355,7 +388,7 @@ export function prepareSnapshot(
           entry.delta !== -original.delta ||
           entry.participantId !== original.participantId ||
           (entry.squadId ?? null) !==
-            (original.squadId ?? player.squadId ?? null)
+          (original.squadId ?? player.squadId ?? null)
         )
           return fail(
             `Pembatalan ${entry.id} harus merujuk transaksi tersimpan yang belum pernah dibatalkan.`,

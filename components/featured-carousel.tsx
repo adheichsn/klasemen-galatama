@@ -228,7 +228,7 @@ export function FeaturedCarousel({
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs font-semibold text-slate-500">
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />{" "}
-            Platform turnamen komunitas Fish It • SOLO & SQUAD
+            Platform turnamen komunitas Fish It
           </div>
           <Link
             href="/turnamen?status=live"

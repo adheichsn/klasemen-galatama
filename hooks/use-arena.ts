@@ -215,7 +215,7 @@ export function useArena() {
       ...prev,
       events: prev.events.map((e) =>
         e.id === prev.activeEventId &&
-        (allowFinished || e.status !== "finished")
+          (allowFinished || e.status !== "finished")
           ? fn(e)
           : e,
       ),
@@ -238,6 +238,16 @@ export function useArena() {
     }));
     return e.id;
   };
+  const createHistorical = (mode: EventMode = "solo") => {
+    const event = newEvent("Arsip Galatama Historis", mode);
+    event.historical = true;
+    setData((prev) => ({
+      ...prev,
+      activeEventId: event.id,
+      events: [event, ...prev.events],
+    }));
+    return event.id;
+  };
   const duplicate = (id: string) => {
     const source = data.events.find((e) => e.id === id);
     if (!source) return;
@@ -252,6 +262,9 @@ export function useArena() {
       status: "draft",
       startedAt: undefined,
       finishedAt: undefined,
+      historical: undefined,
+      historicalRecordedAt: undefined,
+      historicalPodium: undefined,
       published: false,
       featured: false,
       createdAt: new Date().toISOString(),
@@ -331,6 +344,34 @@ export function useArena() {
       setEventBusy(false);
     }
   };
+  const finalizeHistorical = async (confirmTitle: string, podium: string[]) => {
+    if (!ready || saving || eventBusy || dirty || !active?.historical || active.status !== "draft")
+      return { ok: false, error: dirty ? "Klik Simpan ke Server terlebih dahulu." : "Draft historis belum siap." };
+    setEventBusy(true);
+    try {
+      const response = await fetch("/api/admin/historical", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ eventId: active.id, revision, confirmTitle, podium }),
+      });
+      const result: { error?: string; data?: unknown; revision?: number } = await response.json();
+      if (!response.ok || !validArena(result.data) || !Number.isSafeInteger(result.revision))
+        return { ok: false, error: result.error || "Gagal mengunci hasil historis." };
+      skipDirtyEffect.current = true;
+      dataRef.current = result.data;
+      setData(result.data);
+      setRevision(result.revision as number);
+      persistedEntryIds.current = new Set(result.data.events.flatMap((ev: ArenaEvent) => ev.entries.map((entry: ScoreEntry) => entry.id)));
+      setDirty(false);
+      setSaveError("");
+      return { ok: true };
+    } catch {
+      return { ok: false, error: "Server tidak bisa dihubungi. Data historis belum difinalisasi." };
+    } finally {
+      setEventBusy(false);
+    }
+  };
   const field = <
     K extends keyof Pick<
       ArenaEvent,
@@ -353,9 +394,9 @@ export function useArena() {
     update((e) => ({ ...e, bannerUrl: value }), true);
   };
   const feature = (value: boolean) =>
-    update((e) => ({ ...e, featured: value }), true);
+    update((e) => e.historical && e.status === "draft" ? e : ({ ...e, featured: value }), true);
   const publish = (value: boolean) =>
-    update((e) => ({ ...e, published: value }), true);
+    update((e) => e.historical && e.status === "draft" ? e : ({ ...e, published: value }), true);
   const status = (value: EventStatus) =>
     update((e) => {
       if (value === "live") return startMatch(e);
@@ -371,9 +412,9 @@ export function useArena() {
         sec >= 60 &&
         sec <= 86400
         ? {
-            ...e,
-            timer: { durationSec: sec, remainingSec: sec, runningSince: null },
-          }
+          ...e,
+          timer: { durationSec: sec, remainingSec: sec, runningSince: null },
+        }
         : e;
     });
   const toggleTimer = () =>
@@ -387,17 +428,17 @@ export function useArena() {
       e.fish.length >= 500
         ? e
         : {
-            ...e,
-            fish: [
-              ...e.fish,
-              {
-                id: newId(),
-                name: name.trim().slice(0, 70),
-                points,
-                enabled: true,
-              },
-            ],
-          },
+          ...e,
+          fish: [
+            ...e.fish,
+            {
+              id: newId(),
+              name: name.trim().slice(0, 70),
+              points,
+              enabled: true,
+            },
+          ],
+        },
     );
   };
   const changeFish = (id: string, fields: Partial<FishRule>) =>
@@ -413,17 +454,17 @@ export function useArena() {
       e.bonuses.length >= 200
         ? e
         : {
-            ...e,
-            bonuses: [
-              ...e.bonuses,
-              {
-                id: newId(),
-                name: name.trim().slice(0, 70),
-                points,
-                enabled: true,
-              },
-            ],
-          },
+          ...e,
+          bonuses: [
+            ...e.bonuses,
+            {
+              id: newId(),
+              name: name.trim().slice(0, 70),
+              points,
+              enabled: true,
+            },
+          ],
+        },
     );
   };
   const changeBonus = (id: string, fields: Partial<BonusRule>) =>
@@ -591,15 +632,15 @@ export function useArena() {
           fields.squadId &&
           squadLimit(e) > 0 &&
           e.participants.filter((p) => p.squadId === fields.squadId).length >=
-            squadLimit(e)
+          squadLimit(e)
         )
           return e;
       }
       const nextSquads =
         fields.squadId !== undefined && fields.squadId !== existing.squadId
           ? e.squads.map((s) =>
-              s.captainId === id ? { ...s, captainId: null } : s,
-            )
+            s.captainId === id ? { ...s, captainId: null } : s,
+          )
           : e.squads;
       return {
         ...e,
@@ -607,17 +648,17 @@ export function useArena() {
         participants: e.participants.map((p) =>
           p.id === id
             ? {
-                ...p,
-                ...fields,
-                name:
-                  fields.name !== undefined ? fields.name.slice(0, 80) : p.name,
-                squadId:
-                  e.mode === "solo"
-                    ? null
-                    : fields.squadId === undefined
-                      ? p.squadId
-                      : fields.squadId,
-              }
+              ...p,
+              ...fields,
+              name:
+                fields.name !== undefined ? fields.name.slice(0, 80) : p.name,
+              squadId:
+                e.mode === "solo"
+                  ? null
+                  : fields.squadId === undefined
+                    ? p.squadId
+                    : fields.squadId,
+            }
             : p,
         ),
       };
@@ -627,12 +668,12 @@ export function useArena() {
       !rosterEditable(e) || e.entries.some((s) => s.participantId === id)
         ? e
         : {
-            ...e,
-            squads: e.squads.map((s) =>
-              s.captainId === id ? { ...s, captainId: null } : s,
-            ),
-            participants: e.participants.filter((p) => p.id !== id),
-          },
+          ...e,
+          squads: e.squads.map((s) =>
+            s.captainId === id ? { ...s, captainId: null } : s,
+          ),
+          participants: e.participants.filter((p) => p.id !== id),
+        },
     );
   const addCatch = (
     participantId: string,
@@ -645,9 +686,9 @@ export function useArena() {
     if (
       !e ||
       !e.participants.some((p) => p.id === participantId) ||
-      e.status !== "live" ||
-      e.timer.runningSince === null ||
-      secondsLeft(e.timer, Date.now()) <= 0 ||
+      !(e.status === "live" || (e.historical && e.status === "draft")) ||
+      (!e.historical && (e.timer.runningSince === null ||
+        secondsLeft(e.timer, Date.now()) <= 0)) ||
       (e.mode === "squad" &&
         !e.participants.find((p) => p.id === participantId)?.squadId)
     )
@@ -694,7 +735,7 @@ export function useArena() {
       points === 0 ||
       !reason.trim() ||
       !active ||
-      active.status !== "live" ||
+      !(active.status === "live" || (active.historical && active.status === "draft")) ||
       !active.participants.some(
         (p) =>
           p.id === participantId && (active.mode === "solo" || !!p.squadId),
@@ -731,7 +772,7 @@ export function useArena() {
         !original ||
         original.kind === "reversal" ||
         isReversed(e.entries, id) ||
-        e.status !== "live"
+        !(e.status === "live" || (e.historical && e.status === "draft"))
       )
         return e;
       const reversal: ScoreEntry = {
@@ -748,6 +789,18 @@ export function useArena() {
       };
       return { ...e, entries: [reversal, ...e.entries] };
     });
+  const setHistoricalOfficialPoints = (participantId: string, total: number) => {
+    const event = dataRef.current.events.find((item) => item.id === dataRef.current.activeEventId);
+    if (!event || !event.historical || event.status !== "draft" || !Number.isSafeInteger(total) || Math.abs(total) > 1_000_000)
+      return false;
+    const participant = event.participants.find((p) => p.id === participantId);
+    if (!participant || (event.mode === "squad" && !participant.squadId)) return false;
+    const current = event.entries.reduce((sum, entry) => sum + (entry.participantId === participantId ? entry.delta : 0), 0);
+    const adjustment = total - current;
+    if (adjustment === 0) return true;
+    if (!validPoints(adjustment)) return false;
+    return addManual(participantId, adjustment, "Rekonsiliasi total poin resmi • arsip historis");
+  };
   const importBackup = (value: unknown) => {
     const candidate = validArena(value) ? value : migrateLegacy(value);
     if (!candidate || !candidate.events.length) return false;
@@ -770,6 +823,8 @@ export function useArena() {
     remaining,
     setActive,
     create,
+    createHistorical,
+    finalizeHistorical,
     duplicate,
     eventLifecycle,
     field,
@@ -805,6 +860,7 @@ export function useArena() {
     removeParticipant,
     addCatch,
     addManual,
+    setHistoricalOfficialPoints,
     reverse,
     importBackup,
   };

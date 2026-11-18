@@ -29,20 +29,23 @@ export function AdminCommandCenter({
 }: Props) {
   const readiness = tournamentReadiness(event);
   const isLive = event.status === "live";
-  const guidance = isLive
-    ? "Pertandingan sedang berlangsung. Input skor, cek rekap, lalu simpan perubahan ke server."
-    : event.status === "finished"
-      ? "Hasil event sudah diarsipkan. Riwayat dan aturan lama tetap tersimpan."
-      : readiness.canStart
-        ? "Roster dan ikan aktif siap. Periksa aturan sebelum memulai pertandingan."
-        : "Persiapkan katalog ikan dan roster peserta sebelum mengaktifkan turnamen.";
+  const isHistoricalDraft = !!event.historical && event.status === "draft";
+  const guidance = isHistoricalDraft
+    ? "Arsip historis: masukkan tangkapan nyata dan hasil poin resmi tanpa menjalankan timer, lalu finalisasi melalui review."
+    : isLive
+      ? "Pertandingan sedang berlangsung. Input skor, cek rekap, lalu simpan perubahan ke server."
+      : event.status === "finished"
+        ? "Hasil event sudah diarsipkan. Riwayat dan aturan lama tetap tersimpan."
+        : readiness.canStart
+          ? "Roster dan ikan aktif siap. Periksa aturan sebelum memulai pertandingan."
+          : "Persiapkan katalog ikan dan roster peserta sebelum mengaktifkan turnamen.";
   const actions = [
     {
       label: "Input tangkapan",
-      detail: isLive ? "Catat skor SOLO / SQUAD" : "Tersedia saat event LIVE",
+      detail: isHistoricalDraft ? "Catat skor historis" : isLive ? "Catat skor SOLO / SQUAD" : "Tersedia saat event LIVE",
       icon: Fish,
       onClick: onOpenScore,
-      disabled: !isLive,
+      disabled: !isLive && !isHistoricalDraft,
     },
     {
       label: "Atur turnamen",

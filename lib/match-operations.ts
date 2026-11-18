@@ -114,6 +114,7 @@ export function validateMatchTransition(
       !(
         (old.status === "draft" &&
           current.status === "live" &&
+          !old.historical && !current.historical &&
           tournamentReadiness(current).canStart) ||
         (old.status === "live" && current.status === "finished")
       )

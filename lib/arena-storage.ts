@@ -41,6 +41,12 @@ export function validArena(x: unknown): x is ArenaData {
         !isBool(e.published) ||
         (e.bannerUrl !== undefined && !validBannerUrl(e.bannerUrl)) ||
         (e.featured !== undefined && !isBool(e.featured)) ||
+        (e.historical !== undefined && !isBool(e.historical)) ||
+        (e.historicalRecordedAt !== undefined && !isString(e.historicalRecordedAt)) ||
+        (e.historicalPodium !== undefined && (!Array.isArray(e.historicalPodium) ||
+          e.historicalPodium.length !== 3 ||
+          !(e.historicalPodium as unknown[]).every(isString) ||
+          new Set(e.historicalPodium).size !== 3)) ||
         (e.trashedAt !== undefined && !isString(e.trashedAt)) ||
         (e.trashedBy !== undefined && !isString(e.trashedBy)) ||
         (e.rosterLocked !== undefined && !isBool(e.rosterLocked)) ||
