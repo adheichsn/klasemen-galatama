@@ -3,6 +3,7 @@ import { Pool } from "pg";
 import type { ArenaData } from "@/lib/arena-types";
 import { initialArena } from "@/lib/arena-data";
 import { validateMatchTransition } from "@/lib/match-operations";
+import { prepareSnapshot } from "@/lib/score-integrity";
 
 const globalForDb = globalThis as typeof globalThis & { __wejiPool?: Pool };
 function db() {
@@ -47,7 +48,7 @@ export async function getPublicEvents() {
     }));
 }
 export type SaveResult =
-  | { ok: true; revision: number }
+  | { ok: true; revision: number; data: ArenaData }
   | { ok: false; conflict: true }
   | { ok: false; invalid: string };
 export async function saveArenaSnapshot(
@@ -73,15 +74,21 @@ export async function saveArenaSnapshot(
         return { ok: false, invalid };
       }
     }
+    const prepared = prepareSnapshot(locked.rows[0]?.payload ?? null, value, Date.now());
+    if (!prepared.ok) {
+      await client.query("ROLLBACK");
+      return { ok: false, invalid: prepared.error };
+    }
+    const safeValue = prepared.data;
     const result =
       expectedRevision === 0
         ? await client.query<{ revision: number }>(
             "INSERT INTO weji_arena_state (id, revision, payload, updated_at) VALUES (1, 1, $1::jsonb, now()) ON CONFLICT (id) DO NOTHING RETURNING revision",
-            [JSON.stringify(value)],
+            [JSON.stringify(safeValue)],
           )
         : await client.query<{ revision: number }>(
             "UPDATE weji_arena_state SET revision = revision + 1, payload = $1::jsonb, updated_at = now() WHERE id = 1 AND revision = $2 RETURNING revision",
-            [JSON.stringify(value), expectedRevision],
+            [JSON.stringify(safeValue), expectedRevision],
           );
     if (!result.rowCount) {
       await client.query("ROLLBACK");
@@ -92,11 +99,20 @@ export async function saveArenaSnapshot(
       [
         result.rows[0].revision,
         process.env.WEJI_ADMIN_USERNAME || "admin",
-        value.events.length,
+        safeValue.events.length,
       ],
     );
+    for (const change of prepared.activity) {
+      await client.query(
+        "INSERT INTO weji_arena_score_audit (revision, event_id, event_title, actor, action, entry_id, participant_id, delta, details) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)",
+        [result.rows[0].revision, change.eventId, change.eventTitle,
+          process.env.WEJI_ADMIN_USERNAME || "admin", change.action,
+          change.entryId ?? null, change.participantId ?? null,
+          change.delta ?? null, JSON.stringify(change.details)],
+      );
+    }
     await client.query("COMMIT");
-    return { ok: true, revision: result.rows[0].revision };
+    return { ok: true, revision: result.rows[0].revision, data: safeValue };
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
@@ -125,4 +141,18 @@ export async function getArenaAsset(id: string): Promise<{
     [id],
   );
   return result.rows[0] ?? null;
+}
+
+/** Panitia-only chronological scoring/lifecycle audit. Never used by public pages. */
+export async function getScoreAudit(eventId: string, limit = 100) {
+  const result = await db().query<{
+    id: number; revision: number; actor: string; action: string;
+    entry_id: string | null; participant_id: string | null;
+    delta: number | null; details: Record<string, string | number | null>;
+    recorded_at: string;
+  }>(
+    "SELECT id, revision, actor, action, entry_id, participant_id, delta, details, recorded_at FROM weji_arena_score_audit WHERE event_id = $1 ORDER BY id DESC LIMIT $2",
+    [eventId, Math.min(200, Math.max(1, limit))],
+  );
+  return result.rows;
 }

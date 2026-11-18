@@ -66,6 +66,8 @@ import { tournamentReadiness } from "@/lib/tournament-readiness";
 import ArenaBuilder from "./arena-builder";
 import { AdminCommandCenter } from "@/components/admin/admin-command-center";
 import ScoreModal from "./arena-score-modal";
+import FinalizationReview from "@/components/admin/finalization-review";
+import ScoreAuditDialog from "@/components/admin/score-audit-dialog";
 
 type Page = "home" | "events" | "archives" | "hall" | "faq" | "builder";
 const mainNav: { id: Page; label: string; icon: typeof Home }[] = [
@@ -219,6 +221,8 @@ export default function ArenaApp() {
   const admin = true;
   const [mobileMenu, setMobileMenu] = useState(false);
   const [scoreOpen, setScoreOpen] = useState(false);
+  const [finalReviewOpen, setFinalReviewOpen] = useState(false);
+  const [auditOpen, setAuditOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [eventSearch, setEventSearch] = useState("");
   const [openFaq, setOpenFaq] = useState<string[]>([]);
@@ -249,6 +253,10 @@ export default function ArenaApp() {
       return;
     }
     if (next === "live" && e.status === "draft") {
+      if (store.dirty) {
+        setNotice("Simpan konfigurasi turnamen ke Server terlebih dahulu sebelum Mulai.");
+        return;
+      }
       if (!tournamentReadiness(e).canStart) {
         setNotice("Lengkapi ikan aktif serta roster SOLO/SQUAD yang valid sebelum memulai pertandingan.");
         go("builder");
@@ -258,7 +266,8 @@ export default function ArenaApp() {
     }
     if (next === "finished") {
       if (e.status !== "live") return;
-      if (!window.confirm("FINALISASI PERMANEN: akhiri pertandingan dan kunci poin, peserta, aturan serta timer? Hasil arsip tidak dapat dibuka lagi. Pastikan skor sudah benar.")) return;
+      setFinalReviewOpen(true);
+      return;
     }
     store.status(next);
     setNotice("Perubahan status belum diterbitkan. Klik Simpan ke Server agar terlihat di website publik.");
@@ -458,6 +467,7 @@ export default function ArenaApp() {
               aria-label="Logout"
               title="Logout Panitia"
               onClick={async () => {
+                if (store.dirty && !window.confirm("Ada perubahan belum disimpan. Logout sekarang akan membuang perubahan tersebut. Tetap logout?")) return;
                 await fetch("/api/admin/logout", { method: "POST" });
                 window.location.assign("/admin/login");
               }}
@@ -751,8 +761,12 @@ export default function ArenaApp() {
                           className="btn inline-flex items-center justify-center gap-[9px] [border:1px_solid_transparent] rounded-[10px] min-h-[41px] p-[0_16px] whitespace-nowrap text-[12px] font-extrabold [transition:background_.2s,_transform_.2s,_box-shadow_.2s] primary"
                           disabled={e.status !== "live" || (store.remaining === 0 && e.timer.runningSince === null)}
                           onClick={() => {
+                            if (store.dirty) {
+                              setNotice("Simpan skor dan perubahan sebelumnya ke Server sebelum Pause/Resume timer.");
+                              return;
+                            }
                             store.toggleTimer();
-                            setNotice("Perubahan timer perlu Simpan ke Server agar sinkron dengan penonton.");
+                            setNotice("Waktu server mulai berlaku setelah Simpan ke Server. Simpan segera agar sinkron dengan penonton.");
                           }}
                         >
                           {e.timer.runningSince === null ? (
@@ -1072,6 +1086,11 @@ export default function ArenaApp() {
                         <History size={19} /> Aktivitas Terbaru
                       </h2>
                     </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <button type="button" onClick={() => setAuditOpen(true)}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-extrabold text-blue-700">
+                        <ShieldCheck size={15}/> Audit Skor
+                      </button>
                     <button
                       className="text-action bg-transparent text-[#2864ee] inline-flex items-center gap-[8px] p-[7px_0] text-[12px] font-extrabold"
                       onClick={() => setHistoryOpen((v) => !v)}
@@ -1079,6 +1098,7 @@ export default function ArenaApp() {
                       {historyOpen ? "Lebih sedikit" : "Lihat semua"}{" "}
                       <ArrowRight size={15} />
                     </button>
+                    </div>
                   </div>
                   {e.entries.length ? (
                     <div className="activity-list p-[0_23px_12px]">
@@ -1131,7 +1151,7 @@ export default function ArenaApp() {
                                   onClick={() => {
                                     if (
                                       window.confirm(
-                                        "Batalkan catatan ini dengan transaksi pembalik?",
+                                        "Batalkan catatan ini? Input yang belum tersimpan akan dibuang; input yang sudah tersimpan akan dibatalkan dengan transaksi pembalik.",
                                       )
                                     )
                                       store.reverse(item.id);
@@ -1594,6 +1614,23 @@ export default function ArenaApp() {
           </footer>
         </main>
       </div>
+      {finalReviewOpen && (
+        <FinalizationReview
+          key={e.id}
+          event={e}
+          dirty={store.dirty}
+          onClose={() => setFinalReviewOpen(false)}
+          onConfirm={() => {
+            store.status("finished");
+            setFinalReviewOpen(false);
+            setNotice("Review selesai. Klik Simpan ke Server untuk mengunci hasil final secara permanen.");
+          }}
+        />
+      )}
+      {auditOpen && (
+        <ScoreAuditDialog key={e.id} eventId={e.id} eventTitle={e.title}
+          onClose={() => setAuditOpen(false)} />
+      )}
       {scoreOpen && (
         <ScoreModal
           key={e.id}

@@ -136,6 +136,11 @@ export function validArena(x: unknown): x is ArenaData {
             !isString(v.createdAt)
           )
             return false;
+          if (
+            v.catchRef !== undefined &&
+            (!isString(v.catchRef) || v.catchRef.length > 80)
+          )
+            return false;
           if (v.reversesEntryId !== undefined && !isString(v.reversesEntryId))
             return false;
           if (

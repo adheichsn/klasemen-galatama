@@ -23,7 +23,13 @@ import {
   migrateLegacy,
 } from "@/lib/arena-storage";
 import { isReversed, secondsLeft, validPoints } from "@/lib/arena-utils";
-import { startMatch, pauseMatch, resumeMatch, finishMatch, resetDraftClock } from "@/lib/match-operations";
+import {
+  startMatch,
+  pauseMatch,
+  resumeMatch,
+  finishMatch,
+  resetDraftClock,
+} from "@/lib/match-operations";
 import {
   canAssignSquad,
   canSwitchMode,
@@ -41,7 +47,9 @@ export function useArena() {
   const [connectionError, setConnectionError] = useState("");
   const [saveError, setSaveError] = useState("");
   const hydrated = useRef(false);
+  const skipDirtyEffect = useRef(false);
   const dataRef = useRef(data);
+  const persistedEntryIds = useRef(new Set<string>());
   useEffect(() => {
     dataRef.current = data;
   }, [data]);
@@ -69,6 +77,11 @@ export function useArena() {
           throw new Error("Data dari server tidak valid.");
         if (cancelled) return;
         setData(snapshot.data);
+        persistedEntryIds.current = new Set(
+          snapshot.data.events.flatMap((ev) =>
+            ev.entries.map((entry) => entry.id),
+          ),
+        );
         setRevision(snapshot.revision);
         setNow(Date.now());
         setReady(true);
@@ -90,6 +103,10 @@ export function useArena() {
     if (!ready) return;
     if (!hydrated.current) {
       hydrated.current = true;
+      return;
+    }
+    if (skipDirtyEffect.current) {
+      skipDirtyEffect.current = false;
       return;
     }
     setDirty(true);
@@ -119,7 +136,18 @@ export function useArena() {
       if (!response.ok)
         throw new Error(result.error || "Gagal menyimpan data.");
       setRevision(result.revision);
-      if (dataRef.current === snapshot) setDirty(false);
+      if (dataRef.current === snapshot && validArena(result.data)) {
+        // Use canonical server timestamps (not the browser clock) after Save.
+        skipDirtyEffect.current = true;
+        dataRef.current = result.data;
+        persistedEntryIds.current = new Set(
+          result.data.events.flatMap((ev: ArenaEvent) =>
+            ev.entries.map((entry: ScoreEntry) => entry.id),
+          ),
+        );
+        setData(result.data);
+        setDirty(false);
+      }
       return true;
     } catch (error) {
       setSaveError(
@@ -285,12 +313,20 @@ export function useArena() {
   const setDuration = (mins: number) =>
     update((e) => {
       const sec = Math.round(mins * 60);
-      return e.status === "draft" && Number.isSafeInteger(sec) && sec >= 60 && sec <= 86400
-        ? { ...e, timer: { durationSec: sec, remainingSec: sec, runningSince: null } }
+      return e.status === "draft" &&
+        Number.isSafeInteger(sec) &&
+        sec >= 60 &&
+        sec <= 86400
+        ? {
+            ...e,
+            timer: { durationSec: sec, remainingSec: sec, runningSince: null },
+          }
         : e;
     });
   const toggleTimer = () =>
-    update((e) => e.timer.runningSince === null ? resumeMatch(e) : pauseMatch(e));
+    update((e) =>
+      e.timer.runningSince === null ? resumeMatch(e) : pauseMatch(e),
+    );
   const resetTimer = () => update(resetDraftClock);
   const addFish = (name: string, points: number) => {
     if (!name.trim() || !validPoints(points)) return;
@@ -481,15 +517,29 @@ export function useArena() {
     fishId: string,
     bonusIds: string[],
     quantity: number,
+    catchRef = "",
   ) => {
     const e = active;
     if (
       !e ||
       !e.participants.some((p) => p.id === participantId) ||
       e.status !== "live" ||
+      e.timer.runningSince === null ||
       secondsLeft(e.timer, Date.now()) <= 0 ||
       (e.mode === "squad" &&
         !e.participants.find((p) => p.id === participantId)?.squadId)
+    )
+      return false;
+    const reference = catchRef.trim();
+    if (
+      reference &&
+      (reference.length < 2 ||
+        reference.length > 80 ||
+        e.entries.some(
+          (item) =>
+            item.catchRef?.toLocaleUpperCase("id-ID") ===
+            reference.toLocaleUpperCase("id-ID"),
+        ))
     )
       return false;
     const result = calculateCatch(e, fishId, bonusIds, quantity);
@@ -503,6 +553,7 @@ export function useArena() {
           ? e.participants.find((p) => p.id === participantId)?.squadId
           : null,
       kind: "catch",
+      ...(reference ? { catchRef: reference } : {}),
       delta,
       description: `${fish.name} ×${quantity}${bonuses.length ? ` • ${bonuses.map((b) => b.name).join(", ")}` : ""}`,
       fishId,
@@ -546,6 +597,14 @@ export function useArena() {
   const reverse = (id: string) =>
     update((e) => {
       const original = e.entries.find((en) => en.id === id);
+      if (
+        original &&
+        !persistedEntryIds.current.has(id) &&
+        original.kind !== "reversal"
+      ) {
+        // A pending local-only input can be discarded; a saved score needs a reversal.
+        return { ...e, entries: e.entries.filter((item) => item.id !== id) };
+      }
       if (
         !original ||
         original.kind === "reversal" ||

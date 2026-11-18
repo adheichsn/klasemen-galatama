@@ -39,6 +39,8 @@ export type ScoreEntry = {
   quantity?: number;
   bonuses?: EntryBonus[];
   reversesEntryId?: string;
+  /** Optional, unique evidence/receipt reference within this tournament. */
+  catchRef?: string;
 };
 export type MatchTimer = {
   durationSec: number;

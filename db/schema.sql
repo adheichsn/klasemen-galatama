@@ -22,3 +22,23 @@ CREATE TABLE IF NOT EXISTS weji_arena_assets (
   bytes bytea NOT NULL,
   uploaded_at timestamptz NOT NULL DEFAULT now()
 );
+
+-- WEJI ARENA V2.6: append-only event activity journal (server writes only).
+-- Idempotent. Run again in Supabase SQL Editor BEFORE using V2.6.
+CREATE TABLE IF NOT EXISTS weji_arena_score_audit (
+  id bigserial PRIMARY KEY,
+  revision integer NOT NULL,
+  event_id text NOT NULL,
+  event_title text NOT NULL,
+  actor text NOT NULL,
+  action text NOT NULL CHECK (action IN ('catch', 'manual', 'reversal', 'start', 'pause', 'resume', 'finish')),
+  entry_id text,
+  participant_id text,
+  delta integer,
+  details jsonb NOT NULL DEFAULT '{}'::jsonb,
+  recorded_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS weji_arena_score_audit_event_idx
+  ON weji_arena_score_audit (event_id, id DESC);
+-- The table is written through the authenticated Next.js server.
+-- Do not enable direct anonymous writes via Supabase Data API.
