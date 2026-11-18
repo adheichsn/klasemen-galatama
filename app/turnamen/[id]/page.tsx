@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { LiveActivityFeed } from "@/components/live-activity-feed";
 import PublicAutoRefresh from "@/components/public-auto-refresh";
 import LiveMatchClock from "@/components/live-match-clock";
 import { notFound } from "next/navigation";
@@ -8,6 +10,7 @@ import {
   Fish,
   Globe2,
   ListChecks,
+  MonitorPlay,
   ShieldCheck,
   Sparkles,
   Trophy,
@@ -77,15 +80,28 @@ export default async function EventDetail({
             </div>
           </div>
         </section>
-        {e.status === "live" && (
-          <div className="mb-4">
-            <PublicAutoRefresh />
-          </div>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          {e.status === "live" ? (
+            <PublicAutoRefresh eventId={e.id} />
+          ) : (
+            <span />
+          )}
+          <Link
+            href={`/spectate/${encodeURIComponent(e.id)}`}
+            className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-xs font-extrabold text-blue-700 transition hover:bg-blue-50"
+          >
+            <MonitorPlay size={16} /> Spectator / OBS
+          </Link>
+        </div>
+        {(e.status === "live" || e.status === "finished") && (
+          <LiveMatchClock event={e} />
         )}
-        {(e.status === "live" || e.status === "finished") && <LiveMatchClock event={e} />}
         <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
           <div className="space-y-7">
             <PublicRanking event={e} />
+            {(e.status === "live" || e.status === "finished") && (
+              <LiveActivityFeed event={e} />
+            )}
             {e.mode === "squad" && e.squads.length > 0 && (
               <section className="rounded-2xl border border-blue-100 bg-white p-5">
                 <h2 className="mb-4 flex items-center gap-2 text-base font-black text-[#142A55]">

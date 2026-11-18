@@ -1,13 +1,13 @@
 {
   "name": "weji-arena",
-  "version": "2.7.1",
+  "version": "2.8.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test:smoke": "node test/arena-smoke.cjs && node test/security-smoke.cjs && node test/marketing-smoke.cjs && node test/v24-smoke.cjs && node test/v25-smoke.cjs && node test/v26-smoke.cjs && node test/v27-smoke.cjs && node test/v271-smoke.cjs",
+    "test:smoke": "node test/arena-smoke.cjs && node test/security-smoke.cjs && node test/marketing-smoke.cjs && node test/v24-smoke.cjs && node test/v25-smoke.cjs && node test/v26-smoke.cjs && node test/v27-smoke.cjs && node test/v271-smoke.cjs && node test/v28-smoke.cjs",
     "admin:hash": "node scripts/hash-password.cjs",
     "test:security": "node test/security-smoke.cjs",
     "test:source": "node scripts/verify-source.cjs"

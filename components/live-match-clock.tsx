@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Clock3, Pause, Radio, ShieldCheck } from "lucide-react";
 import type { ArenaEvent } from "@/lib/arena-types";
 import { secondsLeft, timeLabel } from "@/lib/arena-utils";
@@ -8,10 +8,43 @@ import { secondsLeft, timeLabel } from "@/lib/arena-utils";
 /** Shows time derived from the saved server timestamp, never controls the match. */
 export default function LiveMatchClock({ event }: { event: ArenaEvent }) {
   const [now, setNow] = useState<number | null>(null);
+  const offsetMs = useRef(0);
   useEffect(() => {
+    let mounted = true;
+    async function syncClock() {
+      const sent = Date.now();
+      try {
+        const response = await fetch("/api/public/time", { cache: "no-store" });
+        if (!response.ok) return;
+        const payload: unknown = await response.json();
+        const received = Date.now();
+        const server = (payload as { serverTime?: unknown })?.serverTime;
+        if (typeof server === "number" && Number.isFinite(server) && mounted) {
+          // Midpoint compensates for network RTT; score timestamps remain server-owned.
+          offsetMs.current = server - (sent + received) / 2;
+          setNow(received + offsetMs.current);
+        }
+      } catch {
+        /* Browser clock fallback if time endpoint is unavailable. */
+      }
+    }
     setNow(Date.now());
-    const interval = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(interval);
+    void syncClock();
+    const interval = window.setInterval(
+      () => setNow(Date.now() + offsetMs.current),
+      1000,
+    );
+    const resync = window.setInterval(() => void syncClock(), 60000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void syncClock();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      mounted = false;
+      window.clearInterval(interval);
+      window.clearInterval(resync);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [event.id]);
 
   const left = now === null ? null : secondsLeft(event.timer, now);
@@ -55,7 +88,7 @@ export default function LiveMatchClock({ event }: { event: ArenaEvent }) {
           <p className="mt-1 text-xs text-slate-500">
             {isFinal
               ? "Peringkat dan poin akhir telah diarsipkan."
-              : "Sinkronisasi otomatis setiap 15 detik dari data panitia yang disimpan."}
+              : "Waktu pertandingan berasal dari server; tampilan disinkronkan berkala."}
           </p>
         </div>
         <div

@@ -9,6 +9,10 @@ import {
   type EventLifecycleAction,
 } from "@/lib/event-lifecycle";
 import { WEJI_ASSET_URL } from "@/lib/banner";
+import {
+  changedPublicEventIds,
+  PUBLIC_CHANGE_CHANNEL,
+} from "@/lib/public-changes";
 
 const globalForDb = globalThis as typeof globalThis & { __wejiPool?: Pool };
 function db() {
@@ -126,6 +130,16 @@ export async function saveArenaSnapshot(
           JSON.stringify(change.details),
         ],
       );
+    }
+    // NOTIFY happens atomically on COMMIT. Only event IDs are published,
+    // never scoring/participant payloads, credentials or staff audit data.
+    for (const eventId of changedPublicEventIds(
+      locked.rows[0]?.payload ?? null,
+      safeValue,
+    )) {
+      await client.query(`SELECT pg_notify('${PUBLIC_CHANGE_CHANNEL}', $1)`, [
+        eventId,
+      ]);
     }
     await client.query("COMMIT");
     return { ok: true, revision: result.rows[0].revision, data: safeValue };
@@ -261,6 +275,14 @@ export async function changeEventLifecycle(
           [assetId],
         );
       }
+    }
+    for (const eventId of changedPublicEventIds(
+      current.payload,
+      applied.data,
+    )) {
+      await client.query(`SELECT pg_notify('${PUBLIC_CHANGE_CHANNEL}', $1)`, [
+        eventId,
+      ]);
     }
     await client.query("COMMIT");
     return { ok: true, data: applied.data, revision };
