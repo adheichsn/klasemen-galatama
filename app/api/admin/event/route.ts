@@ -1,2 +1,6 @@
 // Backward compatibility for older admin clients. Canonical route is /api/admin/events.
-export { runtime, dynamic, POST } from "../events/route";
+// Next.js route segment config must be declared directly in this file.
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+export { POST } from "../events/route";
