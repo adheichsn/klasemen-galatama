@@ -1,6 +1,18 @@
 import { createHmac, scryptSync, timingSafeEqual } from "node:crypto";
 
 const validitySeconds = 60 * 60 * 12;
+/** Tie issued session signatures to the currently configured single-admin
+ * password hash. Changing either password or session secret revokes old cookies. */
+export function configuredSessionSecret(): string | undefined {
+  const secret = process.env.WEJI_SESSION_SECRET;
+  const hash = process.env.WEJI_ADMIN_PASSWORD_HASH;
+  if (!secret || secret.length < 32 || !hash) return undefined;
+  return createHmac("sha256", secret)
+    .update("weji-arena-v3-single-admin:")
+    .update(hash)
+    .digest("hex");
+}
+
 export const SESSION_COOKIE = "weji_arena_session";
 
 export function verifyPassword(password: string, stored: string): boolean {

@@ -58,3 +58,17 @@ CREATE TABLE IF NOT EXISTS weji_arena_event_audit (
 );
 CREATE INDEX IF NOT EXISTS weji_arena_event_audit_event_idx
   ON weji_arena_event_audit (event_id, id DESC);
+
+-- WEJI ARENA V3.0: durable, per-client + global login throttling.
+-- Idempotent migration. No changes to scores, events or existing admin sessions.
+CREATE TABLE IF NOT EXISTS weji_arena_login_limits (
+  bucket text PRIMARY KEY,
+  attempts integer NOT NULL CHECK (attempts >= 0),
+  window_started timestamptz NOT NULL DEFAULT now(),
+  blocked_until timestamptz,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS weji_arena_login_limits_updated_idx
+  ON weji_arena_login_limits (updated_at);
+-- Optional maintenance for old, expired entries (schedule separately if needed):
+-- DELETE FROM weji_arena_login_limits WHERE updated_at < now() - interval '7 days';

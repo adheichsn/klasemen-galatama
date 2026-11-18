@@ -1,16 +1,17 @@
 {
   "name": "weji-arena",
-  "version": "2.10.0",
+  "version": "3.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test:smoke": "node test/arena-smoke.cjs && node test/security-smoke.cjs && node test/marketing-smoke.cjs && node test/v24-smoke.cjs && node test/v25-smoke.cjs && node test/v26-smoke.cjs && node test/v27-smoke.cjs && node test/v271-smoke.cjs && node test/v28-smoke.cjs && node test/v281-smoke.cjs && node test/v29-smoke.cjs && node test/v210-smoke.cjs",
+    "test:smoke": "node test/arena-smoke.cjs && node test/security-smoke.cjs && node test/marketing-smoke.cjs && node test/v24-smoke.cjs && node test/v25-smoke.cjs && node test/v26-smoke.cjs && node test/v27-smoke.cjs && node test/v271-smoke.cjs && node test/v28-smoke.cjs && node test/v281-smoke.cjs && node test/v29-smoke.cjs && node test/v210-smoke.cjs && node test/v30-smoke.cjs",
     "admin:hash": "node scripts/hash-password.cjs",
     "test:security": "node test/security-smoke.cjs",
-    "test:source": "node scripts/verify-source.cjs"
+    "test:source": "node scripts/verify-source.cjs",
+    "preflight": "node scripts/preflight.cjs"
   },
   "dependencies": {
     "next": "^16.0.0",

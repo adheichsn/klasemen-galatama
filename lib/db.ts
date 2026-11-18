@@ -1,5 +1,6 @@
 import "server-only";
 import { Pool } from "pg";
+import { createHash } from "node:crypto";
 import type { ArenaData } from "@/lib/arena-types";
 import { initialArena } from "@/lib/arena-data";
 import { validateMatchTransition } from "@/lib/match-operations";
@@ -14,19 +15,61 @@ import {
   PUBLIC_CHANGE_CHANNEL,
 } from "@/lib/public-changes";
 
-const globalForDb = globalThis as typeof globalThis & { __wejiPool?: Pool };
-function db() {
-  if (!process.env.DATABASE_URL)
+const globalForDb = globalThis as typeof globalThis & {
+  __wejiPool?: Pool;
+  __wejiPoolFingerprint?: string;
+};
+export function getDatabasePool(): Pool {
+  const url = process.env.DATABASE_URL;
+  if (!url)
     throw new Error("DATABASE_URL belum dikonfigurasi. Lihat README.md.");
+  // Development HMR may reload .env.local without restarting Node. Discard
+  // the stale pool instead of silently querying the old Supabase project.
+  const fingerprint = createHash("sha256").update(url).digest("hex");
+  if (
+    globalForDb.__wejiPool &&
+    globalForDb.__wejiPoolFingerprint !== fingerprint
+  ) {
+    const previous = globalForDb.__wejiPool;
+    globalForDb.__wejiPool = undefined;
+    void previous.end().catch(() => undefined);
+  }
   if (!globalForDb.__wejiPool) {
     globalForDb.__wejiPool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      max: 5,
-      connectionTimeoutMillis: 6000,
+      connectionString: url,
+      max: process.env.NODE_ENV === "production" ? 2 : 5,
+      idleTimeoutMillis: 15_000,
+      connectionTimeoutMillis: 6_000,
+      query_timeout: 10_000,
+      statement_timeout: 10_000,
+      application_name: "weji-arena-api",
     });
+    globalForDb.__wejiPoolFingerprint = fingerprint;
   }
   return globalForDb.__wejiPool;
 }
+const db = getDatabasePool;
+
+/** Admin-only diagnostic. Verify tables without creating or changing records. */
+export async function getDatabaseHealth() {
+  const result = await db().query<{
+    state_ready: boolean;
+    audit_ready: boolean;
+    assets_ready: boolean;
+    score_audit_ready: boolean;
+    event_audit_ready: boolean;
+    login_limits_ready: boolean;
+  }>(`SELECT
+    to_regclass('public.weji_arena_state') IS NOT NULL AS state_ready,
+    to_regclass('public.weji_arena_audit') IS NOT NULL AS audit_ready,
+    to_regclass('public.weji_arena_assets') IS NOT NULL AS assets_ready,
+    to_regclass('public.weji_arena_score_audit') IS NOT NULL AS score_audit_ready,
+    to_regclass('public.weji_arena_event_audit') IS NOT NULL AS event_audit_ready,
+    to_regclass('public.weji_arena_login_limits') IS NOT NULL AS login_limits_ready`);
+  const tables = result.rows[0];
+  return { ready: !!tables && Object.values(tables).every(Boolean), tables };
+}
+
 export type ArenaSnapshot = { data: ArenaData; revision: number };
 export async function getArenaSnapshot(): Promise<ArenaSnapshot> {
   const result = await db().query<{ revision: number; payload: ArenaData }>(

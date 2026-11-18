@@ -36,6 +36,18 @@ broker.retryAttempt ??= 0;
 broker.healthTimer ??= null;
 broker.checkingHealth ??= false;
 
+/** LISTEN needs a session-capable URL. A transaction pooler (:6543) cannot
+ * preserve LISTEN across queries. In that case spectators use polling. */
+export function listenerDatabaseUrl(): string | null {
+  const url = process.env.WEJI_LISTEN_DATABASE_URL || process.env.DATABASE_URL;
+  if (!url) return null;
+  try {
+    if (new URL(url).port === "6543") return null;
+  } catch {
+    return null;
+  }
+  return url;
+}
 function broadcastStatus(connected: boolean) {
   for (const listener of broker.statusListeners) {
     try {
@@ -73,13 +85,13 @@ async function ensureConnected(): Promise<void> {
     !broker.listeners.size ||
     broker.client ||
     broker.connecting ||
-    !process.env.DATABASE_URL
+    !listenerDatabaseUrl()
   )
     return;
 
   const pending = (async () => {
     const client = new Client({
-      connectionString: process.env.DATABASE_URL,
+      connectionString: listenerDatabaseUrl()!,
       connectionTimeoutMillis: 6000,
       query_timeout: 6000,
       keepAlive: true,

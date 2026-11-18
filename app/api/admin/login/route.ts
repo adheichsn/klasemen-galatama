@@ -1,9 +1,13 @@
 import { readLimitedText, sameOrigin } from "@/lib/request-security";
+import { logServerFailure } from "@/lib/server-errors";
+import { chargeLoginAttempt, clearSuccessfulLogin } from "@/lib/login-throttle";
+import { LOGIN_WINDOW_MINUTES } from "@/lib/login-throttle-core";
 import { NextRequest, NextResponse } from "next/server";
 import {
   generateSession,
   SESSION_COOKIE,
   verifyAdminCredentials,
+  configuredSessionSecret,
 } from "@/lib/auth-core";
 export const runtime = "nodejs";
 export async function POST(req: NextRequest) {
@@ -42,31 +46,60 @@ export async function POST(req: NextRequest) {
       { error: "Kredensial tidak valid" },
       { status: 400 },
     );
-  if (
-    !process.env.WEJI_SESSION_SECRET ||
-    process.env.WEJI_SESSION_SECRET.length < 32
-  )
+  const sessionSecret = configuredSessionSecret();
+  if (!sessionSecret)
     return NextResponse.json(
       { error: "Konfigurasi server belum lengkap" },
       { status: 503 },
     );
+  // Check durable database budgets before the expensive scrypt verification.
+  // Fail closed if the V3.0 SQL migration / Supabase is unavailable.
+  let clientBucket: string;
+  try {
+    const throttle = await chargeLoginAttempt(req, sessionSecret);
+    if (throttle.denied) {
+      return NextResponse.json(
+        { error: "Terlalu banyak percobaan login. Coba lagi nanti." },
+        {
+          status: 429,
+          headers: {
+            "Cache-Control": "no-store",
+            "Retry-After": String(LOGIN_WINDOW_MINUTES * 60),
+          },
+        },
+      );
+    }
+    clientBucket = throttle.clientBucket;
+  } catch (error) {
+    logServerFailure("login-throttle", error);
+    return NextResponse.json(
+      { error: "Proteksi login belum tersedia. Periksa migrasi SQL V3.0." },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
+  }
   if (!verifyAdminCredentials(value.username, value.password))
     return NextResponse.json(
       { error: "Username atau password salah" },
-      { status: 401 },
+      { status: 401, headers: { "Cache-Control": "no-store" } },
     );
+  try {
+    await clearSuccessfulLogin(clientBucket);
+  } catch (error) {
+    logServerFailure("login-reset", error);
+    return NextResponse.json(
+      { error: "Gagal menyelesaikan login. Coba lagi." },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
+  }
   const response = NextResponse.json({ ok: true });
-  response.cookies.set(
-    SESSION_COOKIE,
-    generateSession(process.env.WEJI_SESSION_SECRET),
-    {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 60 * 60 * 12,
-    },
-  );
+  response.cookies.set(SESSION_COOKIE, generateSession(sessionSecret), {
+    httpOnly: true,
+    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 12,
+    priority: "high",
+  });
   response.headers.set("Cache-Control", "no-store");
   return response;
 }

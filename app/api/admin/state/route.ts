@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
 import { getArenaSnapshot, saveArenaSnapshot } from "@/lib/db";
 import { validArena } from "@/lib/arena-storage";
+import { logServerFailure } from "@/lib/server-errors";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 const denied = () =>
@@ -18,8 +19,7 @@ export async function GET() {
       headers: { "Cache-Control": "private, no-store" },
     });
   } catch (error) {
-    console.error("[WEJI STATE GET ERROR]", error);
-
+    logServerFailure("admin-state-read", error);
     return NextResponse.json(
       { error: "Database belum siap atau tidak terhubung" },
       { status: 503 },
@@ -86,7 +86,8 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json(result, {
       headers: { "Cache-Control": "no-store" },
     });
-  } catch {
+  } catch (error) {
+    logServerFailure("admin-state-write", error);
     return NextResponse.json(
       { error: "Gagal menyimpan ke database" },
       { status: 503 },
