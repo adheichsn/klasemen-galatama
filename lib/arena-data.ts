@@ -26,6 +26,8 @@ export function newEvent(
     writtenRules: [],
     faqs: [],
     squads: [],
+    rosterLocked: false,
+    squadSizeLimit: 0,
     participants: [],
     entries: [],
     timer: { durationSec: 90 * 60, remainingSec: 90 * 60, runningSince: null },

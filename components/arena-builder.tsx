@@ -31,7 +31,11 @@ import type { ArenaStore } from "@/hooks/use-arena";
 import { fmt, validPoints } from "@/lib/arena-utils";
 import { canSwitchMode } from "@/lib/arena-rules";
 import { validBannerUrl } from "@/lib/banner";
-import { BuilderProgress, builderSteps } from "@/components/admin/builder-progress";
+import {
+  BuilderProgress,
+  builderSteps,
+} from "@/components/admin/builder-progress";
+import { ParticipantRoster } from "@/components/admin/participant-roster";
 
 const sections: { id: EditorSection; text: string; icon: typeof Fish }[] = [
   { id: "general", text: "Informasi", icon: Settings2 },
@@ -57,11 +61,6 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
   const [ruleText, setRuleText] = useState("");
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
-  const [person, setPerson] = useState("");
-  const [username, setUsername] = useState("");
-  const [squadId, setSquadId] = useState("");
-  const [squadName, setSquadName] = useState("");
-  const [squadFilter, setSquadFilter] = useState("all");
   const [bannerInput, setBannerInput] = useState("");
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [bannerMessage, setBannerMessage] = useState("");
@@ -117,7 +116,9 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
     <section className="section-stack">
       <div className="page-heading flex justify-between items-center gap-[20px]">
         <div>
-          <div className="kicker text-[10px] text-[#477bce] tracking-[1.6px] font-extrabold mb-[8px]">TOURNAMENT BUILDER</div>
+          <div className="kicker text-[10px] text-[#477bce] tracking-[1.6px] font-extrabold mb-[8px]">
+            TOURNAMENT BUILDER
+          </div>
           <h2>Atur pertandingan sesukamu.</h2>
           <p>
             Semua konfigurasi hanya berlaku untuk <b>{e.title}</b> dan tidak
@@ -130,7 +131,10 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
       </div>
       <BuilderProgress event={e} active={tab} onNavigate={navigate} />
       <div className="builder-layout grid grid-cols-[220px_minmax(0,_1fr)] gap-[18px] [align-items:start]">
-        <nav className="builder-tabs bg-[#fff] [border:1px_solid_var(--line)] rounded-[16px] p-[9px] flex flex-col gap-[4px]" aria-label="Bagian pengaturan turnamen">
+        <nav
+          className="builder-tabs bg-[#fff] [border:1px_solid_var(--line)] rounded-[16px] p-[9px] flex flex-col gap-[4px]"
+          aria-label="Bagian pengaturan turnamen"
+        >
           {sections.map((s) => {
             const Icon = s.icon;
             return (
@@ -504,7 +508,10 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                 </div>
               )}
               {(tab === "fish" ? e.fish : e.bonuses).map((item) => (
-                <div className="catalog-row p-[10px_7px] [border:1px_solid_#eaf0f7] rounded-[11px] mt-[-12px]" key={item.id}>
+                <div
+                  className="catalog-row p-[10px_7px] [border:1px_solid_#eaf0f7] rounded-[11px] mt-[-12px]"
+                  key={item.id}
+                >
                   <input
                     disabled={locked}
                     aria-label={`Aktifkan ${item.name}`}
@@ -704,276 +711,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
               </div>
             </div>
           )}
-          {tab === "participants" && (
-            <div className="stack-lg flex flex-col gap-[22px]">
-              <div className="block-title">
-                <h3>
-                  {e.mode === "squad"
-                    ? "Manajemen Squad & Anggota"
-                    : "Peserta SOLO"}
-                </h3>
-                <p>
-                  {e.mode === "squad"
-                    ? "Buat squad dahulu, daftarkan anggota ke squad, lalu catat kontribusi tiap anggota."
-                    : "Daftarkan peserta individu. Tidak ada tim atau penggabungan poin."}{" "}
-                  Pemain dengan riwayat skor tidak dapat dihapus atau dipindah
-                  tim.
-                </p>
-              </div>
-              <div
-                className={`flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold ${e.mode === "solo" ? "bg-blue-50 text-blue-800" : "bg-indigo-50 text-indigo-800"}`}
-              >
-                {e.mode === "solo" ? (
-                  <UserRound size={18} />
-                ) : (
-                  <UsersRound size={18} />
-                )}
-                <strong>MODE {e.mode.toUpperCase()}</strong>
-                <span className="font-normal">
-                  —{" "}
-                  {e.mode === "solo"
-                    ? "1 pemain = 1 peringkat"
-                    : "Poin seluruh anggota = poin squad"}
-                </span>
-              </div>
-              {e.mode === "squad" && (
-                <div className="squad-editor p-[18px] bg-[#f8faff] rounded-[13px] flex flex-col gap-[10px]">
-                  <h4>Daftar Squad</h4>
-                  {e.squads.map((s) => (
-                    <div className="squad-row flex items-center gap-[8px]" key={s.id}>
-                      <input
-                        aria-label="Warna squad"
-                        disabled={locked}
-                        type="color"
-                        value={s.color}
-                        onChange={(v) =>
-                          store.changeSquad(s.id, { color: v.target.value })
-                        }
-                      />
-                      <input
-                        disabled={locked}
-                        value={s.name}
-                        maxLength={70}
-                        onChange={(v) =>
-                          store.changeSquad(s.id, { name: v.target.value })
-                        }
-                      />
-                      <button
-                        disabled={
-                          locked ||
-                          e.participants.some((p) => p.squadId === s.id)
-                        }
-                        className="icon-button w-[35px] h-[35px] inline-flex items-center justify-center rounded-[10px] bg-transparent text-[#7c8da8] danger"
-                        title="Hapus squad kosong"
-                        onClick={() => store.removeSquad(s.id)}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  ))}
-                  <div className="add-row-fields flex gap-[10px] items-center">
-                    <input
-                      disabled={locked}
-                      value={squadName}
-                      onChange={(v) => setSquadName(v.target.value)}
-                      placeholder="Nama squad baru"
-                    />
-                    <button
-                      disabled={locked || !squadName.trim()}
-                      className="btn inline-flex items-center justify-center gap-[9px] [border:1px_solid_transparent] rounded-[10px] min-h-[41px] p-[0_16px] whitespace-nowrap text-[12px] font-extrabold [transition:background_.2s,_transform_.2s,_box-shadow_.2s] secondary"
-                      onClick={() => {
-                        store.addSquad(squadName);
-                        setSquadName("");
-                      }}
-                    >
-                      <Plus size={16} />
-                      Squad
-                    </button>
-                  </div>
-                </div>
-              )}
-              {e.mode === "squad" && (
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    size="sm"
-                    variant={squadFilter === "all" ? "default" : "secondary"}
-                    onClick={() => setSquadFilter("all")}
-                  >
-                    Semua anggota ({e.participants.length})
-                  </Button>
-                  {e.squads.map((s) => (
-                    <Button
-                      key={s.id}
-                      size="sm"
-                      variant={squadFilter === s.id ? "default" : "secondary"}
-                      onClick={() => setSquadFilter(s.id)}
-                    >
-                      {s.name} (
-                      {e.participants.filter((p) => p.squadId === s.id).length})
-                    </Button>
-                  ))}
-                </div>
-              )}
-              <div className="participant-list flex flex-col gap-[8px]">
-                {e.participants
-                  .filter(
-                    (p) =>
-                      e.mode === "solo" ||
-                      squadFilter === "all" ||
-                      !e.squads.some((s) => s.id === squadFilter) ||
-                      p.squadId === squadFilter,
-                  )
-                  .map((p) => (
-                    <div className="participant-edit flex items-center gap-[11px] p-[11px] bg-[#fbfcff] [border:1px_solid_#e9eef8] rounded-[10px]" key={p.id}>
-                      <div className="participant-avatar w-[36px] h-[36px] text-[12px]">
-                        {p.name.slice(0, 1).toUpperCase()}
-                      </div>
-                      <div className="participant-fields flex gap-[8px] flex-1 min-w-[0]">
-                        <input
-                          disabled={locked}
-                          value={p.name}
-                          maxLength={80}
-                          aria-label="Nama peserta"
-                          onChange={(v) =>
-                            store.changeParticipant(p.id, {
-                              name: v.target.value,
-                            })
-                          }
-                        />
-                        <input
-                          disabled={locked}
-                          value={p.username}
-                          maxLength={80}
-                          aria-label="Username Roblox"
-                          placeholder="Username Roblox"
-                          onChange={(v) =>
-                            store.changeParticipant(p.id, {
-                              username: v.target.value,
-                            })
-                          }
-                        />
-                        {e.mode === "squad" && (
-                          <select
-                            title={
-                              e.entries.some(
-                                (entry) => entry.participantId === p.id,
-                              )
-                                ? "Anggota dengan riwayat skor tidak boleh pindah squad"
-                                : "Pilih squad"
-                            }
-                            disabled={
-                              locked ||
-                              e.entries.some(
-                                (entry) => entry.participantId === p.id,
-                              )
-                            }
-                            value={p.squadId || ""}
-                            onChange={(v) =>
-                              store.changeParticipant(p.id, {
-                                squadId: v.target.value || null,
-                              })
-                            }
-                          >
-                            <option value="">Pilih Squad</option>
-                            {e.squads.map((s) => (
-                              <option key={s.id} value={s.id}>
-                                {s.name}
-                              </option>
-                            ))}
-                          </select>
-                        )}
-                      </div>
-                      <label className="check-label text-[10px] text-[#667e9f] flex gap-[6px] items-center whitespace-nowrap">
-                        <input
-                          disabled={locked}
-                          type="checkbox"
-                          checked={p.checkedIn}
-                          onChange={(v) =>
-                            store.changeParticipant(p.id, {
-                              checkedIn: v.target.checked,
-                            })
-                          }
-                        />
-                        <span>Check-in</span>
-                      </label>
-                      <button
-                        disabled={
-                          locked ||
-                          e.entries.some((x) => x.participantId === p.id)
-                        }
-                        className="icon-button w-[35px] h-[35px] inline-flex items-center justify-center rounded-[10px] bg-transparent text-[#7c8da8] danger"
-                        title="Hapus peserta tanpa riwayat"
-                        onClick={() => store.removeParticipant(p.id)}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  ))}
-                {e.participants.length === 0 && (
-                  <div className="empty-row p-[26px_16px] [border:1px_dashed_#d4e0ef] rounded-[12px] bg-[#f9fbff] flex gap-[5px] flex-col items-center text-center text-[#7495c9]">
-                    <Users size={24} />
-                    <strong>Belum ada peserta</strong>
-                    <span>Daftarkan peserta sebelum mencatat tangkapan.</span>
-                  </div>
-                )}
-              </div>
-              <div className="add-row bg-[#f6f9ff] [border:1px_dashed_#cbdcf7] rounded-[12px] p-[18px] flex flex-col items-stretch gap-[13px]">
-                <div className="row-title flex items-center gap-[8px] text-[12px] font-extrabold text-[#3568c3]">
-                  <Plus size={17} /> Tambah peserta
-                </div>
-                <div className="form-grid grid grid-cols-2 gap-[15px]">
-                  <label className="field flex flex-col gap-[7px] text-[11px] text-[#4f6585] font-extrabold">
-                    Nama tampil
-                    <input
-                      disabled={locked}
-                      value={person}
-                      onChange={(v) => setPerson(v.target.value)}
-                      placeholder="Nama peserta"
-                    />
-                  </label>
-                  <label className="field flex flex-col gap-[7px] text-[11px] text-[#4f6585] font-extrabold">
-                    Username Roblox
-                    <input
-                      disabled={locked}
-                      value={username}
-                      onChange={(v) => setUsername(v.target.value)}
-                      placeholder="Opsional"
-                    />
-                  </label>
-                  {e.mode === "squad" && (
-                    <label className="field flex flex-col gap-[7px] text-[11px] text-[#4f6585] font-extrabold">
-                      Squad
-                      <select
-                        disabled={locked}
-                        value={squadId}
-                        onChange={(v) => setSquadId(v.target.value)}
-                      >
-                        <option value="">Pilih squad</option>
-                        {e.squads.map((s) => (
-                          <option value={s.id} key={s.id}>
-                            {s.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  )}
-                </div>
-                <button
-                  disabled={
-                    locked || !person.trim() || (e.mode === "squad" && !squadId)
-                  }
-                  className="btn inline-flex items-center justify-center gap-[9px] [border:1px_solid_transparent] rounded-[10px] min-h-[41px] p-[0_16px] whitespace-nowrap text-[12px] font-extrabold [transition:background_.2s,_transform_.2s,_box-shadow_.2s] primary"
-                  onClick={() => {
-                    store.addParticipant(person, username, squadId || null);
-                    setPerson("");
-                    setUsername("");
-                  }}
-                >
-                  <Plus size={16} /> Daftarkan Peserta
-                </button>
-              </div>
-            </div>
-          )}
+          {tab === "participants" && <ParticipantRoster store={store} />}
           {tab === "faq" && (
             <div className="stack-lg flex flex-col gap-[22px]">
               <div className="block-title">
@@ -1066,7 +804,9 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
             </div>
           )}
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <span className="text-xs font-bold text-slate-500">Langkah {currentStep + 1} dari {builderSteps.length}</span>
+            <span className="text-xs font-bold text-slate-500">
+              Langkah {currentStep + 1} dari {builderSteps.length}
+            </span>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"

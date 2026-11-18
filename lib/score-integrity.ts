@@ -1,6 +1,7 @@
 import type { ArenaData, ArenaEvent, ScoreEntry } from "./arena-types";
 import { calculateCatch } from "./arena-rules";
 import { secondsLeft } from "./arena-utils";
+import { validateRosterChange } from "./roster-management";
 
 /**
  * V2.6: Validate a full-snapshot edit against the row locked in PostgreSQL.
@@ -96,6 +97,8 @@ export function prepareSnapshot(
         return fail(
           `Event baru ${event.title} harus dibuat sebagai Draft kosong, lalu disimpan sebelum mulai.`,
         );
+      const rosterError = validateRosterChange(undefined, event);
+      if (rosterError) return fail(rosterError);
       continue;
     }
     if (before.status === "finished") continue; // Strict finalized-lock checked separately.
@@ -119,6 +122,8 @@ export function prepareSnapshot(
           `Anggota ${member.name} dengan skor historis tidak boleh dipindah atau dihapus.`,
         );
     }
+    const rosterError = validateRosterChange(before, event);
+    if (rosterError) return fail(rosterError);
 
     if (
       event.timer.durationSec !== before.timer.durationSec &&

@@ -24,6 +24,15 @@ import {
 } from "@/lib/arena-storage";
 import { isReversed, secondsLeft, validPoints } from "@/lib/arena-utils";
 import {
+  addRosterMember,
+  addRosterSquad,
+  planCsvImport,
+  rosterEditable,
+  squadLimit,
+  playerKey,
+  squadKey,
+} from "@/lib/roster-management";
+import {
   startMatch,
   pauseMatch,
   resumeMatch,
@@ -251,7 +260,12 @@ export function useArena() {
       tieBonusId: tieBonusIndex >= 0 ? copiedBonuses[tieBonusIndex].id : null,
       writtenRules: source.writtenRules.map((r) => ({ ...r, id: newId() })),
       faqs: source.faqs.map((q) => ({ ...q, id: newId() })),
-      squads: source.squads.map((s) => ({ ...s, id: newId() })),
+      squads: source.squads.map((s) => ({
+        ...s,
+        id: newId(),
+        captainId: null,
+      })),
+      rosterLocked: false,
       timer: {
         durationSec: source.timer.durationSec,
         remainingSec: source.timer.durationSec,
@@ -427,74 +441,137 @@ export function useArena() {
     }));
   const removeFaq = (id: string) =>
     update((e) => ({ ...e, faqs: e.faqs.filter((f) => f.id !== id) }));
-  const addSquad = (name: string) => {
-    if (!name.trim()) return;
-    update((e) =>
-      e.mode !== "squad"
-        ? e
-        : {
-            ...e,
-            squads: [
-              ...e.squads,
-              { id: newId(), name: name.trim().slice(0, 70), color: "#3478F6" },
-            ],
-          },
-    );
-  };
+  const addSquad = (name: string) =>
+    update((e) => addRosterSquad(e, name) || e);
   const changeSquad = (id: string, fields: Partial<Squad>) =>
-    update((e) => ({
-      ...e,
-      squads: e.squads.map((s) => (s.id === id ? { ...s, ...fields } : s)),
-    }));
+    update((e) => {
+      if (!rosterEditable(e)) return e;
+      const item = e.squads.find((s) => s.id === id);
+      if (!item) return e;
+      if (
+        fields.name !== undefined &&
+        (!fields.name.trim() ||
+          e.squads.some(
+            (s) =>
+              s.id !== id && squadKey(s.name) === squadKey(fields.name || ""),
+          ))
+      )
+        return e;
+      if (
+        fields.captainId &&
+        !e.participants.some(
+          (p) => p.id === fields.captainId && p.squadId === id,
+        )
+      )
+        return e;
+      return {
+        ...e,
+        squads: e.squads.map((s) =>
+          s.id === id
+            ? { ...s, ...fields, name: (fields.name ?? s.name).slice(0, 70) }
+            : s,
+        ),
+      };
+    });
   const removeSquad = (id: string) =>
     update((e) =>
-      e.participants.some((p) => p.squadId === id)
+      !rosterEditable(e) || e.participants.some((p) => p.squadId === id)
         ? e
         : { ...e, squads: e.squads.filter((s) => s.id !== id) },
     );
+  const setRosterLocked = (locked: boolean) =>
+    update((e) =>
+      e.status === "draft" && e.entries.length === 0
+        ? { ...e, rosterLocked: locked }
+        : e,
+    );
+  const setSquadSizeLimit = (limit: number) =>
+    update((e) => {
+      if (
+        !rosterEditable(e) ||
+        e.mode !== "squad" ||
+        !Number.isSafeInteger(limit) ||
+        limit < 0 ||
+        limit > 100
+      )
+        return e;
+      if (
+        limit > 0 &&
+        e.squads.some(
+          (s) =>
+            e.participants.filter((p) => p.squadId === s.id).length > limit,
+        )
+      )
+        return e;
+      return { ...e, squadSizeLimit: limit };
+    });
   const addParticipant = (
     name: string,
     username: string,
     squadId: string | null,
-  ) => {
-    if (!name.trim()) return;
-    update((e) =>
-      e.participants.length >= 2000 ||
-      (e.mode === "squad" && !e.squads.some((s) => s.id === squadId))
-        ? e
-        : {
-            ...e,
-            participants: [
-              ...e.participants,
-              {
-                id: newId(),
-                name: name.trim().slice(0, 80),
-                username: username.trim().replace(/^@/, "").slice(0, 80),
-                checkedIn: false,
-                squadId: e.mode === "squad" ? squadId : null,
-              },
-            ],
-          },
+  ) => update((e) => addRosterMember(e, name, username, squadId) || e);
+  const importRosterCsv = (text: string) => {
+    const e = dataRef.current.events.find(
+      (event) => event.id === dataRef.current.activeEventId,
     );
+    if (!e) return false;
+    const plan = planCsvImport(e, text);
+    if (!plan.prepared) return false;
+    update((current) =>
+      current.id === e.id && rosterEditable(current)
+        ? planCsvImport(current, text).prepared || current
+        : current,
+    );
+    return true;
   };
   const changeParticipant = (id: string, fields: Partial<Participant>) =>
     update((e) => {
       const existing = e.participants.find((p) => p.id === id);
       if (!existing) return e;
-      // Historical team ownership must not change when roster edits are made.
       if (
-        fields.squadId !== undefined &&
-        fields.squadId !== existing.squadId &&
-        !canAssignSquad(e, id, fields.squadId)
+        !rosterEditable(e) &&
+        Object.keys(fields).some((key) => key !== "checkedIn")
       )
         return e;
+      if (fields.username !== undefined) {
+        const clean = fields.username.trim().replace(/^@/, "");
+        if (
+          clean.length > 20 ||
+          (clean && !/^[a-zA-Z0-9_]{1,20}$/.test(clean)) ||
+          (clean &&
+            e.participants.some(
+              (p) => p.id !== id && playerKey(p.username) === playerKey(clean),
+            ))
+        )
+          return e;
+        fields = { ...fields, username: clean };
+      }
+      if (fields.squadId !== undefined && fields.squadId !== existing.squadId) {
+        if (!canAssignSquad(e, id, fields.squadId)) return e;
+        if (
+          fields.squadId &&
+          squadLimit(e) > 0 &&
+          e.participants.filter((p) => p.squadId === fields.squadId).length >=
+            squadLimit(e)
+        )
+          return e;
+      }
+      const nextSquads =
+        fields.squadId !== undefined && fields.squadId !== existing.squadId
+          ? e.squads.map((s) =>
+              s.captainId === id ? { ...s, captainId: null } : s,
+            )
+          : e.squads;
       return {
         ...e,
+        squads: nextSquads,
         participants: e.participants.map((p) =>
           p.id === id
             ? {
                 ...p,
                 ...fields,
+                name:
+                  fields.name !== undefined ? fields.name.slice(0, 80) : p.name,
                 squadId:
                   e.mode === "solo"
                     ? null
@@ -508,9 +585,15 @@ export function useArena() {
     });
   const removeParticipant = (id: string) =>
     update((e) =>
-      e.entries.some((s) => s.participantId === id)
+      !rosterEditable(e) || e.entries.some((s) => s.participantId === id)
         ? e
-        : { ...e, participants: e.participants.filter((p) => p.id !== id) },
+        : {
+            ...e,
+            squads: e.squads.map((s) =>
+              s.captainId === id ? { ...s, captainId: null } : s,
+            ),
+            participants: e.participants.filter((p) => p.id !== id),
+          },
     );
   const addCatch = (
     participantId: string,
@@ -674,7 +757,10 @@ export function useArena() {
     addSquad,
     changeSquad,
     removeSquad,
+    setRosterLocked,
+    setSquadSizeLimit,
     addParticipant,
+    importRosterCsv,
     changeParticipant,
     removeParticipant,
     addCatch,

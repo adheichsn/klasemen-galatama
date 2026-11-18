@@ -41,6 +41,11 @@ export function validArena(x: unknown): x is ArenaData {
         !isBool(e.published) ||
         (e.bannerUrl !== undefined && !validBannerUrl(e.bannerUrl)) ||
         (e.featured !== undefined && !isBool(e.featured)) ||
+        (e.rosterLocked !== undefined && !isBool(e.rosterLocked)) ||
+        (e.squadSizeLimit !== undefined &&
+          (!Number.isSafeInteger(e.squadSizeLimit) ||
+            (e.squadSizeLimit as number) < 0 ||
+            (e.squadSizeLimit as number) > 100)) ||
         !["catches", "bonus", "alphabetical"].includes(String(e.tieBreaker)) ||
         !(e.tieBonusId === null || isString(e.tieBonusId)) ||
         !isString(e.createdAt) ||
@@ -80,7 +85,13 @@ export function validArena(x: unknown): x is ArenaData {
       if (
         !validNamed(e.fish as unknown[]) ||
         !validNamed(e.bonuses as unknown[]) ||
-        !validNamed(e.squads as unknown[])
+        !validNamed(e.squads as unknown[]) ||
+        !(e.squads as RecordMap[]).every(
+          (v) =>
+            v.captainId === undefined ||
+            v.captainId === null ||
+            isString(v.captainId),
+        )
       )
         return false;
       if (

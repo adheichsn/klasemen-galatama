@@ -15,7 +15,12 @@ export type BonusRule = {
 };
 export type WrittenRule = { id: string; group: string; content: string };
 export type FaqItem = { id: string; question: string; answer: string };
-export type Squad = { id: string; name: string; color: string };
+export type Squad = {
+  id: string;
+  name: string;
+  color: string;
+  captainId?: string | null;
+};
 export type Participant = {
   id: string;
   name: string;
@@ -67,6 +72,10 @@ export type ArenaEvent = {
   writtenRules: WrittenRule[];
   faqs: FaqItem[];
   squads: Squad[];
+  /** Locked manually during Draft; LIVE/FINISHED implicitly locked. */
+  rosterLocked?: boolean;
+  /** Maximum members per squad; 0 means unlimited. */
+  squadSizeLimit?: number;
   participants: Participant[];
   entries: ScoreEntry[];
   timer: MatchTimer;
