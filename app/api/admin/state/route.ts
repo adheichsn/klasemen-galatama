@@ -17,7 +17,9 @@ export async function GET() {
     return NextResponse.json(snapshot, {
       headers: { "Cache-Control": "private, no-store" },
     });
-  } catch {
+  } catch (error) {
+    console.error("[WEJI STATE GET ERROR]", error);
+
     return NextResponse.json(
       { error: "Database belum siap atau tidak terhubung" },
       { status: 503 },
