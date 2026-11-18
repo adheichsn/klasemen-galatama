@@ -164,7 +164,12 @@ const auto = fs.readFileSync(
   "utf8",
 );
 assert.match(auto, /new EventSource/);
-assert.match(auto, /setInterval\(refresh/);
+
+assert.match(
+  auto,
+  /(?:window\.)?setInterval\(\s*(?:refresh\b|\(\)\s*=>\s*queueRefresh\()/
+);
+
 const spectator = fs.readFileSync(
   path.join(root, "app/spectate/[id]/page.tsx"),
   "utf8",

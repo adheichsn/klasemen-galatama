@@ -1,14 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Radio, WifiOff } from "lucide-react";
+import { FALLBACK_POLL_MS, reconnectDelay } from "@/lib/realtime-policy";
 
-/** SSE is a best-effort low-latency hint. Every page still polls while visible,
- * so transient connection failure and serverless restarts cannot freeze scores. */
+/**
+ * LISTEN/NOTIFY is a low-latency hint, not the source of truth. Fresh scores are
+ * always fetched through the filtered public server page. The visible tab keeps
+ * polling even when SSE is healthy, so missed hints / serverless restarts recover.
+ */
 export default function PublicAutoRefresh({
   eventId,
-  intervalMs = 15000,
+  intervalMs = FALLBACK_POLL_MS,
   dark = false,
 }: {
   eventId?: string;
@@ -17,46 +21,106 @@ export default function PublicAutoRefresh({
 }) {
   const router = useRouter();
   const [connected, setConnected] = useState(false);
-  const pendingRefresh = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     let alive = true;
-    const refresh = () => {
-      if (document.visibilityState === "visible") router.refresh();
-    };
-    const interval = window.setInterval(refresh, Math.max(5000, intervalMs));
-    // Refresh immediately when returning to a tab that may have missed events.
-    document.addEventListener("visibilitychange", refresh);
     let source: EventSource | null = null;
-    if (eventId && typeof EventSource !== "undefined") {
-      source = new EventSource(
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+    let retries = 0;
+    let lastRefresh = 0;
+    const visible = () => document.visibilityState === "visible";
+
+    const queueRefresh = (delayMs = 250) => {
+      if (!alive || !visible() || refreshTimer) return;
+      // Coalesce bursts and avoid overlapping SSE/visibility/poll refresh calls.
+      const wait = Math.max(delayMs, 900 - (Date.now() - lastRefresh));
+      refreshTimer = setTimeout(() => {
+        refreshTimer = null;
+        if (!alive || !visible()) return;
+        lastRefresh = Date.now();
+        router.refresh();
+      }, wait);
+    };
+
+    const closeSource = () => {
+      const previous = source;
+      source = null;
+      if (previous) {
+        previous.onerror = null;
+        previous.close();
+      }
+    };
+    const clearRetry = () => {
+      if (retryTimer) clearTimeout(retryTimer);
+      retryTimer = null;
+    };
+    const connect = () => {
+      if (
+        !alive ||
+        !visible() ||
+        !eventId ||
+        typeof EventSource === "undefined" ||
+        source
+      )
+        return;
+      const next = new EventSource(
         `/api/public/stream?eventId=${encodeURIComponent(eventId)}`,
       );
-      source.addEventListener("connected", () => {
-        if (alive) setConnected(true);
+      source = next;
+      next.addEventListener("connected", () => {
+        if (!alive || source !== next) return;
+        retries = 0;
+        setConnected(true);
+        // Catch any updates missed between SSR and the successful subscription.
+        queueRefresh(0);
       });
-      source.addEventListener("update", () => {
-        if (document.visibilityState !== "visible" || pendingRefresh.current)
-          return;
-        pendingRefresh.current = setTimeout(() => {
-          pendingRefresh.current = null;
-          if (alive) router.refresh();
-        }, 300);
+      next.addEventListener("update", () => queueRefresh(220));
+      next.addEventListener("degraded", () => {
+        if (alive && source === next) setConnected(false);
+        // Keep this SSE open: the broker may reconnect without changing HTTP.
       });
-      source.addEventListener("reconnect", () => {
-        if (alive) setConnected(false);
-      });
-      source.onerror = () => {
-        if (alive) setConnected(false);
+      const retry = () => {
+        if (!alive || source !== next) return;
+        setConnected(false);
+        closeSource();
+        if (!visible() || retryTimer) return;
+        const delay = reconnectDelay(retries++, Math.random());
+        retryTimer = setTimeout(() => {
+          retryTimer = null;
+          connect();
+        }, delay);
       };
-    }
+      next.addEventListener("reconnect", retry);
+      // Own the retry lifecycle instead of allowing EventSource to issue rapid
+      // native retries on failing endpoints or short-lived serverless functions.
+      next.onerror = retry;
+    };
+
+    const onVisibilityChange = () => {
+      if (!visible()) {
+        closeSource();
+        clearRetry();
+        setConnected(false);
+        return;
+      }
+      queueRefresh(0);
+      retries = 0;
+      connect();
+    };
+    const poll = window.setInterval(
+      () => queueRefresh(0),
+      Math.max(5000, intervalMs),
+    );
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    connect();
     return () => {
       alive = false;
-      source?.close();
-      window.clearInterval(interval);
-      document.removeEventListener("visibilitychange", refresh);
-      if (pendingRefresh.current) clearTimeout(pendingRefresh.current);
-      pendingRefresh.current = null;
+      closeSource();
+      clearRetry();
+      if (refreshTimer) clearTimeout(refreshTimer);
+      window.clearInterval(poll);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [eventId, intervalMs, router]);
 
@@ -71,8 +135,8 @@ export default function PublicAutoRefresh({
         <WifiOff size={13} className="opacity-70" />
       )}
       {connected
-        ? "Terhubung LIVE • update otomatis"
-        : `Mode cadangan • refresh ${Math.round(intervalMs / 1000)} detik`}
+        ? "Terhubung LIVE | update otomatis"
+        : `Mode cadangan | refresh ${Math.round(Math.max(5000, intervalMs) / 1000)} detik`}
     </span>
   );
 }

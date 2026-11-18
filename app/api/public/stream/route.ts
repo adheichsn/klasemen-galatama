@@ -5,6 +5,8 @@ import { validPublicEventId } from "@/lib/public-changes";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// Keep the stream below common serverless execution limits.
+export const maxDuration = 60;
 
 export async function GET(request: NextRequest) {
   const eventId = request.nextUrl.searchParams.get("eventId");
@@ -49,7 +51,7 @@ export async function GET(request: NextRequest) {
           /* already closed */
         }
       };
-      send(": WEJI ARENA spectator stream\n\n");
+      send(": WEJI ARENA spectator stream\nretry: 2000\n\n");
       stopListening = subscribePublicChanges(
         (changedId) => {
           if (changedId === eventId) send("event: update\ndata: {}\n\n");
@@ -58,7 +60,7 @@ export async function GET(request: NextRequest) {
           send(
             connected
               ? `event: connected\ndata: ${JSON.stringify({ serverTime: Date.now() })}\n\n`
-              : "event: reconnect\ndata: {}\n\n",
+              : "event: degraded\ndata: {}\n\n",
           ),
       );
       keepalive = setInterval(() => send(": keepalive\n\n"), 20000);

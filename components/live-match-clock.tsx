@@ -4,44 +4,66 @@ import { useEffect, useRef, useState } from "react";
 import { Clock3, Pause, Radio, ShieldCheck } from "lucide-react";
 import type { ArenaEvent } from "@/lib/arena-types";
 import { secondsLeft, timeLabel } from "@/lib/arena-utils";
+import {
+  clockFromAnchor,
+  makeClockAnchor,
+  type ClockAnchor,
+} from "@/lib/realtime-policy";
 
-/** Shows time derived from the saved server timestamp, never controls the match. */
+/** The match is driven by saved server timestamps, never by this display. */
 export default function LiveMatchClock({ event }: { event: ArenaEvent }) {
   const [now, setNow] = useState<number | null>(null);
-  const offsetMs = useRef(0);
+  const [synced, setSynced] = useState(false);
+  const anchorRef = useRef<ClockAnchor | null>(null);
+
   useEffect(() => {
-    let mounted = true;
+    let active = true;
+    let syncSequence = 0;
+    const initialMono = performance.now();
+    anchorRef.current = { serverAtMs: Date.now(), observedMonoMs: initialMono };
+    const tick = () => {
+      if (!active || !anchorRef.current) return;
+      setNow(clockFromAnchor(anchorRef.current, performance.now()));
+    };
+    tick();
+
     async function syncClock() {
-      const sent = Date.now();
+      if (document.visibilityState !== "visible") return;
+      const seq = ++syncSequence;
+      const sent = performance.now();
       try {
-        const response = await fetch("/api/public/time", { cache: "no-store" });
+        const response = await fetch("/api/public/time", {
+          cache: "no-store",
+        });
         if (!response.ok) return;
         const payload: unknown = await response.json();
-        const received = Date.now();
-        const server = (payload as { serverTime?: unknown })?.serverTime;
-        if (typeof server === "number" && Number.isFinite(server) && mounted) {
-          // Midpoint compensates for network RTT; score timestamps remain server-owned.
-          offsetMs.current = server - (sent + received) / 2;
-          setNow(received + offsetMs.current);
-        }
+        const received = performance.now();
+        const serverTime = (payload as { serverTime?: unknown })?.serverTime;
+        if (typeof serverTime !== "number") return;
+        const anchor = makeClockAnchor(serverTime, sent, received);
+        if (!active || seq !== syncSequence || !anchor) return;
+        anchorRef.current = anchor;
+        setSynced(true);
+        tick();
       } catch {
-        /* Browser clock fallback if time endpoint is unavailable. */
+        // Keep the last good anchor, or local monotonic estimate if offline.
       }
     }
-    setNow(Date.now());
+
     void syncClock();
-    const interval = window.setInterval(
-      () => setNow(Date.now() + offsetMs.current),
-      1000,
-    );
-    const resync = window.setInterval(() => void syncClock(), 60000);
+    const ticker = window.setInterval(tick, 1000);
+    const resync = window.setInterval(() => void syncClock(), 30_000);
     const onVisible = () => {
-      if (document.visibilityState === "visible") void syncClock();
+      if (document.visibilityState === "visible") {
+        tick();
+        void syncClock();
+      }
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => {
-      mounted = false;
-      window.clearInterval(interval);
+      active = false;
+      syncSequence++;
+      window.clearInterval(ticker);
       window.clearInterval(resync);
       document.removeEventListener("visibilitychange", onVisible);
     };
@@ -88,7 +110,9 @@ export default function LiveMatchClock({ event }: { event: ArenaEvent }) {
           <p className="mt-1 text-xs text-slate-500">
             {isFinal
               ? "Peringkat dan poin akhir telah diarsipkan."
-              : "Waktu pertandingan berasal dari server; tampilan disinkronkan berkala."}
+              : synced
+                ? "Countdown tersinkron dengan jam server."
+                : "Menggunakan perkiraan jam perangkat sampai server tersambung."}
           </p>
         </div>
         <div
