@@ -53,7 +53,10 @@ const client = fs.readFileSync(
   path.join(root, "components/public-auto-refresh.tsx"),
   "utf8",
 );
-assert.match(client, /setInterval\(\(\) => queueRefresh/);
+assert.match(
+  client,
+  /(?:window\.)?setInterval\(\s*\(\)\s*=>\s*queueRefresh\(0\)/,
+);
 assert.match(client, /visibilitychange/);
 assert.match(client, /next\.onerror = retry/);
 assert.match(client, /addEventListener\("connected"/);

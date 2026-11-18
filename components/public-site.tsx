@@ -63,7 +63,7 @@ export function PublicHeader() {
         </Link>
         <nav
           aria-label="Navigasi utama"
-          className="hidden items-center gap-7 text-[13px] font-bold text-slate-600 lg:flex"
+          className="hidden items-center gap-5 text-[13px] font-bold text-slate-600 lg:flex"
         >
           <Link className="hover:text-blue-600" href="/">
             Beranda
@@ -73,6 +73,9 @@ export function PublicHeader() {
           </Link>
           <Link className="hover:text-blue-600" href="/turnamen?status=live">
             Live Klasemen
+          </Link>
+          <Link className="hover:text-blue-600" href="/statistik">
+            Statistik
           </Link>
           <Link className="hover:text-blue-600" href="/arsip">
             Arsip
@@ -116,6 +119,12 @@ export function PublicHeader() {
               </Link>
               <Link
                 className="rounded-lg px-3 py-2 hover:bg-blue-50"
+                href="/statistik"
+              >
+                Statistik
+              </Link>
+              <Link
+                className="rounded-lg px-3 py-2 hover:bg-blue-50"
                 href="/arsip"
               >
                 Arsip
@@ -156,6 +165,7 @@ export function PublicFooter() {
           </div>
           <div className="flex flex-wrap gap-5 text-xs font-bold text-slate-500">
             <Link href="/turnamen">Turnamen</Link>
+            <Link href="/statistik">Statistik</Link>
             <Link href="/arsip">Arsip</Link>
             <Link href="/faq">FAQ</Link>
           </div>

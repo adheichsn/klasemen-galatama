@@ -5,6 +5,7 @@ import LiveMatchClock from "@/components/live-match-clock";
 import { notFound } from "next/navigation";
 import {
   CalendarDays,
+  ChartNoAxesCombined,
   CheckCircle2,
   Clock3,
   Fish,
@@ -86,6 +87,12 @@ export default async function EventDetail({
           ) : (
             <span />
           )}
+          <Link
+            href={`/turnamen/${encodeURIComponent(e.id)}/statistik`}
+            className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-xs font-extrabold text-blue-700 transition hover:bg-blue-50"
+          >
+            <ChartNoAxesCombined size={16} /> Statistik Turnamen
+          </Link>
           <Link
             href={`/spectate/${encodeURIComponent(e.id)}`}
             className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-xs font-extrabold text-blue-700 transition hover:bg-blue-50"

@@ -9,6 +9,7 @@ import {
   Award,
   BookOpen,
   CalendarDays,
+  ChartNoAxesCombined,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
@@ -49,6 +50,7 @@ import {
   X,
 } from "lucide-react";
 import { useArena } from "@/hooks/use-arena";
+import { TournamentAnalytics } from "@/components/tournament-analytics";
 import {
   downloadArena,
   fmt,
@@ -73,6 +75,7 @@ import PermanentDeleteDialog from "@/components/admin/permanent-delete-dialog";
 type Page =
   | "home"
   | "events"
+  | "analytics"
   | "archives"
   | "hall"
   | "faq"
@@ -81,6 +84,7 @@ type Page =
 const mainNav: { id: Page; label: string; icon: typeof Home }[] = [
   { id: "home", label: "Dashboard", icon: LayoutDashboard },
   { id: "events", label: "Turnamen", icon: CalendarDays },
+  { id: "analytics", label: "Statistik Turnamen", icon: ChartNoAxesCombined },
   { id: "archives", label: "Arsip Galatama", icon: Archive },
   { id: "hall", label: "Hall of Fame", icon: Trophy },
   { id: "faq", label: "Rules & FAQ", icon: BookOpen },
@@ -1391,6 +1395,40 @@ export default function ArenaApp() {
                   </div>
                 )}
               </section>
+            </div>
+          )}
+          {page === "analytics" && (
+            <div className="space-y-6">
+              <div className="flex flex-wrap items-end justify-between gap-4">
+                <div>
+                  <div className="mb-2 text-[10px] font-extrabold tracking-[.16em] text-blue-600">
+                    WEJI ARENA ANALYTICS
+                  </div>
+                  <h2 className="text-2xl font-black text-[#142A55]">
+                    Statistik Turnamen
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Data analitik event aktif: {e.title} ({e.mode.toUpperCase()}
+                    ). Pilih turnamen lain melalui menu Turnamen.
+                  </p>
+                </div>
+                <button
+                  className="rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-xs font-extrabold text-blue-700 hover:bg-blue-50"
+                  onClick={() => go("events")}
+                >
+                  Ganti Event
+                </button>
+              </div>
+              {store.dirty && (
+                <p
+                  role="status"
+                  className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-800"
+                >
+                  Statistik ini mencakup perubahan lokal yang belum disimpan.
+                  Klik Simpan ke Server untuk menerbitkannya.
+                </p>
+              )}
+              <TournamentAnalytics event={e} />
             </div>
           )}
           {page === "builder" &&
