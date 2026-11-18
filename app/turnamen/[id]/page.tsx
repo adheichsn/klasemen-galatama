@@ -87,6 +87,14 @@ export default async function EventDetail({
           ) : (
             <span />
           )}
+          {e.status === "finished" && (
+            <Link
+              href={`/turnamen/${encodeURIComponent(e.id)}/hasil`}
+              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-extrabold text-white hover:bg-blue-700"
+            >
+              <Trophy size={16} /> Hasil Final
+            </Link>
+          )}
           <Link
             href={`/turnamen/${encodeURIComponent(e.id)}/statistik`}
             className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-xs font-extrabold text-blue-700 transition hover:bg-blue-50"

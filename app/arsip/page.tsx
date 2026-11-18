@@ -5,7 +5,8 @@ import {
   PublicShell,
 } from "@/components/public-site";
 import { publicEvents } from "@/lib/public-events";
-import { LockKeyhole } from "lucide-react";
+import { LockKeyhole, ArrowRight } from "lucide-react";
+import Link from "next/link";
 export const dynamic = "force-dynamic";
 export default async function ArchivePage({
   searchParams,
@@ -53,7 +54,12 @@ export default async function ArchivePage({
         {finished.length ? (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {finished.map((e, i) => (
-              <EventCard event={e} index={i} key={e.id} />
+              <div key={e.id} className="min-w-0 space-y-2">
+                <EventCard event={e} index={i} />
+                <Link href={`/turnamen/${encodeURIComponent(e.id)}/hasil`} className="inline-flex items-center gap-2 px-1 text-xs font-bold text-blue-600 hover:underline">
+                  Lihat Hasil Final <ArrowRight size={14} />
+                </Link>
+              </div>
             ))}
           </div>
         ) : (
