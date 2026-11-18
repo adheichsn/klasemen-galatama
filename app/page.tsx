@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FeaturedCarousel } from "@/components/featured-carousel";
+import { PublicReveal } from "@/components/public-reveal";
 import { Search } from "lucide-react";
 import {
   ArrowRight,
@@ -134,7 +135,7 @@ export default async function HomePage() {
           )}
           <form
             action="/turnamen"
-            className="-mt-3 flex flex-col items-stretch gap-3 rounded-2xl border border-blue-100 bg-white p-3 shadow-[0_15px_40px_rgba(18,52,125,.04)] sm:flex-row sm:items-center sm:p-4"
+            className="-mt-3 flex flex-col items-stretch gap-3 rounded-[24px] border border-blue-100 bg-white p-3 shadow-[0_15px_40px_rgba(18,52,125,.07)] sm:flex-row sm:items-center sm:p-4"
           >
             <label className="flex flex-1 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-500">
               <Search size={20} className="text-blue-600" />
@@ -162,51 +163,68 @@ export default async function HomePage() {
               Cari Event <ArrowRight size={16} className="ml-1 inline" />
             </button>
           </form>
-          <section>
-            <SectionTitle
-              eyebrow="CHOOSE YOUR ADVENTURE"
-              title="Mau Jelajahi Apa Nih?"
-              desc="Akses semua bagian arena dengan satu klik."
-            />
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-              {categories.map((c) => (
-                <Link
-                  href={c.href}
-                  key={c.name}
-                  className="group rounded-[20px] border border-blue-100 bg-white p-3.5 shadow-[0_8px_30px_rgba(30,61,132,.025)] transition hover:-translate-y-1 hover:shadow-lg"
-                >
-                  <span
-                    className={`flex h-[72px] items-center justify-center rounded-2xl bg-gradient-to-br ${c.gradient}`}
+          <div className="grid gap-3 sm:grid-cols-3">
+            {[
+              { href: "/turnamen?status=live", title: "Sedang Berlangsung", count: live.length, detail: "Ikuti persaingan realtime", icon: Radio, tint: "from-blue-600 to-[#2d84ed]" },
+              { href: "/turnamen?status=draft", title: "Segera Dimulai", count: upcoming.length, detail: "Cari event berikutnya", icon: CalendarDays, tint: "from-[#354b99] to-[#6980d2]" },
+              { href: "/arsip", title: "Selesai & Diarsipkan", count: recent.length, detail: "Jelajahi sejarah juara", icon: Trophy, tint: "from-[#15557c] to-[#238eb2]" },
+            ].map((item) => (
+              <Link key={item.href} href={item.href} className={`group flex items-center gap-4 rounded-[20px] bg-gradient-to-br ${item.tint} px-5 py-5 text-white shadow-[0_12px_30px_rgba(25,67,143,.10)] transition hover:-translate-y-1 hover:shadow-xl motion-reduce:transform-none`}>
+                <span className="inline-flex size-12 shrink-0 items-center justify-center rounded-2xl bg-white/15"><item.icon size={23} /></span>
+                <span className="min-w-0 flex-1"><span className="block text-[11px] font-bold text-blue-100">{item.title}</span><span className="mt-0.5 block text-[21px] font-black tabular-nums">{item.count} <span className="text-[11px] font-bold text-white/80">Event</span></span><span className="block truncate text-[10px] text-white/70">{item.detail}</span></span>
+                <ArrowRight size={17} className="text-white/70 transition group-hover:translate-x-1" />
+              </Link>
+            ))}
+          </div>
+          <PublicReveal>
+            <section>
+              <SectionTitle
+                eyebrow="CHOOSE YOUR ADVENTURE"
+                title="Mau Jelajahi Apa Nih?"
+                desc="Akses semua bagian arena dengan satu klik."
+              />
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+                {categories.map((c) => (
+                  <Link
+                    href={c.href}
+                    key={c.name}
+                    className="group rounded-[20px] border border-blue-100 bg-white p-3.5 shadow-[0_8px_30px_rgba(30,61,132,.035)] transition duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-lg motion-reduce:transform-none"
                   >
-                    <c.icon size={34} strokeWidth={1.7} className={c.color} />
-                  </span>
-                  <span className="mt-3 block text-[13px] font-black text-[#142A55]">
-                    {c.name}
-                  </span>
-                  <span className="mt-0.5 block text-[11px] text-slate-500">
-                    {c.desc}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </section>
-          <section>
-            <SectionTitle
-              eyebrow="DISCOVER COMPETITIONS"
-              title="Explore Tournaments"
-              desc="Cari turnamen yang pas buat kamu, dari SOLO hingga SQUAD."
-              href="/turnamen"
-            />
-            {showcase.length ? (
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {showcase.map((e, i) => (
-                  <EventCard key={e.id} event={e} index={i} />
+                    <span
+                      className={`flex h-[72px] items-center justify-center rounded-2xl bg-gradient-to-br ${c.gradient}`}
+                    >
+                      <c.icon size={34} strokeWidth={1.7} className={c.color} />
+                    </span>
+                    <span className="mt-3 block text-[13px] font-black text-[#142A55]">
+                      {c.name}
+                    </span>
+                    <span className="mt-0.5 block text-[11px] text-slate-500">
+                      {c.desc}
+                    </span>
+                  </Link>
                 ))}
               </div>
-            ) : (
-              <EmptyEvents />
-            )}
-          </section>
+            </section>
+          </PublicReveal>
+          <PublicReveal>
+            <section>
+              <SectionTitle
+                eyebrow="DISCOVER COMPETITIONS"
+                title="Explore Tournaments"
+                desc="Cari turnamen yang pas buat kamu, dari SOLO hingga SQUAD."
+                href="/turnamen"
+              />
+              {showcase.length ? (
+                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                  {showcase.map((e, i) => (
+                    <EventCard key={e.id} event={e} index={i} />
+                  ))}
+                </div>
+              ) : (
+                <EmptyEvents />
+              )}
+            </section>
+          </PublicReveal>
           {live.length > 0 && (
             <section>
               <SectionTitle
@@ -260,24 +278,26 @@ export default async function HomePage() {
               </div>
             </section>
           )}
-          <section>
-            <SectionTitle
-              eyebrow="MEMORIES & LEGENDS"
-              title="Galatama Archives"
-              desc="Setiap turnamen punya cerita dan pemenangnya."
-              href="/arsip"
-              link="Lihat Arsip"
-            />
-            {recent.length ? (
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {recent.slice(0, 3).map((e, i) => (
-                  <EventCard key={e.id} event={e} index={i + 1} />
-                ))}
-              </div>
-            ) : (
-              <EmptyEvents type="arsip Galatama" />
-            )}
-          </section>
+          <PublicReveal>
+            <section>
+              <SectionTitle
+                eyebrow="MEMORIES & LEGENDS"
+                title="Galatama Archives"
+                desc="Setiap turnamen punya cerita dan pemenangnya."
+                href="/arsip"
+                link="Lihat Arsip"
+              />
+              {recent.length ? (
+                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                  {recent.slice(0, 3).map((e, i) => (
+                    <EventCard key={e.id} event={e} index={i + 1} />
+                  ))}
+                </div>
+              ) : (
+                <EmptyEvents type="arsip Galatama" />
+              )}
+            </section>
+          </PublicReveal>
           <section className="grid gap-6 lg:grid-cols-[.9fr_1.1fr]">
             <div className="relative overflow-hidden rounded-[25px] bg-gradient-to-br from-[#132C66] to-[#2563eb] p-7 text-white sm:p-9">
               <div className="pointer-events-none absolute -bottom-16 -right-12 rounded-full border-[45px] border-white/10 p-10">

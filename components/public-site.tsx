@@ -1,3 +1,5 @@
+export { PublicHeader } from "@/components/public-header";
+import { PublicHeader } from "@/components/public-header";
 import "@/styles/public-effects.css";
 import Link from "next/link";
 import {
@@ -10,9 +12,7 @@ import {
   Fish,
   Globe2,
   Medal,
-  Menu,
   Radio,
-  Search,
   ShieldCheck,
   LockKeyhole,
   Sparkles,
@@ -21,6 +21,7 @@ import {
   Waves,
 } from "lucide-react";
 import type { ArenaEvent, EventMode } from "@/lib/arena-types";
+import type { MarketplaceEvent } from "@/lib/marketplace-filters";
 import { fmt, standings } from "@/lib/arena-utils";
 import { validBannerUrl } from "@/lib/banner";
 import { LiveRanking } from "@/components/live-ranking";
@@ -35,119 +36,15 @@ export const dateLabel = (date: string) => {
 };
 export const modeText = (mode: EventMode) =>
   mode === "solo" ? "SOLO" : "SQUAD";
-export const stageText = (e: ArenaEvent) =>
+
+export const stageText = (e: Pick<ArenaEvent, "status">) =>
   e.status === "live"
     ? "LIVE NOW"
     : e.status === "finished"
       ? "SELESAI"
       : "SEGERA HADIR";
 
-export function PublicHeader() {
-  return (
-    <header className="sticky top-0 z-30 border-b border-blue-100/80 bg-white/95 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-[1260px] items-center justify-between gap-6 px-4 py-3.5 sm:px-6">
-        <Link
-          href="/"
-          className="flex shrink-0 items-center gap-2.5"
-          aria-label="WEJI ARENA - Beranda"
-        >
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#2563eb] text-white shadow-lg shadow-blue-200">
-            <Fish size={23} />
-          </span>
-          <span className="text-lg font-black tracking-[-.06em] text-[#132855] sm:text-[22px]">
-            WEJI <span className="text-blue-600">ARENA</span>
-            <span className="block text-[9px] font-bold tracking-[.22em] text-slate-400">
-              FISH IT TOURNAMENTS
-            </span>
-          </span>
-        </Link>
-        <nav
-          aria-label="Navigasi utama"
-          className="hidden items-center gap-5 text-[13px] font-bold text-slate-600 lg:flex"
-        >
-          <Link className="hover:text-blue-600" href="/">
-            Beranda
-          </Link>
-          <Link className="hover:text-blue-600" href="/turnamen">
-            Turnamen
-          </Link>
-          <Link className="hover:text-blue-600" href="/turnamen?status=live">
-            Live Klasemen
-          </Link>
-          <Link className="hover:text-blue-600" href="/statistik">
-            Statistik
-          </Link>
-          <Link className="hover:text-blue-600" href="/arsip">
-            Arsip
-          </Link>
-          <Link className="hover:text-blue-600" href="/hall-of-fame">
-            Hall of Fame
-          </Link>
-          <Link className="hover:text-blue-600" href="/faq">
-            FAQ
-          </Link>
-        </nav>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/turnamen"
-            className="hidden items-center gap-2 rounded-xl border border-blue-100 bg-blue-50 px-3.5 py-2.5 text-xs font-bold text-blue-700 sm:flex"
-          >
-            <Search size={15} /> Cari Event
-          </Link>
-          <details className="relative lg:hidden">
-            <summary
-              className="flex cursor-pointer list-none rounded-xl border border-blue-100 bg-blue-50 p-2.5 text-[#18345F]"
-              aria-label="Menu"
-            >
-              <Menu size={19} />
-            </summary>
-            <div className="absolute right-0 top-12 flex min-w-[200px] flex-col gap-1 rounded-2xl border border-blue-100 bg-white p-2 text-sm font-semibold shadow-2xl">
-              <Link className="rounded-lg px-3 py-2 hover:bg-blue-50" href="/">
-                Beranda
-              </Link>
-              <Link
-                className="rounded-lg px-3 py-2 hover:bg-blue-50"
-                href="/turnamen"
-              >
-                Turnamen
-              </Link>
-              <Link
-                className="rounded-lg px-3 py-2 hover:bg-blue-50"
-                href="/turnamen?status=live"
-              >
-                Live Klasemen
-              </Link>
-              <Link
-                className="rounded-lg px-3 py-2 hover:bg-blue-50"
-                href="/statistik"
-              >
-                Statistik
-              </Link>
-              <Link
-                className="rounded-lg px-3 py-2 hover:bg-blue-50"
-                href="/arsip"
-              >
-                Arsip
-              </Link>
-              <Link
-                className="rounded-lg px-3 py-2 hover:bg-blue-50"
-                href="/hall-of-fame"
-              >
-                Hall of Fame
-              </Link>
-              <Link
-                className="rounded-lg px-3 py-2 hover:bg-blue-50"
-                href="/faq"
-              >
-                FAQ
-              </Link>
-            </div>
-          </details>
-        </div>
-      </div>
-    </header>
-  );
-}
+
 export function PublicFooter() {
   return (
     <footer className="mt-20 border-t border-blue-100 bg-white">
@@ -233,15 +130,17 @@ export function EventCard({
   event,
   index = 0,
 }: {
-  event: ArenaEvent;
+  event: ArenaEvent | MarketplaceEvent;
   index?: number;
 }) {
-  const ranking = standings(event);
+  const isSummary = "participantCount" in event;
+  const count = isSummary ? event.participantCount : event.participants.length;
+  const topPoints = isSummary ? event.topPoints : standings(event)[0]?.points;
   return (
-    <article className="group overflow-hidden rounded-[22px] border border-blue-100 bg-white shadow-[0_8px_30px_rgba(21,52,111,.035)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_19px_40px_rgba(21,52,111,.10)]">
+    <article className="group relative overflow-hidden rounded-[24px] border border-blue-100 bg-white shadow-[0_10px_28px_rgba(21,52,111,.055)] transition duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-[0_24px_50px_rgba(21,52,111,.13)] motion-reduce:transform-none">
       <Link
         href={`/turnamen/${encodeURIComponent(event.id)}`}
-        className={`weji-event-art relative flex h-44 flex-col justify-between overflow-hidden bg-gradient-to-br ${coverStyles[index % coverStyles.length]} p-5 text-white`}
+        className={`weji-event-art relative flex h-48 flex-col justify-between overflow-hidden bg-gradient-to-br ${coverStyles[index % coverStyles.length]} p-5 text-white sm:h-52`}
       >
         {event.bannerUrl && validBannerUrl(event.bannerUrl) && (
           <>
@@ -300,14 +199,14 @@ export function EventCard({
         <div className="mt-4 flex items-center justify-between border-t border-blue-50 pt-4 text-xs">
           <span className="flex items-center gap-1 font-bold text-slate-600">
             <Users size={15} className="text-blue-600" />
-            {event.participants.length} peserta
+            {count} peserta
           </span>
-          <span className="flex items-center gap-1 font-extrabold text-blue-700">
-            {ranking.length && event.status !== "draft"
-              ? `${fmt(ranking[0].points)} PTS tertinggi`
+          <Link href={`/turnamen/${encodeURIComponent(event.id)}`} className="inline-flex items-center gap-1 font-extrabold text-blue-700 transition group-hover:gap-2">
+            {typeof topPoints === "number" && event.status !== "draft"
+              ? `${fmt(topPoints)} PTS tertinggi`
               : "Lihat Event"}{" "}
             <ChevronRight size={16} />
-          </span>
+          </Link>
         </div>
       </div>
     </article>

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -61,12 +62,15 @@ export function FeaturedCarousel({
   ];
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
+  const reduceMotion = useReducedMotion();
+  const touchStart = useRef<number | null>(null);
   const current = slides[active] ?? slides[0];
   useEffect(() => {
     if (
       slides.length <= 1 ||
       paused ||
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      document.visibilityState !== "visible" ||
+      reduceMotion
     )
       return;
     const timer = window.setInterval(
@@ -74,7 +78,7 @@ export function FeaturedCarousel({
       6500,
     );
     return () => window.clearInterval(timer);
-  }, [slides.length, paused]);
+  }, [slides.length, paused, reduceMotion]);
   const move = (direction: number) =>
     setActive((prev) => (prev + direction + slides.length) % slides.length);
   const hasImage = !!current.bannerUrl && validBannerUrl(current.bannerUrl);
@@ -83,6 +87,13 @@ export function FeaturedCarousel({
       <div className="mx-auto max-w-[1260px] px-4 sm:px-6">
         <div
           className="relative isolate overflow-hidden rounded-[28px] bg-gradient-to-br from-[#0E2862] via-[#1D4FB6] to-[#267CF0] text-white shadow-[0_22px_65px_rgba(30,75,160,.20)] sm:rounded-[34px]"
+          onTouchStart={(event) => { touchStart.current = event.touches[0]?.clientX ?? null; }}
+          onTouchEnd={(event) => {
+            if (touchStart.current === null) return;
+            const delta = event.changedTouches[0]?.clientX - touchStart.current;
+            if (Math.abs(delta) > 45) move(delta < 0 ? 1 : -1);
+            touchStart.current = null;
+          }}
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
           onFocus={() => setPaused(true)}
@@ -112,7 +123,10 @@ export function FeaturedCarousel({
             </div>
           )}
           <div className="relative z-10 flex min-h-[348px] flex-col justify-between gap-8 p-7 sm:min-h-[405px] sm:p-11 lg:p-12">
-            <div className="max-w-[680px]" key={current.id}>
+            <motion.div className="max-w-[680px]" key={current.id}
+              initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.38, ease: "easeOut" }} aria-live="off">
               <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 text-[10px] font-extrabold tracking-[.18em] text-blue-100 backdrop-blur-sm">
                 {current.status === "live" ? (
                   <Radio size={13} />
@@ -153,7 +167,7 @@ export function FeaturedCarousel({
                   Hall of Fame <Trophy size={15} />
                 </Link>
               </div>
-            </div>
+            </motion.div>
             <div className="flex flex-wrap items-end justify-between gap-4 border-t border-white/20 pt-5">
               <div className="grid grid-cols-3 gap-6 text-white sm:gap-12">
                 <div>
@@ -179,10 +193,7 @@ export function FeaturedCarousel({
                   </span>
                 </div>
               </div>
-              <div
-                className="flex items-center gap-2"
-                aria-label="Navigasi banner"
-              >
+              <div className="flex items-center gap-2" aria-label="Navigasi banner">
                 {slides.length > 1 && (
                   <>
                     <button
@@ -193,9 +204,13 @@ export function FeaturedCarousel({
                     >
                       <ChevronLeft size={17} />
                     </button>
-                    <span className="min-w-10 text-center text-xs font-bold tabular-nums">
-                      {active + 1}/{slides.length}
-                    </span>
+                    <div className="flex items-center gap-1.5" role="group" aria-label="Pilih banner">
+                      {slides.map((slide, index) => (
+                        <button key={slide.id} type="button" aria-label={`Tampilkan banner ${index + 1}`} aria-current={active === index ? "true" : undefined}
+                          onClick={() => setActive(index)}
+                          className={`h-1.5 rounded-full transition-all ${active === index ? "w-6 bg-white" : "w-2 bg-white/40 hover:bg-white/70"}`} />
+                      ))}
+                    </div>
                     <button
                       type="button"
                       aria-label="Banner berikutnya"

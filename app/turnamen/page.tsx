@@ -1,88 +1,47 @@
+import { MarketplaceCatalog } from "@/components/marketplace-catalog";
+import { Breadcrumb, PublicShell } from "@/components/public-site";
 import { publicEvents } from "@/lib/public-events";
-import {
-  Breadcrumb,
-  EmptyEvents,
-  EventCard,
-  PublicShell,
-} from "@/components/public-site";
+import { standings } from "@/lib/arena-utils";
+import type { MarketplaceEvent } from "@/lib/marketplace-filters";
+import type { MarketplaceMode, MarketplaceStatus, MarketplaceSort } from "@/lib/marketplace-filters";
 export const dynamic = "force-dynamic";
-type Search = { mode?: string; status?: string; q?: string };
-export default async function EventsPage({
-  searchParams,
-}: {
-  searchParams: Promise<Search>;
-}) {
+
+type Search = { mode?: string; status?: string; q?: string; sort?: string };
+export default async function EventsPage({ searchParams }: { searchParams: Promise<Search> }) {
   const q = await searchParams;
-  const { events } = await publicEvents();
-  const filtered = events.filter(
-    (e) =>
-      (q.mode === "solo" || q.mode === "squad" ? e.mode === q.mode : true) &&
-      (q.status === "live" || q.status === "finished" || q.status === "draft"
-        ? e.status === q.status
-        : true) &&
-      (!q.q ||
-        `${e.title} ${e.location}`.toLowerCase().includes(q.q.toLowerCase())),
-  );
+  const { events, unavailable } = await publicEvents();
+  const catalog: MarketplaceEvent[] = events.map((event) => ({
+    id: event.id,
+    title: event.title,
+    subtitle: event.subtitle,
+    location: event.location,
+    host: event.host,
+    eventDate: event.eventDate,
+    mode: event.mode,
+    status: event.status,
+    bannerUrl: event.bannerUrl,
+    featured: event.featured,
+    createdAt: event.createdAt,
+    participantCount: event.participants.length,
+    topPoints: standings(event)[0]?.points,
+  }));
+  const mode: MarketplaceMode = q.mode === "solo" || q.mode === "squad" ? q.mode : "all";
+  const sort: MarketplaceSort = q.sort === "newest" || q.sort === "participants" || q.sort === "alphabetical" ? q.sort : "recommended";
+  const status: MarketplaceStatus = q.status === "live" || q.status === "draft" || q.status === "finished" ? q.status : "all";
   return (
     <PublicShell>
-      <main className="mx-auto max-w-[1260px] px-4 py-10 sm:px-6">
-        <Breadcrumb label="Turnamen" />
-        <div className="mb-7">
-          <div className="mb-2 text-[11px] font-black tracking-widest text-blue-600">
-            TOURNAMENT CATALOG
+      <main className="mx-auto max-w-[1260px] px-4 py-8 sm:px-6 sm:py-12">
+        <Breadcrumb label="Katalog Turnamen" />
+        <div className="relative mb-8 overflow-hidden rounded-[26px] bg-gradient-to-br from-[#142B60] via-[#1D4FAA] to-[#317BEC] px-6 py-9 text-white sm:px-10 sm:py-12">
+          <div className="pointer-events-none absolute -right-16 -top-20 size-64 rounded-full border-[46px] border-white/10" />
+          <div className="relative">
+            <p className="text-[11px] font-black tracking-[.19em] text-blue-200">THE TOURNAMENT COLLECTION</p>
+            <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-5xl">Cari Arena Kamu Berikutnya.</h1>
+            <p className="mt-3 max-w-xl text-sm leading-7 text-blue-100 sm:text-base">Jelajahi seluruh event Fish It, filter SOLO atau SQUAD, dan pantau turnamen yang sedang berlangsung.</p>
           </div>
-          <h1 className="text-3xl font-black text-[#142A55] sm:text-4xl">
-            Explore Tournaments
-          </h1>
-          <p className="mt-2 text-sm text-slate-500">
-            Temukan turnamen SOLO dan SQUAD dengan sistem poin unik.
-          </p>
         </div>
-        <form
-          className="mb-7 grid gap-3 rounded-2xl border border-blue-100 bg-white p-4 sm:grid-cols-[1fr_auto_auto_auto]"
-          action="/turnamen"
-        >
-          <input
-            name="q"
-            defaultValue={q.q || ""}
-            placeholder="Cari nama event atau lokasi..."
-            className="min-w-0 rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none"
-          />
-          <select
-            name="mode"
-            defaultValue={q.mode || "all"}
-            className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-          >
-            <option value="all">Semua Mode</option>
-            <option value="solo">SOLO</option>
-            <option value="squad">SQUAD</option>
-          </select>
-          <select
-            name="status"
-            defaultValue={q.status || "all"}
-            className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-          >
-            <option value="all">Semua Status</option>
-            <option value="live">Live</option>
-            <option value="draft">Upcoming</option>
-            <option value="finished">Finished</option>
-          </select>
-          <button className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-700">
-            Terapkan Filter
-          </button>
-        </form>
-        <p className="mb-4 text-xs font-semibold text-slate-500">
-          {filtered.length} turnamen ditemukan
-        </p>
-        {filtered.length ? (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((e, i) => (
-              <EventCard key={e.id} event={e} index={i} />
-            ))}
-          </div>
-        ) : (
-          <EmptyEvents />
-        )}
+        {unavailable && <div role="status" className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">Data turnamen belum dapat dimuat. Coba muat ulang halaman nanti.</div>}
+        <MarketplaceCatalog events={catalog} initialQuery={typeof q.q === "string" ? q.q.slice(0, 100) : ""} initialMode={mode} initialStatus={status} initialSort={sort} />
       </main>
     </PublicShell>
   );
