@@ -68,8 +68,16 @@ import { AdminCommandCenter } from "@/components/admin/admin-command-center";
 import ScoreModal from "./arena-score-modal";
 import FinalizationReview from "@/components/admin/finalization-review";
 import ScoreAuditDialog from "@/components/admin/score-audit-dialog";
+import PermanentDeleteDialog from "@/components/admin/permanent-delete-dialog";
 
-type Page = "home" | "events" | "archives" | "hall" | "faq" | "builder";
+type Page =
+  | "home"
+  | "events"
+  | "archives"
+  | "hall"
+  | "faq"
+  | "builder"
+  | "trash";
 const mainNav: { id: Page; label: string; icon: typeof Home }[] = [
   { id: "home", label: "Dashboard", icon: LayoutDashboard },
   { id: "events", label: "Turnamen", icon: CalendarDays },
@@ -151,12 +159,17 @@ function EventTile({
         )}
         <span className="cover-grid" />
         <span className="cover-ring absolute left-[50%] top-[45%] [transform:translate(-50%,_-50%)] h-[180px] w-[180px] rounded-full [border:1px_solid_rgba(195,_230,_255,_.25)] shadow-[0_0_0_26px_rgba(255,_255,_255,_.045),_0_0_0_58px_rgba(255,_255,_255,_.025)]" />
-        <Fish size={65} className="cover-fish absolute [transform:rotate(-22deg)] text-[#a3dfff] opacity-[.68]" />
+        <Fish
+          size={65}
+          className="cover-fish absolute [transform:rotate(-22deg)] text-[#a3dfff] opacity-[.68]"
+        />
         <span className="cover-label absolute left-[16px] top-[14px] text-[#fff] text-[10px] font-extrabold tracking-[1.4px]">
           WEJI <b>ARENA</b>
         </span>
         <span className="cover-bottom absolute bottom-[12px] left-[15px] right-[15px] flex justify-between items-center gap-[10px] text-[10px] font-extrabold text-[#b8d4ff]">
-          <span className={`status-chip inline-flex items-center justify-center p-[5px_10px] rounded-[20px] text-[10px] font-extrabold whitespace-nowrap ${e.status}`}>
+          <span
+            className={`status-chip inline-flex items-center justify-center p-[5px_10px] rounded-[20px] text-[10px] font-extrabold whitespace-nowrap ${e.status}`}
+          >
             {statusText[e.status]}
           </span>
           <span>{e.mode.toUpperCase()}</span>
@@ -188,7 +201,10 @@ function EventTile({
           </span>
         </div>
         <div className="event-tile-actions flex gap-[7px]">
-          <button className="btn inline-flex items-center justify-center gap-[9px] [border:1px_solid_transparent] rounded-[10px] min-h-[41px] p-[0_16px] whitespace-nowrap text-[12px] font-extrabold [transition:background_.2s,_transform_.2s,_box-shadow_.2s] secondary" onClick={onOpen}>
+          <button
+            className="btn inline-flex items-center justify-center gap-[9px] [border:1px_solid_transparent] rounded-[10px] min-h-[41px] p-[0_16px] whitespace-nowrap text-[12px] font-extrabold [transition:background_.2s,_transform_.2s,_box-shadow_.2s] secondary"
+            onClick={onOpen}
+          >
             Lihat Detail <ArrowRight size={15} />
           </button>
           {admin && onDuplicate && (
@@ -203,7 +219,7 @@ function EventTile({
           {admin && onDelete && (
             <button
               className="icon-button w-[35px] h-[35px] inline-flex items-center justify-center rounded-[10px] bg-transparent text-[#7c8da8] danger"
-              title="Hapus draft tanpa skor"
+              title="Pindahkan ke Trash (termasuk event berskor)"
               onClick={onDelete}
             >
               <Trash2 size={16} />
@@ -225,6 +241,7 @@ export default function ArenaApp() {
   const [auditOpen, setAuditOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [eventSearch, setEventSearch] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [openFaq, setOpenFaq] = useState<string[]>([]);
   const [eventFilter, setEventFilter] = useState<"all" | EventStatus>("all");
   const [eventModeFilter, setEventModeFilter] = useState<"all" | EventMode>(
@@ -237,6 +254,33 @@ export default function ArenaApp() {
   const [notice, setNotice] = useState("");
   const [historyOpen, setHistoryOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const manageEvent = async (
+    id: string,
+    action: "trash" | "restore" | "delete",
+    title?: string,
+  ) => {
+    const result = await store.eventLifecycle(id, action, title);
+    setNotice(
+      result.ok
+        ? action === "trash"
+          ? "Turnamen berhasil dipindah ke Trash dan tidak lagi terlihat publik."
+          : action === "restore"
+            ? "Turnamen berhasil dipulihkan sebagai event tidak dipublikasikan."
+            : "Turnamen dan seluruh transaksi skornya telah dihapus permanen."
+        : result.error || "Gagal memproses turnamen.",
+    );
+    if (result.ok && action === "delete") setDeleteTarget(null);
+    return result.ok;
+  };
+  const moveToTrash = async (event: ArenaEvent) => {
+    if (
+      !window.confirm(
+        `Pindahkan "${event.title}" ke Trash?\n\nEvent akan langsung disembunyikan dari publik, termasuk leaderboard dan Hall of Fame. Skor tetap tersimpan dan bisa dipulihkan.`,
+      )
+    )
+      return;
+    await manageEvent(event.id, "trash");
+  };
   const go = (to: Page) => {
     setPage(to);
     setMobileMenu(false);
@@ -249,20 +293,31 @@ export default function ArenaApp() {
   };
   const setEventStatus = (next: EventStatus) => {
     if (e.status === "finished") {
-      setNotice("Hasil final sudah terkunci. Duplikat turnamen untuk membuat edisi baru.");
+      setNotice(
+        "Hasil final sudah terkunci. Duplikat turnamen untuk membuat edisi baru.",
+      );
       return;
     }
     if (next === "live" && e.status === "draft") {
       if (store.dirty) {
-        setNotice("Simpan konfigurasi turnamen ke Server terlebih dahulu sebelum Mulai.");
+        setNotice(
+          "Simpan konfigurasi turnamen ke Server terlebih dahulu sebelum Mulai.",
+        );
         return;
       }
       if (!tournamentReadiness(e).canStart) {
-        setNotice("Lengkapi ikan aktif serta roster SOLO/SQUAD yang valid sebelum memulai pertandingan.");
+        setNotice(
+          "Lengkapi ikan aktif serta roster SOLO/SQUAD yang valid sebelum memulai pertandingan.",
+        );
         go("builder");
         return;
       }
-      if (!window.confirm("Mulai pertandingan dan langsung jalankan hitung mundur? Setelah mulai, durasi tidak bisa diubah.")) return;
+      if (
+        !window.confirm(
+          "Mulai pertandingan dan langsung jalankan hitung mundur? Setelah mulai, durasi tidak bisa diubah.",
+        )
+      )
+        return;
     }
     if (next === "finished") {
       if (e.status !== "live") return;
@@ -270,7 +325,9 @@ export default function ArenaApp() {
       return;
     }
     store.status(next);
-    setNotice("Perubahan status belum diterbitkan. Klik Simpan ke Server agar terlihat di website publik.");
+    setNotice(
+      "Perubahan status belum diterbitkan. Klik Simpan ke Server agar terlihat di website publik.",
+    );
   };
   const load = async (file?: File) => {
     if (!file) return;
@@ -310,11 +367,13 @@ export default function ArenaApp() {
     .filter((x) => x.kind === "catch" && !cancelled.has(x.id))
     .reduce((a, x) => a + (x.quantity || 1), 0);
   const recent = e.entries.slice(0, 6);
+  const trashedEvents = store.data.events.filter((x) => !!x.trashedAt);
   const finished = store.data.events.filter(
-    (x) => x.status === "finished" && (admin || x.published),
+    (x) => !x.trashedAt && x.status === "finished" && (admin || x.published),
   );
   const visibleEvents = store.data.events.filter(
     (x) =>
+      !x.trashedAt &&
       (admin || x.published) &&
       (eventModeFilter === "all" || x.mode === eventModeFilter) &&
       (eventFilter === "all" || x.status === eventFilter) &&
@@ -336,7 +395,9 @@ export default function ArenaApp() {
       >
         <Icon size={19} strokeWidth={page === item.id ? 2.3 : 1.9} />
         <span>{item.label}</span>
-        {page === item.id && <span className="nav-current ml-[auto] h-[6px] w-[6px] bg-[#8ec8ff] rounded-full" />}
+        {page === item.id && (
+          <span className="nav-current ml-[auto] h-[6px] w-[6px] bg-[#8ec8ff] rounded-full" />
+        )}
       </button>
     );
   };
@@ -367,7 +428,9 @@ export default function ArenaApp() {
           onClick={() => setMobileMenu(false)}
         />
       )}
-      <aside className={`sidebar fixed left-[0] top-[0] bottom-[0] w-[258px] [background:linear-gradient(165deg,_#111e3f_0%,_#0a1732_72%,_#0c1d40_100%)] text-[#d2dff7] z-[30] flex flex-col [border-right:1px_solid_rgba(255,_255,_255,_.07)] ${mobileMenu ? "mobile-open" : ""}`}>
+      <aside
+        className={`sidebar fixed left-[0] top-[0] bottom-[0] w-[258px] [background:linear-gradient(165deg,_#111e3f_0%,_#0a1732_72%,_#0c1d40_100%)] text-[#d2dff7] z-[30] flex flex-col [border-right:1px_solid_rgba(255,_255,_255,_.07)] ${mobileMenu ? "mobile-open" : ""}`}
+      >
         <div className="brand-area h-[99px] p-[25px_23px] flex gap-[11px] items-center [border-bottom:1px_solid_rgba(255,_255,_255,_.08)]">
           <div className="brand-mark w-[45px] h-[45px] rounded-[14px] [background:linear-gradient(135deg,_#4b9cff,_#2458e6)] flex items-center justify-center text-white shadow-[0_9px_24px_rgba(33,_104,_245,_.35)]">
             <Fish size={25} />
@@ -387,15 +450,24 @@ export default function ArenaApp() {
           </button>
         </div>
         <div className="sidebar-nav p-[29px_13px] flex-1 overflow-auto">
-          <div className="sidebar-caption text-[10px] tracking-[1.5px] font-extrabold text-[#6680ae] m-[0_14px_13px]">MENU UTAMA</div>
+          <div className="sidebar-caption text-[10px] tracking-[1.5px] font-extrabold text-[#6680ae] m-[0_14px_13px]">
+            MENU UTAMA
+          </div>
           {mainNav.map(navItem)}
           {admin && (
             <>
-              <div className="sidebar-caption text-[10px] tracking-[1.5px] font-extrabold text-[#6680ae] m-[0_14px_13px] admin-caption mt-[34px]">PANEL PANITIA</div>
+              <div className="sidebar-caption text-[10px] tracking-[1.5px] font-extrabold text-[#6680ae] m-[0_14px_13px] admin-caption mt-[34px]">
+                PANEL PANITIA
+              </div>
               {navItem({
                 id: "builder",
                 label: "Tournament Builder",
                 icon: Settings2,
+              })}
+              {navItem({
+                id: "trash",
+                label: `Recycle Bin (${trashedEvents.length})`,
+                icon: Trash2,
               })}
             </>
           )}
@@ -409,7 +481,8 @@ export default function ArenaApp() {
             </div>
           </div>
           <div className="sidebar-signoff flex items-center gap-[7px] m-[22px_5px_0] text-[#6d8dbb] text-[9px] font-extrabold tracking-[1.1px]">
-            <span className="online-dot h-[6px] w-[6px] bg-[#3bc6bb] rounded-full shadow-[0_0_0_4px_rgba(59,_198,_187,_.1)]" /> READY TO COMPETE <Waves size={15} />
+            <span className="online-dot h-[6px] w-[6px] bg-[#3bc6bb] rounded-full shadow-[0_0_0_4px_rgba(59,_198,_187,_.1)]" />{" "}
+            READY TO COMPETE <Waves size={15} />
           </div>
         </div>
       </aside>
@@ -430,6 +503,7 @@ export default function ArenaApp() {
                 [
                   ...mainNav,
                   { id: "builder", label: "Tournament Builder" },
+                  { id: "trash", label: "Recycle Bin" },
                 ].find((x) => x.id === page)?.label
               }
             </b>
@@ -441,7 +515,9 @@ export default function ArenaApp() {
             </Badge>
           </div>
           <div className="topbar-end flex items-center gap-[21px]">
-            <span className="topbar-date text-[10px] tracking-[1.15px] text-[#96a5bb] font-extrabold">FISH IT COMMUNITY HUB</span>
+            <span className="topbar-date text-[10px] tracking-[1.15px] text-[#96a5bb] font-extrabold">
+              FISH IT COMMUNITY HUB
+            </span>
             <a
               href="/"
               target="_blank"
@@ -452,7 +528,7 @@ export default function ArenaApp() {
             </a>
             <button
               className="btn inline-flex items-center justify-center gap-[9px] [border:1px_solid_transparent] rounded-[10px] min-h-[41px] p-[0_16px] whitespace-nowrap text-[12px] font-extrabold [transition:background_.2s,_transform_.2s,_box-shadow_.2s] primary"
-              disabled={!store.dirty || store.saving}
+              disabled={!store.dirty || store.saving || store.eventBusy}
               onClick={() => void store.save()}
             >
               <CheckCircle2 size={16} />
@@ -467,7 +543,13 @@ export default function ArenaApp() {
               aria-label="Logout"
               title="Logout Panitia"
               onClick={async () => {
-                if (store.dirty && !window.confirm("Ada perubahan belum disimpan. Logout sekarang akan membuang perubahan tersebut. Tetap logout?")) return;
+                if (
+                  store.dirty &&
+                  !window.confirm(
+                    "Ada perubahan belum disimpan. Logout sekarang akan membuang perubahan tersebut. Tetap logout?",
+                  )
+                )
+                  return;
                 await fetch("/api/admin/logout", { method: "POST" });
                 window.location.assign("/admin/login");
               }}
@@ -642,13 +724,17 @@ export default function ArenaApp() {
                 <section className="panel bg-[#fff] [border:1px_solid_var(--line)] rounded-[17px] shadow-[var(--shadow)] min-w-[0] podium-panel min-h-[365px]">
                   <div className="panel-heading p-[23px_23px_15px] flex items-center justify-between gap-[15px]">
                     <div>
-                      <div className="kicker text-[10px] text-[#477bce] tracking-[1.6px] font-extrabold mb-[8px]">HALL OF CHAMPIONS</div>
+                      <div className="kicker text-[10px] text-[#477bce] tracking-[1.6px] font-extrabold mb-[8px]">
+                        HALL OF CHAMPIONS
+                      </div>
                       <h2>
                         <Crown size={20} /> Top 3{" "}
                         {e.mode === "solo" ? "Peserta SOLO" : "SQUAD"}
                       </h2>
                     </div>
-                    <span className={`status-chip inline-flex items-center justify-center p-[5px_10px] rounded-[20px] text-[10px] font-extrabold whitespace-nowrap ${e.status}`}>
+                    <span
+                      className={`status-chip inline-flex items-center justify-center p-[5px_10px] rounded-[20px] text-[10px] font-extrabold whitespace-nowrap ${e.status}`}
+                    >
                       {statusText[e.status]}
                     </span>
                   </div>
@@ -657,7 +743,9 @@ export default function ArenaApp() {
                       <div className="podium-slot flex flex-col items-center w-[30%] max-w-[180px] min-w-[0] text-center relative second">
                         {ranking[1] && (
                           <>
-                            <div className="podium-medal absolute top-[-19px] bg-[#f3f6fc] text-[#8ca1c3] text-[10px] w-[25px] h-[25px] flex items-center justify-center rounded-full font-extrabold">2</div>
+                            <div className="podium-medal absolute top-[-19px] bg-[#f3f6fc] text-[#8ca1c3] text-[10px] w-[25px] h-[25px] flex items-center justify-center rounded-full font-extrabold">
+                              2
+                            </div>
                             <div className="podium-avatar flex items-center justify-center rounded-full [border:4px_solid_#fff] shadow-[0_4px_18px_#dfe5f5] h-[57px] w-[57px] text-white silver">
                               <Medal size={24} />
                             </div>
@@ -691,7 +779,9 @@ export default function ArenaApp() {
                       <div className="podium-slot flex flex-col items-center w-[30%] max-w-[180px] min-w-[0] text-center relative third">
                         {ranking[2] && (
                           <>
-                            <div className="podium-medal absolute top-[-19px] bg-[#f3f6fc] text-[#8ca1c3] text-[10px] w-[25px] h-[25px] flex items-center justify-center rounded-full font-extrabold">3</div>
+                            <div className="podium-medal absolute top-[-19px] bg-[#f3f6fc] text-[#8ca1c3] text-[10px] w-[25px] h-[25px] flex items-center justify-center rounded-full font-extrabold">
+                              3
+                            </div>
                             <div className="podium-avatar flex items-center justify-center rounded-full [border:4px_solid_#fff] shadow-[0_4px_18px_#dfe5f5] h-[57px] w-[57px] text-white bronze">
                               <Medal size={24} />
                             </div>
@@ -727,7 +817,9 @@ export default function ArenaApp() {
                   <section className="panel bg-[#fff] [border:1px_solid_var(--line)] rounded-[17px] shadow-[var(--shadow)] min-w-[0] timer-panel pb-[16px]">
                     <div className="panel-heading p-[23px_23px_15px] flex items-center justify-between gap-[15px]">
                       <div>
-                        <div className="kicker text-[10px] text-[#477bce] tracking-[1.6px] font-extrabold mb-[8px]">MATCH CONTROL</div>
+                        <div className="kicker text-[10px] text-[#477bce] tracking-[1.6px] font-extrabold mb-[8px]">
+                          MATCH CONTROL
+                        </div>
                         <h2>
                           <Clock3 size={19} /> Waktu Pertandingan
                         </h2>
@@ -736,7 +828,15 @@ export default function ArenaApp() {
                         className={`live-indicator flex gap-[7px] items-center text-[10px] text-[#90a1b6] font-extrabold ${e.status === "live" ? "is-live" : ""}`}
                       >
                         <span />
-                        {e.status === "finished" ? "FINAL" : e.status === "live" ? store.remaining === 0 ? "TIME UP" : e.timer.runningSince === null ? "PAUSED" : "LIVE" : "DRAFT"}
+                        {e.status === "finished"
+                          ? "FINAL"
+                          : e.status === "live"
+                            ? store.remaining === 0
+                              ? "TIME UP"
+                              : e.timer.runningSince === null
+                                ? "PAUSED"
+                                : "LIVE"
+                            : "DRAFT"}
                       </div>
                     </div>
                     <div className="timer-face m-[3px_23px_13px] [background:linear-gradient(135deg,_#f4f8ff,_#eef5ff)] [border:1px_solid_#e5eefc] rounded-[13px] p-[15px_12px] text-center flex flex-col gap-[3px]">
@@ -746,12 +846,23 @@ export default function ArenaApp() {
                         Durasi {fmt(e.timer.durationSec / 60)} menit •{" "}
                         {e.mode.toUpperCase()}
                       </div>
-                      <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-blue-100" aria-label="Progres waktu pertandingan">
-                        <div className={`h-full rounded-full transition-[width] duration-500 ${store.remaining === 0 ? "bg-rose-500" : "bg-blue-600"}`} style={{ width: `${Math.min(100, Math.max(0, 100 * store.remaining / Math.max(1, e.timer.durationSec)))}%` }} />
+                      <div
+                        className="mt-3 h-2 w-full overflow-hidden rounded-full bg-blue-100"
+                        aria-label="Progres waktu pertandingan"
+                      >
+                        <div
+                          className={`h-full rounded-full transition-[width] duration-500 ${store.remaining === 0 ? "bg-rose-500" : "bg-blue-600"}`}
+                          style={{
+                            width: `${Math.min(100, Math.max(0, (100 * store.remaining) / Math.max(1, e.timer.durationSec)))}%`,
+                          }}
+                        />
                       </div>
                       {e.status === "finished" && (
                         <div className="mt-3 inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-[11px] font-bold text-emerald-700">
-                          <LockKeyhole size={14} /> Hasil final terkunci {e.finishedAt ? `• ${new Date(e.finishedAt).toLocaleDateString("id-ID")}` : ""}
+                          <LockKeyhole size={14} /> Hasil final terkunci{" "}
+                          {e.finishedAt
+                            ? `• ${new Date(e.finishedAt).toLocaleDateString("id-ID")}`
+                            : ""}
                         </div>
                       )}
                     </div>
@@ -759,14 +870,22 @@ export default function ArenaApp() {
                       <div className="timer-controls flex gap-[9px] m-[0_23px]">
                         <button
                           className="btn inline-flex items-center justify-center gap-[9px] [border:1px_solid_transparent] rounded-[10px] min-h-[41px] p-[0_16px] whitespace-nowrap text-[12px] font-extrabold [transition:background_.2s,_transform_.2s,_box-shadow_.2s] primary"
-                          disabled={e.status !== "live" || (store.remaining === 0 && e.timer.runningSince === null)}
+                          disabled={
+                            e.status !== "live" ||
+                            (store.remaining === 0 &&
+                              e.timer.runningSince === null)
+                          }
                           onClick={() => {
                             if (store.dirty) {
-                              setNotice("Simpan skor dan perubahan sebelumnya ke Server sebelum Pause/Resume timer.");
+                              setNotice(
+                                "Simpan skor dan perubahan sebelumnya ke Server sebelum Pause/Resume timer.",
+                              );
                               return;
                             }
                             store.toggleTimer();
-                            setNotice("Waktu server mulai berlaku setelah Simpan ke Server. Simpan segera agar sinkron dengan penonton.");
+                            setNotice(
+                              "Waktu server mulai berlaku setelah Simpan ke Server. Simpan segera agar sinkron dengan penonton.",
+                            );
                           }}
                         >
                           {e.timer.runningSince === null ? (
@@ -815,7 +934,8 @@ export default function ArenaApp() {
                             disabled
                             type="button"
                           >
-                            <LockKeyhole size={15} /> Final terkunci • arsip permanen
+                            <LockKeyhole size={15} /> Final terkunci • kelola
+                            arsip melalui Trash
                           </button>
                         )}
                       </div>
@@ -824,7 +944,9 @@ export default function ArenaApp() {
                   <section className="panel bg-[#fff] [border:1px_solid_var(--line)] rounded-[17px] shadow-[var(--shadow)] min-w-[0] glance-panel flex flex-col">
                     <div className="panel-heading p-[23px_23px_15px] flex items-center justify-between gap-[15px]">
                       <div>
-                        <div className="kicker text-[10px] text-[#477bce] tracking-[1.6px] font-extrabold mb-[8px]">QUICK OVERVIEW</div>
+                        <div className="kicker text-[10px] text-[#477bce] tracking-[1.6px] font-extrabold mb-[8px]">
+                          QUICK OVERVIEW
+                        </div>
                         <h2>
                           <Sparkles size={19} /> Aturan Penilaian
                         </h2>
@@ -871,7 +993,9 @@ export default function ArenaApp() {
               <section className="panel bg-[#fff] [border:1px_solid_var(--line)] rounded-[17px] shadow-[var(--shadow)] min-w-[0] standings-panel overflow-hidden">
                 <div className="panel-heading p-[23px_23px_15px] flex items-center justify-between gap-[15px] leaderboard-header pb-[20px]">
                   <div>
-                    <div className="kicker text-[10px] text-[#477bce] tracking-[1.6px] font-extrabold mb-[8px]">THE LEADERBOARD</div>
+                    <div className="kicker text-[10px] text-[#477bce] tracking-[1.6px] font-extrabold mb-[8px]">
+                      THE LEADERBOARD
+                    </div>
                     <h2>
                       <Trophy size={20} /> Klasemen{" "}
                       {e.mode === "solo" ? "SOLO • Individu" : "SQUAD • Tim"}
@@ -939,7 +1063,10 @@ export default function ArenaApp() {
                                     <small>{row.subtitle}</small>
                                   </div>
                                   {rank === 1 && (
-                                    <Crown size={16} className="crown-small text-[#eab058]" />
+                                    <Crown
+                                      size={16}
+                                      className="crown-small text-[#eab058]"
+                                    />
                                   )}
                                 </div>
                               </td>
@@ -1081,30 +1208,40 @@ export default function ArenaApp() {
                 <section className="panel bg-[#fff] [border:1px_solid_var(--line)] rounded-[17px] shadow-[var(--shadow)] min-w-[0]">
                   <div className="panel-heading p-[23px_23px_15px] flex items-center justify-between gap-[15px]">
                     <div>
-                      <div className="kicker text-[10px] text-[#477bce] tracking-[1.6px] font-extrabold mb-[8px]">MATCH LOG</div>
+                      <div className="kicker text-[10px] text-[#477bce] tracking-[1.6px] font-extrabold mb-[8px]">
+                        MATCH LOG
+                      </div>
                       <h2>
                         <History size={19} /> Aktivitas Terbaru
                       </h2>
                     </div>
                     <div className="flex flex-wrap items-center gap-3">
-                      <button type="button" onClick={() => setAuditOpen(true)}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-extrabold text-blue-700">
-                        <ShieldCheck size={15}/> Audit Skor
+                      <button
+                        type="button"
+                        onClick={() => setAuditOpen(true)}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-extrabold text-blue-700"
+                      >
+                        <ShieldCheck size={15} /> Audit Skor
                       </button>
-                    <button
-                      className="text-action bg-transparent text-[#2864ee] inline-flex items-center gap-[8px] p-[7px_0] text-[12px] font-extrabold"
-                      onClick={() => setHistoryOpen((v) => !v)}
-                    >
-                      {historyOpen ? "Lebih sedikit" : "Lihat semua"}{" "}
-                      <ArrowRight size={15} />
-                    </button>
+                      <button
+                        className="text-action bg-transparent text-[#2864ee] inline-flex items-center gap-[8px] p-[7px_0] text-[12px] font-extrabold"
+                        onClick={() => setHistoryOpen((v) => !v)}
+                      >
+                        {historyOpen ? "Lebih sedikit" : "Lihat semua"}{" "}
+                        <ArrowRight size={15} />
+                      </button>
                     </div>
                   </div>
                   {e.entries.length ? (
                     <div className="activity-list p-[0_23px_12px]">
                       {(historyOpen ? e.entries : recent).map((item) => (
-                        <div className="activity-item flex items-center gap-[12px] [border-bottom:1px_solid_#f0f3f9] p-[13px_0]" key={item.id}>
-                          <div className={`activity-icon h-[39px] w-[39px] rounded-[12px] flex items-center justify-center text-[#3172df] bg-[#eff5ff] ${item.kind}`}>
+                        <div
+                          className="activity-item flex items-center gap-[12px] [border-bottom:1px_solid_#f0f3f9] p-[13px_0]"
+                          key={item.id}
+                        >
+                          <div
+                            className={`activity-icon h-[39px] w-[39px] rounded-[12px] flex items-center justify-center text-[#3172df] bg-[#eff5ff] ${item.kind}`}
+                          >
                             {item.kind === "catch" ? (
                               <Fish size={18} />
                             ) : item.kind === "reversal" ? (
@@ -1175,7 +1312,9 @@ export default function ArenaApp() {
                 <section className="panel bg-[#fff] [border:1px_solid_var(--line)] rounded-[17px] shadow-[var(--shadow)] min-w-[0] rules-spotlight">
                   <div className="panel-heading p-[23px_23px_15px] flex items-center justify-between gap-[15px]">
                     <div>
-                      <div className="kicker text-[10px] text-[#477bce] tracking-[1.6px] font-extrabold mb-[8px]">COMPETITION GUIDE</div>
+                      <div className="kicker text-[10px] text-[#477bce] tracking-[1.6px] font-extrabold mb-[8px]">
+                        COMPETITION GUIDE
+                      </div>
                       <h2>
                         <BookOpen size={19} /> Peraturan Event
                       </h2>
@@ -1207,7 +1346,10 @@ export default function ArenaApp() {
                       description="Aturan dapat dibuat sendiri untuk setiap event."
                     />
                   )}
-                  <button className="text-action bg-transparent text-[#2864ee] inline-flex items-center gap-[8px] p-[7px_0] text-[12px] font-extrabold" onClick={() => go("faq")}>
+                  <button
+                    className="text-action bg-transparent text-[#2864ee] inline-flex items-center gap-[8px] p-[7px_0] text-[12px] font-extrabold"
+                    onClick={() => go("faq")}
+                  >
                     Buka Rules & FAQ <ArrowRight size={16} />
                   </button>
                 </section>
@@ -1215,7 +1357,9 @@ export default function ArenaApp() {
               <section className="section-stack archive-preview">
                 <div className="section-top flex items-end justify-between gap-[16px]">
                   <div>
-                    <div className="kicker text-[10px] text-[#477bce] tracking-[1.6px] font-extrabold mb-[8px]">RELIVE THE MOMENT</div>
+                    <div className="kicker text-[10px] text-[#477bce] tracking-[1.6px] font-extrabold mb-[8px]">
+                      RELIVE THE MOMENT
+                    </div>
                     <h2>Arsip Galatama</h2>
                     <p>
                       Lihat hasil pertandingan sebelumnya, pemenang, dan aturan
@@ -1263,7 +1407,9 @@ export default function ArenaApp() {
             <div className="section-stack">
               <div className="page-heading flex justify-between items-center gap-[20px]">
                 <div>
-                  <div className="kicker text-[10px] text-[#477bce] tracking-[1.6px] font-extrabold mb-[8px]">EVENT MANAGEMENT</div>
+                  <div className="kicker text-[10px] text-[#477bce] tracking-[1.6px] font-extrabold mb-[8px]">
+                    EVENT MANAGEMENT
+                  </div>
                   <h2>Semua Turnamen</h2>
                   <p>
                     Setiap event mempunyai konfigurasi poin, peserta, dan
@@ -1340,17 +1486,7 @@ export default function ArenaApp() {
                             }
                           : undefined
                       }
-                      onDelete={
-                        admin &&
-                        x.status === "draft" &&
-                        !x.entries.length &&
-                        store.data.events.length > 1
-                          ? () => {
-                              if (window.confirm(`Hapus draft "${x.title}"?`))
-                                store.remove(x.id);
-                            }
-                          : undefined
-                      }
+                      onDelete={admin ? () => void moveToTrash(x) : undefined}
                     />
                   ))}
                 </div>
@@ -1381,7 +1517,9 @@ export default function ArenaApp() {
             <div className="section-stack">
               <div className="page-heading flex justify-between items-center gap-[20px]">
                 <div>
-                  <div className="kicker text-[10px] text-[#477bce] tracking-[1.6px] font-extrabold mb-[8px]">GALATAMA HISTORY</div>
+                  <div className="kicker text-[10px] text-[#477bce] tracking-[1.6px] font-extrabold mb-[8px]">
+                    GALATAMA HISTORY
+                  </div>
                   <h2>Arsip Galatama</h2>
                   <p>
                     Dokumentasi hasil final, skor, dan peraturan setiap edisi.
@@ -1422,6 +1560,7 @@ export default function ArenaApp() {
                         e={x}
                         admin={admin}
                         onOpen={() => select(x.id)}
+                        onDelete={admin ? () => void moveToTrash(x) : undefined}
                       />
                     ))}
                 </div>
@@ -1434,13 +1573,97 @@ export default function ArenaApp() {
               )}
             </div>
           )}
+          {page === "trash" && (
+            <div className="space-y-5">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <div className="mb-2 text-[10px] font-black tracking-[1.5px] text-blue-600">
+                    EVENT MANAGEMENT
+                  </div>
+                  <h2 className="text-2xl font-black text-[#142A55]">
+                    Recycle Bin
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Event di Trash tersembunyi dari publik. Pulihkan atau hapus
+                    permanen, termasuk yang sudah berskor.
+                  </p>
+                </div>
+                <span className="rounded-full bg-blue-50 px-4 py-2 text-xs font-black text-blue-700">
+                  {trashedEvents.length} event
+                </span>
+              </div>
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs font-semibold leading-5 text-amber-800">
+                <Info size={17} className="mr-2 inline" />
+                Simpan perubahan dashboard terlebih dahulu sebelum menggunakan
+                Trash. Restore tidak otomatis mempublikasikan event. Hapus
+                permanen tidak bisa dipulihkan.
+              </div>
+              {trashedEvents.length ? (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {trashedEvents.map((ev) => (
+                    <div
+                      key={ev.id}
+                      className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                    >
+                      <div className="mb-3 flex flex-wrap items-center gap-2">
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black text-slate-700">
+                          {ev.mode.toUpperCase()}
+                        </span>
+                        <span className="rounded-full bg-rose-50 px-3 py-1 text-[10px] font-black text-rose-700">
+                          {statusText[ev.status]}
+                        </span>
+                      </div>
+                      <h3 className="break-words text-base font-black text-slate-900">
+                        {ev.title}
+                      </h3>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Dihapus sementara:{" "}
+                        {ev.trashedAt
+                          ? new Date(ev.trashedAt).toLocaleString("id-ID")
+                          : "—"}
+                      </p>
+                      <div className="mt-4 flex gap-4 border-t border-slate-100 pt-4 text-xs font-semibold text-slate-600">
+                        <span>{ev.participants.length} peserta</span>
+                        <span>{ev.entries.length} transaksi skor</span>
+                      </div>
+                      <div className="mt-5 flex flex-wrap gap-2">
+                        <button
+                          disabled={store.eventBusy || store.dirty}
+                          className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-black text-white disabled:opacity-40"
+                          onClick={() => void manageEvent(ev.id, "restore")}
+                        >
+                          <RotateCcw size={15} /> Pulihkan
+                        </button>
+                        <button
+                          disabled={store.eventBusy || store.dirty}
+                          className="inline-flex items-center gap-2 rounded-xl border border-rose-200 px-4 py-2.5 text-xs font-black text-rose-700 hover:bg-rose-50 disabled:opacity-40"
+                          onClick={() => setDeleteTarget(ev.id)}
+                        >
+                          <Trash2 size={15} /> Hapus Permanen
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <Empty
+                  icon={Trash2}
+                  title="Recycle Bin kosong"
+                  description="Event yang dipindahkan dari menu Turnamen atau Arsip akan muncul di sini."
+                />
+              )}
+            </div>
+          )}
           {page === "hall" && (
             <div className="section-stack">
               <div className="page-heading flex justify-between items-center gap-[20px]">
                 <div>
-                  <div className="kicker text-[10px] text-[#477bce] tracking-[1.6px] font-extrabold mb-[8px]">LEGENDS NEVER FADE</div>
+                  <div className="kicker text-[10px] text-[#477bce] tracking-[1.6px] font-extrabold mb-[8px]">
+                    LEGENDS NEVER FADE
+                  </div>
                   <h2>
-                    Hall of Fame <Crown className="title-icon text-[#d5a451]" size={24} />
+                    Hall of Fame{" "}
+                    <Crown className="title-icon text-[#d5a451]" size={24} />
                   </h2>
                   <p>
                     Para juara dari setiap edisi turnamen yang sudah selesai.
@@ -1456,7 +1679,10 @@ export default function ArenaApp() {
                   {finished.map((ev) => {
                     const top = standings(ev).slice(0, 3);
                     return (
-                      <div className="panel bg-[#fff] [border:1px_solid_var(--line)] rounded-[17px] shadow-[var(--shadow)] min-w-[0] hall-card p-[23px]" key={ev.id}>
+                      <div
+                        className="panel bg-[#fff] [border:1px_solid_var(--line)] rounded-[17px] shadow-[var(--shadow)] min-w-[0] hall-card p-[23px]"
+                        key={ev.id}
+                      >
                         <div className="hall-head flex items-center gap-[13px] pb-[17px] [border-bottom:1px_solid_var(--line)]">
                           <div className="hall-icon w-[49px] h-[49px] rounded-[13px] flex items-center justify-center text-[#cd9b31] bg-[#fff6e5]">
                             <Trophy size={23} />
@@ -1473,8 +1699,13 @@ export default function ArenaApp() {
                         </div>
                         {top.length ? (
                           top.map((p, i) => (
-                            <div className="hall-winner flex items-center gap-[12px] p-[13px_0] [border-bottom:1px_solid_#f1f4f9]" key={p.id}>
-                              <span className={`winner-rank w-[37px] h-[29px] flex items-center justify-center rounded-[9px] font-extrabold bg-[#f0f4fb] text-[#8d9bb2] text-[11px] ${standMedals[i]}`}>
+                            <div
+                              className="hall-winner flex items-center gap-[12px] p-[13px_0] [border-bottom:1px_solid_#f1f4f9]"
+                              key={p.id}
+                            >
+                              <span
+                                className={`winner-rank w-[37px] h-[29px] flex items-center justify-center rounded-[9px] font-extrabold bg-[#f0f4fb] text-[#8d9bb2] text-[11px] ${standMedals[i]}`}
+                              >
                                 #{i + 1}
                               </span>
                               <strong>{p.name}</strong>
@@ -1509,7 +1740,9 @@ export default function ArenaApp() {
             <div className="section-stack">
               <div className="page-heading flex justify-between items-center gap-[20px]">
                 <div>
-                  <div className="kicker text-[10px] text-[#477bce] tracking-[1.6px] font-extrabold mb-[8px]">RULES & SUPPORT CENTER</div>
+                  <div className="kicker text-[10px] text-[#477bce] tracking-[1.6px] font-extrabold mb-[8px]">
+                    RULES & SUPPORT CENTER
+                  </div>
                   <h2>Peraturan & FAQ</h2>
                   <p>
                     Ketentuan pertandingan yang sedang dipilih: <b>{e.title}</b>
@@ -1528,7 +1761,9 @@ export default function ArenaApp() {
                 <section className="panel bg-[#fff] [border:1px_solid_var(--line)] rounded-[17px] shadow-[var(--shadow)] min-w-[0] faq-panel">
                   <div className="panel-heading p-[23px_23px_15px] flex items-center justify-between gap-[15px]">
                     <div>
-                      <div className="kicker text-[10px] text-[#477bce] tracking-[1.6px] font-extrabold mb-[8px]">PERTANYAAN UMUM</div>
+                      <div className="kicker text-[10px] text-[#477bce] tracking-[1.6px] font-extrabold mb-[8px]">
+                        PERTANYAAN UMUM
+                      </div>
                       <h2>
                         <CircleHelp size={20} /> Frequently Asked Questions
                       </h2>
@@ -1568,7 +1803,9 @@ export default function ArenaApp() {
                 <aside className="panel bg-[#fff] [border:1px_solid_var(--line)] rounded-[17px] shadow-[var(--shadow)] min-w-[0] written-rules">
                   <div className="panel-heading p-[23px_23px_15px] flex items-center justify-between gap-[15px]">
                     <div>
-                      <div className="kicker text-[10px] text-[#477bce] tracking-[1.6px] font-extrabold mb-[8px]">OFFICIAL RULEBOOK</div>
+                      <div className="kicker text-[10px] text-[#477bce] tracking-[1.6px] font-extrabold mb-[8px]">
+                        OFFICIAL RULEBOOK
+                      </div>
                       <h2>
                         <BookOpen size={19} /> Peraturan Turnamen
                       </h2>
@@ -1587,7 +1824,10 @@ export default function ArenaApp() {
                           {e.writtenRules
                             .filter((x) => x.group === group)
                             .map((r, i) => (
-                              <div key={r.id} className="rules-line flex gap-[10px] mb-[11px]">
+                              <div
+                                key={r.id}
+                                className="rules-line flex gap-[10px] mb-[11px]"
+                              >
                                 <span>{i + 1}.</span>
                                 <p>{r.content}</p>
                               </div>
@@ -1614,6 +1854,18 @@ export default function ArenaApp() {
           </footer>
         </main>
       </div>
+      {deleteTarget &&
+        store.data.events.some(
+          (ev) => ev.id === deleteTarget && !!ev.trashedAt,
+        ) && (
+          <PermanentDeleteDialog
+            key={deleteTarget}
+            event={store.data.events.find((ev) => ev.id === deleteTarget)!}
+            busy={store.eventBusy}
+            onClose={() => setDeleteTarget(null)}
+            onDelete={(title) => manageEvent(deleteTarget, "delete", title)}
+          />
+        )}
       {finalReviewOpen && (
         <FinalizationReview
           key={e.id}
@@ -1623,13 +1875,19 @@ export default function ArenaApp() {
           onConfirm={() => {
             store.status("finished");
             setFinalReviewOpen(false);
-            setNotice("Review selesai. Klik Simpan ke Server untuk mengunci hasil final secara permanen.");
+            setNotice(
+              "Review selesai. Klik Simpan ke Server untuk mengunci hasil final secara permanen.",
+            );
           }}
         />
       )}
       {auditOpen && (
-        <ScoreAuditDialog key={e.id} eventId={e.id} eventTitle={e.title}
-          onClose={() => setAuditOpen(false)} />
+        <ScoreAuditDialog
+          key={e.id}
+          eventId={e.id}
+          eventTitle={e.title}
+          onClose={() => setAuditOpen(false)}
+        />
       )}
       {scoreOpen && (
         <ScoreModal

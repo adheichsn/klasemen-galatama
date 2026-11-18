@@ -41,6 +41,8 @@ export function validArena(x: unknown): x is ArenaData {
         !isBool(e.published) ||
         (e.bannerUrl !== undefined && !validBannerUrl(e.bannerUrl)) ||
         (e.featured !== undefined && !isBool(e.featured)) ||
+        (e.trashedAt !== undefined && !isString(e.trashedAt)) ||
+        (e.trashedBy !== undefined && !isString(e.trashedBy)) ||
         (e.rosterLocked !== undefined && !isBool(e.rosterLocked)) ||
         (e.squadSizeLimit !== undefined &&
           (!Number.isSafeInteger(e.squadSizeLimit) ||

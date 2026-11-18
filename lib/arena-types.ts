@@ -65,6 +65,9 @@ export type ArenaEvent = {
   /** Optional marketing fields for existing database snapshots/backups. */
   bannerUrl?: string;
   featured?: boolean;
+  /** Recycle Bin metadata. Only server-side lifecycle endpoint can change it. */
+  trashedAt?: string;
+  trashedBy?: string;
   tieBreaker: TieBreaker;
   tieBonusId: string | null;
   fish: FishRule[];

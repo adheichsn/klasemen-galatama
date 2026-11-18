@@ -77,17 +77,17 @@ export function prepareSnapshot(
   if (new Set(next.events.map((event) => event.id)).size !== next.events.length)
     return fail("ID turnamen tidak boleh duplikat.");
   for (const old of previous?.events ?? []) {
-    if (!next.events.some((event) => event.id === old.id)) {
-      if (old.status !== "draft" || old.entries.length)
-        return fail(
-          `Event ${old.title} yang sudah berjalan atau berskor tidak dapat dihapus.`,
-        );
-    }
+    if (!next.events.some((event) => event.id === old.id))
+      return fail(
+        `Event ${old.title} tidak boleh dihapus melalui snapshot. Gunakan Recycle Bin.`,
+      );
   }
   for (const event of next.events) {
     const before = existing.get(event.id);
     if (!before) {
       if (
+        event.trashedAt ||
+        event.trashedBy ||
         event.status !== "draft" ||
         event.entries.length ||
         event.timer.runningSince !== null ||

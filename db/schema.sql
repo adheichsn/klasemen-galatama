@@ -42,3 +42,19 @@ CREATE INDEX IF NOT EXISTS weji_arena_score_audit_event_idx
   ON weji_arena_score_audit (event_id, id DESC);
 -- The table is written through the authenticated Next.js server.
 -- Do not enable direct anonymous writes via Supabase Data API.
+
+-- WEJI ARENA V2.7.1: Permanent deletion leaves a minimal event-level audit.
+-- No entries, scoring details, or deleted event snapshot are retained here.
+-- Safe/idempotent migration; existing tournaments are not changed.
+CREATE TABLE IF NOT EXISTS weji_arena_event_audit (
+  id bigserial PRIMARY KEY,
+  revision integer NOT NULL,
+  event_id text NOT NULL,
+  event_title text NOT NULL,
+  actor text NOT NULL,
+  action text NOT NULL CHECK (action IN ('trash', 'restore', 'delete')),
+  details jsonb NOT NULL DEFAULT '{}'::jsonb,
+  recorded_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS weji_arena_event_audit_event_idx
+  ON weji_arena_event_audit (event_id, id DESC);

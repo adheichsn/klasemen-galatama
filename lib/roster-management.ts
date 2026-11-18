@@ -19,9 +19,9 @@ export function rosterRegistry(data: ArenaData) {
     string,
     { name: string; username: string; appearances: number }
   >();
-  for (const event of [...data.events].sort((a, b) =>
-    a.createdAt.localeCompare(b.createdAt),
-  )) {
+  for (const event of data.events
+    .filter((item) => !item.trashedAt)
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))) {
     const seenInEvent = new Set<string>();
     for (const p of event.participants) {
       const key = playerKey(p.username);

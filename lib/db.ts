@@ -4,6 +4,11 @@ import type { ArenaData } from "@/lib/arena-types";
 import { initialArena } from "@/lib/arena-data";
 import { validateMatchTransition } from "@/lib/match-operations";
 import { prepareSnapshot } from "@/lib/score-integrity";
+import {
+  applyEventLifecycle,
+  type EventLifecycleAction,
+} from "@/lib/event-lifecycle";
+import { WEJI_ASSET_URL } from "@/lib/banner";
 
 const globalForDb = globalThis as typeof globalThis & { __wejiPool?: Pool };
 function db() {
@@ -29,7 +34,7 @@ export async function getArenaSnapshot(): Promise<ArenaSnapshot> {
 export async function getPublicEvents() {
   const { data } = await getArenaSnapshot();
   return data.events
-    .filter((e) => e.published)
+    .filter((e) => e.published && !e.trashedAt)
     .map((e) => ({
       ...e,
       // Public only needs these immutable score fields, not private staff correction notes.
@@ -74,7 +79,11 @@ export async function saveArenaSnapshot(
         return { ok: false, invalid };
       }
     }
-    const prepared = prepareSnapshot(locked.rows[0]?.payload ?? null, value, Date.now());
+    const prepared = prepareSnapshot(
+      locked.rows[0]?.payload ?? null,
+      value,
+      Date.now(),
+    );
     if (!prepared.ok) {
       await client.query("ROLLBACK");
       return { ok: false, invalid: prepared.error };
@@ -105,10 +114,17 @@ export async function saveArenaSnapshot(
     for (const change of prepared.activity) {
       await client.query(
         "INSERT INTO weji_arena_score_audit (revision, event_id, event_title, actor, action, entry_id, participant_id, delta, details) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)",
-        [result.rows[0].revision, change.eventId, change.eventTitle,
-          process.env.WEJI_ADMIN_USERNAME || "admin", change.action,
-          change.entryId ?? null, change.participantId ?? null,
-          change.delta ?? null, JSON.stringify(change.details)],
+        [
+          result.rows[0].revision,
+          change.eventId,
+          change.eventTitle,
+          process.env.WEJI_ADMIN_USERNAME || "admin",
+          change.action,
+          change.entryId ?? null,
+          change.participantId ?? null,
+          change.delta ?? null,
+          JSON.stringify(change.details),
+        ],
       );
     }
     await client.query("COMMIT");
@@ -146,13 +162,112 @@ export async function getArenaAsset(id: string): Promise<{
 /** Panitia-only chronological scoring/lifecycle audit. Never used by public pages. */
 export async function getScoreAudit(eventId: string, limit = 100) {
   const result = await db().query<{
-    id: number; revision: number; actor: string; action: string;
-    entry_id: string | null; participant_id: string | null;
-    delta: number | null; details: Record<string, string | number | null>;
+    id: number;
+    revision: number;
+    actor: string;
+    action: string;
+    entry_id: string | null;
+    participant_id: string | null;
+    delta: number | null;
+    details: Record<string, string | number | null>;
     recorded_at: string;
   }>(
     "SELECT id, revision, actor, action, entry_id, participant_id, delta, details, recorded_at FROM weji_arena_score_audit WHERE event_id = $1 ORDER BY id DESC LIMIT $2",
     [eventId, Math.min(200, Math.max(1, limit))],
   );
   return result.rows;
+}
+
+/** Dedicated, authenticated Recycle Bin actions. All writes use the same row
+ * lock/revision mechanism as the full editor, preventing stale-tab data loss. */
+export async function changeEventLifecycle(
+  id: string,
+  action: EventLifecycleAction,
+  expectedRevision: number,
+  confirmedTitle?: string,
+): Promise<SaveResult> {
+  const client = await db().connect();
+  try {
+    await client.query("BEGIN");
+    const locked = await client.query<{ revision: number; payload: ArenaData }>(
+      "SELECT revision, payload FROM weji_arena_state WHERE id = 1 FOR UPDATE",
+    );
+    const current = locked.rows[0];
+    if (!current || current.revision !== expectedRevision) {
+      await client.query("ROLLBACK");
+      return { ok: false, conflict: true };
+    }
+    const actor = process.env.WEJI_ADMIN_USERNAME || "admin";
+    const applied = applyEventLifecycle(
+      current.payload,
+      id,
+      action,
+      Date.now(),
+      actor,
+    );
+    if (!applied.ok) {
+      await client.query("ROLLBACK");
+      return { ok: false, invalid: applied.error };
+    }
+    // Case-sensitive, exact title. No silent delete, including zero-score events.
+    if (action === "delete" && confirmedTitle !== applied.target.title) {
+      await client.query("ROLLBACK");
+      return {
+        ok: false,
+        invalid: "Ketik nama event persis untuk konfirmasi hapus permanen.",
+      };
+    }
+    const revision = current.revision + 1;
+    await client.query(
+      "UPDATE weji_arena_state SET revision = $1, payload = $2::jsonb, updated_at = now() WHERE id = 1",
+      [revision, JSON.stringify(applied.data)],
+    );
+    await client.query(
+      "INSERT INTO weji_arena_audit (revision, actor, event_count) VALUES ($1, $2, $3)",
+      [revision, actor, applied.data.events.length],
+    );
+    await client.query(
+      "INSERT INTO weji_arena_event_audit (revision, event_id, event_title, actor, action, details) VALUES ($1, $2, $3, $4, $5, $6::jsonb)",
+      [
+        revision,
+        id,
+        applied.target.title,
+        actor,
+        action,
+        JSON.stringify({
+          status: applied.target.status,
+          mode: applied.target.mode,
+          participants: applied.target.participants.length,
+          scoreEntries: applied.target.entries.length,
+        }),
+      ],
+    );
+    if (action === "delete") {
+      // Score audit details should not outlive a permanently deleted event.
+      await client.query(
+        "DELETE FROM weji_arena_score_audit WHERE event_id = $1",
+        [id],
+      );
+      // Remove uploaded banner only if no other tournament (including Trash)
+      // still references it. External image URLs are never touched.
+      const bannerUrl = applied.target.bannerUrl || "";
+      if (
+        WEJI_ASSET_URL.test(bannerUrl) &&
+        !applied.data.events.some((ev) => ev.bannerUrl === bannerUrl)
+      ) {
+        const assetId = bannerUrl.split("/").at(-1);
+        await client.query(
+          "DELETE FROM weji_arena_assets WHERE id = $1::uuid",
+          [assetId],
+        );
+      }
+    }
+    await client.query("COMMIT");
+    return { ok: true, data: applied.data, revision };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }

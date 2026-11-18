@@ -15,6 +15,7 @@ import type {
   ScoreEntry,
 } from "@/lib/arena-types";
 import { initialArena, newEvent, newId } from "@/lib/arena-data";
+import type { EventLifecycleAction } from "@/lib/event-lifecycle";
 import { validBannerUrl } from "@/lib/banner";
 import {
   ARENA_STORAGE_KEY,
@@ -53,6 +54,7 @@ export function useArena() {
   const [revision, setRevision] = useState(0);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [eventBusy, setEventBusy] = useState(false);
   const [connectionError, setConnectionError] = useState("");
   const [saveError, setSaveError] = useState("");
   const hydrated = useRef(false);
@@ -130,7 +132,7 @@ export function useArena() {
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
   const save = async () => {
-    if (!ready || saving || !dirty) return false;
+    if (!ready || saving || eventBusy || !dirty) return false;
     const snapshot = dataRef.current;
     setSaving(true);
     setSaveError("");
@@ -278,20 +280,57 @@ export function useArena() {
       events: [copy, ...prev.events],
     }));
   };
-  const remove = (id: string) =>
-    setData((prev) => {
-      if (prev.events.length <= 1) return prev;
-      const target = prev.events.find((e) => e.id === id);
-      if (!target || target.status !== "draft" || target.entries.length > 0)
-        return prev;
-      const events = prev.events.filter((e) => e.id !== id);
+  // Trash, restore, and permanent deletion MUST commit through the dedicated
+  // server endpoint. Never emulate deletion with local snapshot editing.
+  const eventLifecycle = async (
+    id: string,
+    action: EventLifecycleAction,
+    confirmTitle?: string,
+  ): Promise<{ ok: boolean; error?: string }> => {
+    if (!ready || saving || eventBusy || dirty)
       return {
-        ...prev,
-        events,
-        activeEventId:
-          prev.activeEventId === id ? events[0].id : prev.activeEventId,
+        ok: false,
+        error: dirty
+          ? "Simpan perubahan ke Server terlebih dahulu sebelum mengelola Trash."
+          : "Operasi belum siap. Coba lagi setelah penyimpanan selesai.",
       };
-    });
+    setEventBusy(true);
+    try {
+      const response = await fetch("/api/admin/events", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, action, revision, confirmTitle }),
+      });
+      const result: {
+        error?: string;
+        revision?: number;
+        data?: unknown;
+      } = await response.json();
+      if (
+        !response.ok ||
+        !validArena(result.data) ||
+        !Number.isSafeInteger(result.revision)
+      )
+        return { ok: false, error: result.error || "Gagal memperbarui Trash." };
+      skipDirtyEffect.current = true;
+      setData(result.data);
+      dataRef.current = result.data;
+      setRevision(result.revision as number);
+      persistedEntryIds.current = new Set(
+        result.data.events.flatMap((ev: ArenaEvent) =>
+          ev.entries.map((entry: ScoreEntry) => entry.id),
+        ),
+      );
+      setDirty(false);
+      setSaveError("");
+      return { ok: true };
+    } catch {
+      return { ok: false, error: "Tidak bisa terhubung ke server. Coba lagi." };
+    } finally {
+      setEventBusy(false);
+    }
+  };
   const field = <
     K extends keyof Pick<
       ArenaEvent,
@@ -723,6 +762,7 @@ export function useArena() {
     revision,
     dirty,
     saving,
+    eventBusy,
     connectionError,
     saveError,
     save,
@@ -731,7 +771,7 @@ export function useArena() {
     setActive,
     create,
     duplicate,
-    remove,
+    eventLifecycle,
     field,
     mode,
     setTie,
