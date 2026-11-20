@@ -59,13 +59,19 @@ export async function getDatabaseHealth() {
     score_audit_ready: boolean;
     event_audit_ready: boolean;
     login_limits_ready: boolean;
+    players_ready: boolean;
+    player_links_ready: boolean;
+    identity_audit_ready: boolean;
   }>(`SELECT
     to_regclass('public.weji_arena_state') IS NOT NULL AS state_ready,
     to_regclass('public.weji_arena_audit') IS NOT NULL AS audit_ready,
     to_regclass('public.weji_arena_assets') IS NOT NULL AS assets_ready,
     to_regclass('public.weji_arena_score_audit') IS NOT NULL AS score_audit_ready,
     to_regclass('public.weji_arena_event_audit') IS NOT NULL AS event_audit_ready,
-    to_regclass('public.weji_arena_login_limits') IS NOT NULL AS login_limits_ready`);
+    to_regclass('public.weji_arena_login_limits') IS NOT NULL AS login_limits_ready,
+    to_regclass('public.weji_arena_players') IS NOT NULL AS players_ready,
+    to_regclass('public.weji_arena_player_links') IS NOT NULL AS player_links_ready,
+    to_regclass('public.weji_arena_identity_audit') IS NOT NULL AS identity_audit_ready`);
   const tables = result.rows[0];
   return { ready: !!tables && Object.values(tables).every(Boolean), tables };
 }
@@ -142,13 +148,13 @@ export async function saveArenaSnapshot(
     const result =
       expectedRevision === 0
         ? await client.query<{ revision: number }>(
-            "INSERT INTO weji_arena_state (id, revision, payload, updated_at) VALUES (1, 1, $1::jsonb, now()) ON CONFLICT (id) DO NOTHING RETURNING revision",
-            [JSON.stringify(safeValue)],
-          )
+          "INSERT INTO weji_arena_state (id, revision, payload, updated_at) VALUES (1, 1, $1::jsonb, now()) ON CONFLICT (id) DO NOTHING RETURNING revision",
+          [JSON.stringify(safeValue)],
+        )
         : await client.query<{ revision: number }>(
-            "UPDATE weji_arena_state SET revision = revision + 1, payload = $1::jsonb, updated_at = now() WHERE id = 1 AND revision = $2 RETURNING revision",
-            [JSON.stringify(safeValue), expectedRevision],
-          );
+          "UPDATE weji_arena_state SET revision = revision + 1, payload = $1::jsonb, updated_at = now() WHERE id = 1 AND revision = $2 RETURNING revision",
+          [JSON.stringify(safeValue), expectedRevision],
+        );
     if (!result.rowCount) {
       await client.query("ROLLBACK");
       return { ok: false, conflict: true };
@@ -308,6 +314,9 @@ export async function changeEventLifecycle(
         "DELETE FROM weji_arena_score_audit WHERE event_id = $1",
         [id],
       );
+      // Delete event-specific identity metadata, retaining reusable player profiles.
+      await client.query("DELETE FROM public.weji_arena_player_links WHERE event_id = $1", [id]);
+      await client.query("DELETE FROM public.weji_arena_identity_audit WHERE event_id = $1", [id]);
       // Remove uploaded banner only if no other tournament (including Trash)
       // still references it. External image URLs are never touched.
       const bannerUrl = applied.target.bannerUrl || "";

@@ -66,6 +66,7 @@ import { motion } from "motion/react";
 import { validBannerUrl } from "@/lib/banner";
 import { tournamentReadiness } from "@/lib/tournament-readiness";
 import ArenaBuilder from "./arena-builder";
+import { PlayerIdentityPanel } from "@/components/admin/player-identity-panel";
 import { AdminCommandCenter } from "@/components/admin/admin-command-center";
 import ScoreModal from "./arena-score-modal";
 import FinalizationReview from "@/components/admin/finalization-review";
@@ -81,11 +82,13 @@ type Page =
   | "archives"
   | "hall"
   | "faq"
+  | "players"
   | "builder"
   | "trash";
 const mainNav: { id: Page; label: string; icon: typeof Home }[] = [
   { id: "home", label: "Dashboard", icon: LayoutDashboard },
   { id: "events", label: "Turnamen", icon: CalendarDays },
+  { id: "players", label: "Profil Pemain", icon: Users },
   { id: "analytics", label: "Statistik Turnamen", icon: ChartNoAxesCombined },
   { id: "archives", label: "Arsip Galatama", icon: Archive },
   { id: "hall", label: "Hall of Fame", icon: Trophy },
@@ -1417,6 +1420,7 @@ export default function ArenaApp() {
               </section>
             </div>
           )}
+          {page === "players" && <PlayerIdentityPanel dirty={store.dirty} />}
           {page === "analytics" && (
             <div className="space-y-6">
               <div className="flex flex-wrap items-end justify-between gap-4">
