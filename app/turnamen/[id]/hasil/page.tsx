@@ -1,4 +1,5 @@
-import { avatarTarget, rankAvatarTargets } from "@/lib/avatar-identity";
+import { playerHref, legacyPlayerHref } from "@/lib/player-directory";
+import { avatarTarget, avatarProfile, rankAvatarTargets } from "@/lib/avatar-identity";
 import { PlayerIdentity, RankIdentity } from "@/components/player-avatar";
 import { publicAvatarProfiles } from "@/lib/avatar-identity-db";
 import Link from "next/link";
@@ -31,8 +32,9 @@ export default async function FinalResultsPage({
   const event = events.find((e) => e.id === id && e.status === "finished");
   if (!event) notFound();
   const rows = resultRows(event);
+  const profiles = await publicAvatarProfiles([event]);
   return (
-    <PublicShell profiles={await publicAvatarProfiles([event])}>
+    <PublicShell profiles={profiles}>
       <main className="mx-auto max-w-[1180px] px-4 py-10 sm:px-6">
         <Breadcrumb label="Hasil Akhir" />
         <section className="mb-7 overflow-hidden rounded-3xl bg-gradient-to-br from-[#10265b] via-[#1d49ab] to-[#377feb] p-7 text-white sm:p-10">
@@ -102,10 +104,9 @@ export default async function FinalResultsPage({
           {rows.length ? (
             <div className="divide-y divide-blue-50">
               {rows.map((row) => {
-                const profile =
-                  event.mode === "solo"
-                    ? normalizedRobloxUsername(row.username)
-                    : null;
+                const linked = event.mode === "solo" ? avatarProfile(profiles, avatarTarget(event, row.id)) : undefined;
+                const legacy = event.mode === "solo" ? normalizedRobloxUsername(row.username) : null;
+                const profile = linked ? playerHref(linked.robloxId) : legacy ? legacyPlayerHref(legacy) : null;
                 return (
                   <div key={row.id} className="px-5 py-4 sm:px-7">
                     <div className="grid grid-cols-[34px_minmax(0,1fr)_auto] items-center gap-3">
@@ -125,7 +126,7 @@ export default async function FinalResultsPage({
                           <span>{row.subtitle}</span>
                           {profile && (
                             <Link
-                              href={`/pemain/${encodeURIComponent(profile)}`}
+                              prefetch={false} href={profile}
                               className="font-bold text-blue-600 hover:underline"
                             >
                               Riwayat pemain

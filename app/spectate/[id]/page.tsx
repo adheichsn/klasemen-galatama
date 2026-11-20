@@ -45,7 +45,7 @@ export default async function SpectatorPage({
   if (!event) notFound();
   const ranking = standings(event);
   return (
-    <AvatarScope profiles={await publicAvatarProfiles([event])}>
+    <AvatarScope profiles={await publicAvatarProfiles([event])} publicLinks>
     <div className="min-h-screen bg-[#0b1731] px-4 py-5 text-white sm:px-7 lg:px-10">
       <div className="mx-auto max-w-[1600px]">
         <header className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-white/15 pb-5">

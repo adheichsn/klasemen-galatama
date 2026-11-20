@@ -10,6 +10,7 @@ const links = [
   { href: "/turnamen", text: "Turnamen" },
   { href: "/turnamen?status=live", text: "Live" },
   { href: "/statistik", text: "Statistik" },
+  { href: "/pemain", text: "Pemain" },
   { href: "/arsip", text: "Arsip" },
   { href: "/hall-of-fame", text: "Hall of Fame" },
   { href: "/faq", text: "FAQ" },
@@ -42,7 +43,7 @@ export function PublicHeader() {
             const selected = item.href === "/" ? pathname === "/" : item.href.includes("?") ? false : pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
               <Link key={item.href} href={item.href} aria-current={selected ? "page" : undefined}
-                className={`rounded-xl px-3 py-2.5 text-[12px] font-extrabold transition-colors ${selected ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-blue-50 hover:text-blue-700"}`}>
+                className={`rounded-xl px-2.5 py-2.5 text-[12px] font-extrabold transition-colors ${selected ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-blue-50 hover:text-blue-700"}`}>
                 {item.text}
               </Link>
             );

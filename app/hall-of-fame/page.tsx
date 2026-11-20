@@ -1,4 +1,5 @@
-import { avatarTarget, rankAvatarTargets, consistentAvatarTarget } from "@/lib/avatar-identity";
+import { identitySoloChampions, playerHref, legacyPlayerHref } from "@/lib/player-directory";
+import { avatarTarget, avatarProfile, rankAvatarTargets } from "@/lib/avatar-identity";
 import { PlayerIdentity, RankIdentity } from "@/components/player-avatar";
 import { publicAvatarProfiles } from "@/lib/avatar-identity-db";
 import Link from "next/link";
@@ -15,8 +16,6 @@ import { Breadcrumb, PublicShell, dateLabel } from "@/components/public-site";
 import { publicEvents } from "@/lib/public-events";
 import { fmt } from "@/lib/arena-utils";
 import {
-  allTimeSoloChampions,
-  playerHistory,
   finalEvents,
   normalizedRobloxUsername,
   resultRows,
@@ -59,8 +58,9 @@ export default async function HallOfFame({
           .toLocaleLowerCase()
           .includes(query)),
   );
-  const allTime = allTimeSoloChampions(filtered);
-  const profiles = await publicAvatarProfiles(filtered);
+  let identityUnavailable = false;
+  const profiles = await publicAvatarProfiles(filtered, () => { identityUnavailable = true; });
+  const allTime = identityUnavailable ? [] : identitySoloChampions(filtered, profiles);
   const pages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
   const safePage = Math.min(page, pages);
   const showing = filtered.slice(
@@ -159,6 +159,7 @@ export default async function HallOfFame({
             pulih.
           </p>
         )}
+        {identityUnavailable && <p className="mb-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-800">Rekap identitas pemain sementara tidak tersedia. Hasil per edisi tetap ditampilkan.</p>}
         {mode !== "squad" && allTime.length > 0 && (
           <section className="mb-9 rounded-2xl border border-blue-100 bg-white p-5 shadow-sm sm:p-7">
             <div className="mb-2 flex items-center gap-2">
@@ -184,13 +185,14 @@ export default async function HallOfFame({
                 </thead>
                 <tbody className="divide-y divide-blue-50">
                   {allTime.slice(0, 20).map((p, i) => (
-                    <tr key={p.username} className="hover:bg-blue-50/50">
+                    <tr key={p.key} className="hover:bg-blue-50/50">
                       <td className="px-3 py-3 font-black text-blue-600">
                         {i + 1}
                       </td>
                       <td className="px-3 py-3">
-                        <PlayerIdentity target={consistentAvatarTarget(profiles, playerHistory(filtered, p.username).map(({event, row}) => avatarTarget(event, row.id)))} name={p.name} subtitle={`@${p.username}`} size="sm" />
-                        <Link href={`/pemain/${encodeURIComponent(p.username)}`} className="text-[11px] font-bold text-blue-600 hover:underline">Riwayat pemain</Link>
+                        <PlayerIdentity target={p.target} name={p.name} subtitle={`@${p.username}`} size="sm" />
+                        <Link prefetch={false} href={p.href} className="text-[11px] font-bold text-blue-600 hover:underline">{p.linked ? "Profil pemain" : "Arsip username"}</Link>
+                        {!p.linked && <p className="text-[10px] text-slate-500">Belum terhubung</p>}
                       </td>
                       <td className="px-3 py-3 text-right font-extrabold">
                         {p.wins}
@@ -203,7 +205,7 @@ export default async function HallOfFame({
               </table>
             </div>
             <p className="mt-4 text-[11px] leading-5 text-slate-500">
-              Peringkat lintas event masih berdasarkan username yang dicatat panitia. Avatar ditampilkan jika seluruh riwayat tersebut terhubung ke ID Roblox yang sama. Pengelompokan berdasarkan User ID akan hadir pada pembaruan profil berikutnya.
+              Gelar pemain yang terhubung dikelompokkan berdasarkan Roblox User ID. Catatan username yang belum terhubung dipisahkan dan ditandai sebagai arsip lama, bukan identitas terkonfirmasi.
             </p>
           </section>
         )}
@@ -241,10 +243,9 @@ export default async function HallOfFame({
                 <div className="mt-5 divide-y divide-blue-50">
                   {top.length ? (
                     top.map((r, i) => {
-                      const profile =
-                        event.mode === "solo"
-                          ? normalizedRobloxUsername(r.username)
-                          : null;
+                      const linked = event.mode === "solo" ? avatarProfile(profiles, avatarTarget(event,r.id)) : undefined;
+                      const legacy = event.mode === "solo" ? normalizedRobloxUsername(r.username) : null;
+                      const profile = linked ? playerHref(linked.robloxId) : legacy ? legacyPlayerHref(legacy) : null;
                       return (
                         <div
                           key={r.id}
@@ -256,7 +257,7 @@ export default async function HallOfFame({
                             {i + 1}
                           </span>
                           <div className="min-w-0 flex-1">
-                            <RankIdentity targets={rankAvatarTargets(event, r.id)} name={r.name} subtitle={r.subtitle} team={event.mode === "squad"} />{profile && <Link href={`/pemain/${encodeURIComponent(profile)}`} className="text-[11px] font-bold text-blue-600 hover:underline">Riwayat pemain</Link>}
+                            <RankIdentity targets={rankAvatarTargets(event, r.id)} name={r.name} subtitle={r.subtitle} team={event.mode === "squad"} />{profile && <Link prefetch={false} href={profile} className="text-[11px] font-bold text-blue-600 hover:underline">Riwayat pemain</Link>}
                             <p className="text-[11px] text-slate-400">
                               {fmt(r.catches)} Secret
                             </p>

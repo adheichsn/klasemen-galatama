@@ -5,7 +5,7 @@ import { projectAvatarProfiles, type AvatarLinkRow, type AvatarProfiles } from "
 import { logServerFailure } from "./server-errors";
 
 /** One bounded-by-event batch read. No upstream Roblox request, no writes. */
-export async function readAvatarProfiles(events: ArenaEvent[]): Promise<AvatarProfiles> {
+export async function readAvatarProfiles(events: ArenaEvent[], onUnavailable?: () => void): Promise<AvatarProfiles> {
   const eligible = events.filter(e => !e.trashedAt && e.participants.length > 0);
   if (!eligible.length) return {};
   try {
@@ -15,9 +15,10 @@ export async function readAvatarProfiles(events: ArenaEvent[]): Promise<AvatarPr
     return projectAvatarProfiles(eligible, rows);
   } catch (error) {
     logServerFailure("avatar-profiles", error);
+    onUnavailable?.();
     return {}; // Scores and public results remain available independently.
   }
 }
-export function publicAvatarProfiles(events: ArenaEvent[]): Promise<AvatarProfiles> {
-  return readAvatarProfiles(events.filter(e => e.published && !e.trashedAt));
+export function publicAvatarProfiles(events: ArenaEvent[], onUnavailable?: () => void): Promise<AvatarProfiles> {
+  return readAvatarProfiles(events.filter(e => e.published && !e.trashedAt), onUnavailable);
 }

@@ -66,6 +66,7 @@ export function PublicFooter() {
             <Link href="/turnamen">Turnamen</Link>
             <Link href="/statistik">Statistik</Link>
             <Link href="/arsip">Arsip</Link>
+            <Link href="/pemain">Pemain</Link>
             <Link href="/faq">FAQ</Link>
           </div>
         </div>
@@ -81,7 +82,7 @@ export function PublicShell({ children, profiles = {} }: { children: React.React
   return (
     <div className="weji-public min-h-screen bg-[#f5f8ff] text-[#172b4d]">
       <PublicHeader />
-      <AvatarScope profiles={profiles}>{children}</AvatarScope>
+      <AvatarScope profiles={profiles} publicLinks>{children}</AvatarScope>
       <PublicFooter />
     </div>
   );
