@@ -1,3 +1,4 @@
+import { publicAvatarProfiles } from "@/lib/avatar-identity-db";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ChartNoAxesCombined, LockKeyhole } from "lucide-react";
@@ -18,7 +19,7 @@ export default async function StatisticsPage({
   const event = events.find((item) => item.id === id);
   if (!event) notFound();
   return (
-    <PublicShell>
+    <PublicShell profiles={await publicAvatarProfiles([event])}>
       <main className="mx-auto max-w-[1260px] px-4 py-10 sm:px-6">
         <Breadcrumb label="Statistik Turnamen" />
         <div className="mb-8 rounded-[26px] bg-gradient-to-r from-[#142D70] via-[#2152C1] to-[#2980E6] p-7 text-white sm:p-10">

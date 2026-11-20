@@ -1,3 +1,5 @@
+import { AvatarScope, RankIdentity } from "@/components/player-avatar";
+import { rankAvatarTargets, type AvatarProfiles } from "@/lib/avatar-identity";
 export { PublicHeader } from "@/components/public-header";
 import { PublicHeader } from "@/components/public-header";
 import "@/styles/public-effects.css";
@@ -75,11 +77,11 @@ export function PublicFooter() {
     </footer>
   );
 }
-export function PublicShell({ children }: { children: React.ReactNode }) {
+export function PublicShell({ children, profiles = {} }: { children: React.ReactNode; profiles?: AvatarProfiles }) {
   return (
     <div className="weji-public min-h-screen bg-[#f5f8ff] text-[#172b4d]">
       <PublicHeader />
-      {children}
+      <AvatarScope profiles={profiles}>{children}</AvatarScope>
       <PublicFooter />
     </div>
   );
@@ -268,9 +270,7 @@ export function PublicRanking({
                 >
                   {index + 1}
                 </span>
-                <p className="truncate text-xs font-black text-[#142A55] sm:text-sm">
-                  {r?.name ?? "—"}
-                </p>
+                {r ? <RankIdentity targets={rankAvatarTargets(event, r.id)} name={r.name} subtitle={r.subtitle} team={event.mode === "squad"} centered size="lg" /> : <p className="text-xs text-slate-500">—</p>}
                 <p className="mt-1 text-xs font-black text-blue-700">
                   {r ? fmt(r.points) : "—"} PTS
                 </p>
@@ -312,12 +312,7 @@ export function PublicRanking({
                     </span>
                   </td>
                   <td className="px-5 py-3">
-                    <div className="font-extrabold text-slate-800">
-                      {rank.name}
-                    </div>
-                    <div className="text-xs text-slate-400">
-                      {rank.subtitle}
-                    </div>
+                    <RankIdentity targets={rankAvatarTargets(event, rank.id)} name={rank.name} subtitle={rank.subtitle} team={event.mode === "squad"} />
                   </td>
                   <td className="px-5 py-3 text-slate-500">
                     {fmt(rank.catches)}

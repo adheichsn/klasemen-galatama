@@ -1,0 +1,17 @@
+# WEJI ARENA V3.2B — Roblox Avatar Integration
+
+## What changes
+
+- A shared avatar/identity component with cached Roblox CDN headshots, display name, current linked username, and verified-format Roblox user ID profile URL. The original recorded event name remains the primary name, including for FINISHED tournaments. The link is an admin-confirmed association, not proof that a contestant owns the Roblox account.
+- Public event rankings, LIVE podium/table/activity, SQUAD contributions, spectator, final results, Hall of Fame, archive winner cards, event analytics and pre-existing SOLO history receive profile decoration. Teams show a compact avatar group (up to four, plus an overflow count); detailed member rows render individually. Legacy credited squad members are included if known.
+- The admin dashboard podium, scorer's selected player, roster, contribution rows, archived results overview (Hall of Fame), historical entry and analytics reuse the profile data. The native select stays text-based; the avatar preview appears below it. The admin-scoped read refreshes on section navigation, including after editing a link. No extra query per timer tick or score edit.
+- Public pages query only published, non-trashed relevant event IDs, in one batch per rendered page. A link must match event ID, participant ID and the original roster fingerprint. No username-only automatic matching. Only presentation fields are added to the response; no audit or private profile index is exposed. If SQL fails, the page still renders scores with fallback avatars. Invalid or broken avatar URLs also show a fallback. The browser loads the cached Roblox CDN image directly (lazy, no-referrer); no repeated Roblox user/thumbnail API lookup is made by the leaderboard.
+- Existing cross-event SOLO history and aggregate champions still group by recorded username. They receive an avatar only when each contributing occurrence resolves to the same Roblox ID. Canonical ID-based profiles, directory and aggregation are deferred to V3.2C. DUO is not implemented in this patch.
+- Score calculations, historical podiums, lifecycle and database schema are unchanged. No profile data is written into ArenaData.
+
+## QA
+
+- Inspect the 18 November 2026 FINISHED event (19 previously linked participants) on `/turnamen`, event detail, `/hasil`, `/statistik`, `/arsip`, `/hall-of-fame`, and spectator. Compare all recorded points and podium order to the old results. Verify headshots, original names, current usernames, and Roblox profile links.
+- Inspect both SOLO and SQUAD events. Use a disposable QA event to test unlinked participants, a missing avatar, changed roster name, and a relink through Profil Pemain. Confirm the admin dashboard refreshes after leaving Profil Pemain. Check native score select and selected participant preview; do not change official FINISHED scores.
+- Test public/private separation and unauthenticated access to `/api/admin/player-identity?view=avatars` (401). Confirm unpublished/trashed events are hidden from public pages. Test desktop/tablet/mobile layout; longer names, many squad members, and image failure must not obstruct scoring.
+- In this build environment: complete smoke test chain passes; source syntax checks pass (108 TS/TSX, three CSS); isolated strict TypeScript check for core projection passes. `npm ci --offline` blocked by uncached `xtend@4.0.2`, so full dependency typecheck/Next build and real browser/Supabase QA are not verified here.

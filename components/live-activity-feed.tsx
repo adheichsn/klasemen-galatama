@@ -1,4 +1,6 @@
 "use client";
+import { avatarTarget } from "@/lib/avatar-identity";
+import { PlayerIdentity } from "@/components/player-avatar";
 
 import { motion } from "motion/react";
 import { Activity, Fish, RotateCcw, SlidersHorizontal } from "lucide-react";
@@ -53,15 +55,8 @@ export function LiveActivityFeed({
                   <Icon size={17} />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="break-words text-xs font-extrabold text-[#142A55] sm:text-sm">
-                    {row.name}
-                    {row.squad ? (
-                      <span className="font-medium text-slate-500">
-                        {" "}
-                        • {row.squad}
-                      </span>
-                    ) : null}
-                  </p>
+                  <PlayerIdentity target={avatarTarget(event, row.participantId)} name={row.name} size="sm" />
+                  {row.squad && <p className="break-words text-xs font-medium text-slate-500">{row.squad}</p>}
                   <p className="mt-1 break-words text-xs text-slate-500">
                     {row.detail}
                   </p>

@@ -1,3 +1,6 @@
+import { avatarTarget, rankAvatarTargets } from "@/lib/avatar-identity";
+import { PlayerIdentity, RankIdentity } from "@/components/player-avatar";
+import { publicAvatarProfiles } from "@/lib/avatar-identity-db";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -29,7 +32,7 @@ export default async function FinalResultsPage({
   if (!event) notFound();
   const rows = resultRows(event);
   return (
-    <PublicShell>
+    <PublicShell profiles={await publicAvatarProfiles([event])}>
       <main className="mx-auto max-w-[1180px] px-4 py-10 sm:px-6">
         <Breadcrumb label="Hasil Akhir" />
         <section className="mb-7 overflow-hidden rounded-3xl bg-gradient-to-br from-[#10265b] via-[#1d49ab] to-[#377feb] p-7 text-white sm:p-10">
@@ -72,17 +75,8 @@ export default async function FinalResultsPage({
                 )}{" "}
                 Juara {i + 1}
               </div>
-              <h2 className="break-words text-lg font-black text-[#142A55]">
-                {row.name}
-              </h2>
-              <p className="mt-1 text-xs text-slate-500">
-                {event.mode === "solo"
-                  ? row.username
-                    ? `@${row.username.replace(/^@/, "")}`
-                    : "Peserta individu"
-                  : `${row.players} anggota squad`}
-              </p>
-              <div className="mt-4 text-2xl font-black text-blue-700">
+              <RankIdentity targets={rankAvatarTargets(event, row.id)} name={row.name} subtitle={row.subtitle} team={event.mode === "squad"} centered size="lg" />
+              <div className="mt-4 text-center text-2xl font-black text-blue-700">
                 {fmt(row.points)} <span className="text-xs">PTS</span>
               </div>
             </div>
@@ -121,9 +115,7 @@ export default async function FinalResultsPage({
                         {row.rank}
                       </span>
                       <div className="min-w-0">
-                        <div className="break-words font-extrabold text-[#142A55]">
-                          {row.name}
-                        </div>
+                        <RankIdentity targets={rankAvatarTargets(event, row.id)} name={row.name} subtitle={row.subtitle} team={event.mode === "squad"} />
                         <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-slate-500">
                           <span>
                             <Fish size={12} className="mr-1 inline" />
@@ -157,14 +149,7 @@ export default async function FinalResultsPage({
                               key={m.id}
                               className="flex justify-between gap-3 py-2 text-xs"
                             >
-                              <span className="min-w-0 break-words text-slate-600">
-                                {m.name}{" "}
-                                {m.username && (
-                                  <span className="text-slate-400">
-                                    (@{m.username.replace(/^@/, "")})
-                                  </span>
-                                )}
-                              </span>
+                              <PlayerIdentity target={avatarTarget(event, m.id)} name={m.name} size="sm" subtitle={m.username ? `@${m.username.replace(/^@/, "")}` : undefined} />
                               <b className="shrink-0">{fmt(m.points)} PTS</b>
                             </div>
                           ))}

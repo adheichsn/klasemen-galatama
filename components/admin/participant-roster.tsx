@@ -1,4 +1,6 @@
 "use client";
+import { avatarTarget } from "@/lib/avatar-identity";
+import { PlayerAvatar } from "@/components/player-avatar";
 import { useMemo, useState } from "react";
 import {
   Check,
@@ -569,6 +571,8 @@ export function ParticipantRoster({ store }: { store: ArenaStore }) {
               className="grid gap-2 rounded-xl border border-slate-100 bg-slate-50 p-3 lg:grid-cols-[minmax(130px,1fr)_minmax(140px,1fr)_auto_auto] lg:items-center"
               key={p.id}
             >
+              <div className="flex min-w-0 items-center gap-2">
+              <PlayerAvatar target={avatarTarget(event, p.id)} size="sm" />
               <input
                 aria-label={`Nama ${p.name}`}
                 className={inputClass}
@@ -579,6 +583,7 @@ export function ParticipantRoster({ store }: { store: ArenaStore }) {
                   store.changeParticipant(p.id, { name: ev.target.value })
                 }
               />
+              </div>
               <input
                 aria-label={`Username ${p.name}`}
                 className={inputClass}

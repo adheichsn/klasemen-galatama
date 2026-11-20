@@ -1,3 +1,6 @@
+import { publicAvatarProfiles } from "@/lib/avatar-identity-db";
+import { avatarTarget, consistentAvatarTarget } from "@/lib/avatar-identity";
+import { PlayerAvatar, PlayerIdentity } from "@/components/player-avatar";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Crown, Medal, Trophy, UserRound } from "lucide-react";
@@ -24,12 +27,14 @@ export default async function PlayerPage({
   const victories = history.filter((x) => x.row.rank === 1).length;
   const podiums = history.filter((x) => x.row.rank <= 3).length;
   const name = history[0].row.name;
+  const profiles = await publicAvatarProfiles(history.map(h => h.event));
+  const target = consistentAvatarTarget(profiles, history.map(({event, row}) => avatarTarget(event, row.id)));
   return (
-    <PublicShell>
+    <PublicShell profiles={profiles}>
       <main className="mx-auto max-w-[1030px] px-4 py-10 sm:px-6">
         <Breadcrumb label="Riwayat Pemain" />
         <section className="mb-6 rounded-3xl bg-gradient-to-br from-[#132b68] to-[#2c6be3] p-7 text-white sm:p-10">
-          <UserRound size={32} className="mb-4 text-blue-200" />
+          <PlayerAvatar target={target} size="lg" />
           <p className="text-xs font-extrabold tracking-widest text-blue-200">
             WEJI ARENA • SOLO PLAYER HISTORY
           </p>
@@ -52,6 +57,7 @@ export default async function PlayerPage({
           </div>
         </section>
         <section className="rounded-2xl border border-blue-100 bg-white p-5 sm:p-7">
+          {target && <div className="mb-5 rounded-xl bg-blue-50 p-3"><PlayerIdentity target={target} name={name} /></div>}
           <h2 className="mb-5 flex items-center gap-2 text-lg font-black text-[#142A55]">
             <Trophy className="text-blue-600" size={21} /> Riwayat Turnamen
           </h2>
@@ -95,7 +101,7 @@ export default async function PlayerPage({
         </section>
         <p className="mt-5 text-xs leading-6 text-slate-500">
           Riwayat ini dikelompokkan berdasarkan username Roblox yang dimasukkan
-          panitia (tidak diverifikasi melalui Roblox). Nama tampilan bisa
+          panitia. Avatar profil hanya ditampilkan jika seluruh riwayat terhubung ke User ID yang sama; hubungan dikonfirmasi panitia, bukan verifikasi kepemilikan akun. Nama tampilan bisa
           berbeda antarevent; squad tidak dicampur dengan profil SOLO. Tidak ada
           penjumlahan poin lintas turnamen.
         </p>

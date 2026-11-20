@@ -2,6 +2,7 @@ import type { ArenaEvent, ScoreEntry } from "./arena-types";
 
 export type PublicActivity = {
   id: string;
+  participantId: string;
   at: string;
   name: string;
   squad?: string;
@@ -29,6 +30,7 @@ export function recentPublicActivity(
       const person = people.get(entry.participantId);
       return {
         id: entry.id,
+        participantId: entry.participantId,
         at: entry.createdAt,
         name: person?.name || "Peserta",
         squad:

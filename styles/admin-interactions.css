@@ -640,7 +640,10 @@
     box-shadow: 0 16px 32px rgba(29, 66, 131, .09)
 }
 
-.event-tile:nth-child(3n/**/+2) .event-cover {
+.event-tile:nth-child(3n
+
+    /**/
+    +2) .event-cover {
     background: linear-gradient(125deg, #1f2762, #474cc5, #4e9fdf)
 }
 
@@ -997,162 +1000,209 @@
     font-size: 13px
 }
 
-@media(min-width:1450px) {.main-content {
+@media(min-width:1450px) {
+    .main-content {
         padding: 37px 45px 0
     }
-.stats-grid {
+
+    .stats-grid {
         gap: 20px
     }
-.dashboard-columns {
+
+    .dashboard-columns {
         gap: 20px
     }
-.hero-banner {
+
+    .hero-banner {
         min-height: 300px
     }
-.hero-copy {
-        padding: 43px 47px
-    }}
 
-@media(max-width:1210px) {.sidebar {
+    .hero-copy {
+        padding: 43px 47px
+    }
+}
+
+@media(max-width:1210px) {
+    .sidebar {
         width: 228px
     }
-.main-column {
+
+    .main-column {
         margin-left: 228px
     }
-.main-content {
+
+    .main-content {
         padding: 24px
     }
-.topbar {
+
+    .topbar {
         padding: 0 24px
     }
-.event-grid {
+
+    .event-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr))
     }
-.stat-card {
+
+    .stat-card {
         padding: 16px 12px;
         gap: 10px
     }
-.stat-icon {
+
+    .stat-icon {
         width: 42px;
         height: 42px
     }
-.stat-card strong {
+
+    .stat-card strong {
         font-size: 21px
     }
-.dashboard-columns {
-        grid-template-columns: minmax(0, 1.2fr) minmax(290px, 1fr)
-    }}
 
-@media(max-width:990px) {.sidebar {
+    .dashboard-columns {
+        grid-template-columns: minmax(0, 1.2fr) minmax(290px, 1fr)
+    }
+}
+
+@media(max-width:990px) {
+    .sidebar {
         width: 75px
     }
-.main-column {
+
+    .main-column {
         margin-left: 75px
     }
-.brand-area {
+
+    .brand-area {
         padding: 15px;
         justify-content: center
     }
-.brand-name,
+
+    .brand-name,
     .sidebar-caption,
     .sidebar-bottom,
     .nav-item span,
     .nav-current {
         display: none
     }
-.nav-item {
+
+    .nav-item {
         justify-content: center;
         padding: 14px
     }
-.sidebar-nav {
+
+    .sidebar-nav {
         padding: 19px 9px
     }
-.main-content {
+
+    .main-content {
         padding: 22px
     }
-.stats-grid {
+
+    .stats-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr))
     }
-.hero-copy {
+
+    .hero-copy {
         max-width: 75%
     }
-.hero-art {
+
+    .hero-art {
         min-width: 150px
     }
-.hero-art-center svg {
+
+    .hero-art-center svg {
         width: 72px
     }
-.event-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr))
-    }}
 
-@media(max-width:760px) {.sidebar {
+    .event-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr))
+    }
+}
+
+@media(max-width:760px) {
+    .sidebar {
         width: 265px;
         transform: translateX(-105%);
         transition: transform .25s ease
     }
-.sidebar.mobile-open {
+
+    .sidebar.mobile-open {
         transform: translateX(0)
     }
-.sidebar .brand-name,
+
+    .sidebar .brand-name,
     .sidebar .sidebar-caption,
     .sidebar .sidebar-bottom,
     .sidebar .nav-item span,
     .sidebar .nav-current {
         display: flex
     }
-.sidebar .sidebar-caption {
+
+    .sidebar .sidebar-caption {
         display: block
     }
-.sidebar .brand-area {
+
+    .sidebar .brand-area {
         justify-content: flex-start
     }
-.sidebar .nav-item {
+
+    .sidebar .nav-item {
         justify-content: flex-start
     }
-.mobile-backdrop {
+
+    .mobile-backdrop {
         display: block;
         position: fixed;
         inset: 0;
         z-index: 29;
         background: #09162eaa
     }
-.mobile-menu,
+
+    .mobile-menu,
     .mobile-close {
         display: flex !important
     }
-.mobile-close {
+
+    .mobile-close {
         margin-left: auto
     }
-.main-column {
+
+    .main-column {
         margin-left: 0
     }
-.topbar {
+
+    .topbar {
         height: 67px;
         padding: 0 17px
     }
-.breadcrumbs span,
+
+    .breadcrumbs span,
     .breadcrumbs>svg,
     .topbar-date {
         display: none
     }
-.breadcrumbs b {
+
+    .breadcrumbs b {
         font-size: 13px
     }
-.topbar-end {
+
+    .topbar-end {
         margin-left: auto
     }
-.main-content {
+
+    .main-content {
         padding: 18px 14px 0
     }
-.hero-banner {
+
+    .hero-banner {
         min-height: 300px
     }
-.hero-copy {
+
+    .hero-copy {
         max-width: 100%;
         padding: 27px
     }
-.hero-art {
+
+    .hero-art {
         position: absolute;
         right: -56px;
         bottom: -80px;
@@ -1161,221 +1211,287 @@
         height: 200px;
         opacity: .28
     }
-.hero-art-txt {
+
+    .hero-art-txt {
         display: none
     }
-.hero-copy h1 {
+
+    .hero-copy h1 {
         font-size: 28px;
         max-width: 440px
     }
-.stats-grid {
+
+    .stats-grid {
         gap: 10px
     }
-.stat-card {
+
+    .stat-card {
         min-height: 96px
     }
-.dashboard-columns,
+
+    .dashboard-columns,
     .activity-layout,
     .faq-layout,
     .builder-layout {
         grid-template-columns: 1fr
     }
-.builder-tabs {
+
+    .builder-tabs {
         flex-direction: row;
         overflow-x: auto;
         scrollbar-width: none;
         white-space: nowrap
     }
-.builder-tab {
+
+    .builder-tab {
         width: auto;
         flex: 0 0 auto
     }
-.panel-heading {
+
+    .panel-heading {
         padding: 19px 16px 13px
     }
-.leaderboard-header {
+
+    .leaderboard-header {
         flex-direction: column;
         align-items: flex-start
     }
-.leaderboard-tools {
+
+    .leaderboard-tools {
         width: 100%
     }
-.leaderboard-tools .searchbox {
+
+    .leaderboard-tools .searchbox {
         flex: 1;
         min-width: 0
     }
-.event-grid {
+
+    .event-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr))
     }
-.hall-grid {
+
+    .hall-grid {
         grid-template-columns: 1fr
     }
-.site-footer {
+
+    .site-footer {
         padding-bottom: 80px
     }
-.podium {
-        height: 253px
-    }}
 
-@media(max-width:520px) {.topbar {
+    .podium {
+        min-height: 253px;
+        height: auto
+    }
+}
+
+@media(max-width:520px) {
+    .topbar {
         gap: 7px
     }
-.hero-copy {
+
+    .hero-copy {
         padding: 24px 19px
     }
-.hero-copy h1 {
+
+    .hero-copy h1 {
         font-size: 25px
     }
-.hero-details {
+
+    .hero-details {
         gap: 9px 13px
     }
-.hero-actions {
+
+    .hero-actions {
         gap: 8px
     }
-.hero-actions .btn {
+
+    .hero-actions .btn {
         font-size: 11px;
         padding: 0 10px
     }
-.stat-card {
+
+    .stat-card {
         gap: 8px;
         padding: 13px 10px
     }
-.stat-icon {
+
+    .stat-icon {
         width: 37px;
         height: 37px;
         border-radius: 10px
     }
-.stat-icon svg {
+
+    .stat-icon svg {
         width: 18px
     }
-.stat-card span {
+
+    .stat-card span {
         font-size: 8px;
         letter-spacing: .1px
     }
-.stat-card strong {
+
+    .stat-card strong {
         font-size: 19px
     }
-.stat-card strong.stat-status {
+
+    .stat-card strong.stat-status {
         font-size: 15px
     }
-.stat-card small {
+
+    .stat-card small {
         font-size: 9px
     }
-.podium {
+
+    .podium {
         gap: 5px;
         padding: 20px 10px
     }
-.podium-slot strong {
+
+    .podium-slot strong {
         font-size: 11px
     }
-.podium-slot span {
+
+    .podium-slot span {
         font-size: 10px
     }
-.podium-slot small {
+
+    .podium-slot small {
         font-size: 9px
     }
-.podium-avatar.gold {
+
+    .podium-avatar.gold {
         width: 60px;
         height: 60px
     }
-.podium-avatar {
+
+    .podium-avatar {
         width: 48px;
         height: 48px
     }
-.right-rail {
+
+    .right-rail {
         grid-template-columns: 1fr
     }
-.event-grid {
+
+    .event-grid {
         grid-template-columns: 1fr
     }
-.page-heading {
+
+    .page-heading {
         flex-direction: column;
         align-items: flex-start
     }
-.page-heading h2 {
+
+    .page-heading h2 {
         font-size: 23px
     }
-.page-heading>.btn {
+
+    .page-heading>.btn {
         align-self: flex-start
     }
-.section-top {
+
+    .section-top {
         align-items: flex-start
     }
-.section-top .btn {
+
+    .section-top .btn {
         padding: 0 9px;
         font-size: 10px
     }
-.filter-bar {
+
+    .filter-bar {
         align-items: stretch;
         flex-direction: column
     }
-.filter-buttons {
+
+    .filter-buttons {
         width: 100%;
         justify-content: space-between
     }
-.filter-buttons button {
+
+    .filter-buttons button {
         padding: 9px 10px
     }
-.form-grid {
+
+    .form-grid {
         grid-template-columns: 1fr
     }
-.field.span-2 {
+
+    .field.span-2 {
         grid-column: span 1
     }
-.builder-body {
+
+    .builder-body {
         padding: 16px
     }
-.add-row-fields {
+
+    .add-row-fields {
         flex-wrap: wrap
     }
-.add-row-fields .btn {
+
+    .add-row-fields .btn {
         flex: 1
     }
-.catalog-header,
+
+    .catalog-header,
     .catalog-row {
         grid-template-columns: 34px minmax(0, 1fr) 80px 30px;
         gap: 5px
     }
-.catalog-row input:not([type=checkbox]) {
+
+    .catalog-row input:not([type=checkbox]) {
         padding: 10px 7px;
         font-size: 11px
     }
-.participant-edit {
+
+    .participant-edit {
         flex-wrap: wrap
     }
-.participant-fields {
+
+    .participant-fields {
         order: 2;
         width: 100%;
         flex-basis: 100%;
         flex-wrap: wrap
     }
-.participant-fields>* {
+
+    .participant-fields>* {
         flex: 1 1 42%
     }
-.check-label {
+
+    .check-label {
         margin-left: auto
     }
-.modal-backdrop {
+
+    .modal-backdrop {
         padding: 8px
     }
-.leaderboard-tools {
+
+    .leaderboard-tools {
         flex-wrap: wrap
     }
-.leaderboard-tools .btn {
+
+    .leaderboard-tools .btn {
         flex: 1
     }
-.activity-desc span {
+
+    .activity-desc span {
         max-width: 165px
     }
-.floating-tools {
+
+    .floating-tools {
         right: 10px;
         bottom: 10px
     }
-.floating-tools button span {
-        display: none
-    }}
 
-@media (prefers-reduced-motion:reduce) {.weji-public * {
+    .floating-tools button span {
+        display: none
+    }
+}
+
+@media (prefers-reduced-motion:reduce) {
+    .weji-public * {
         animation: none !important;
         transition: none !important;
-    }}
+    }
+}

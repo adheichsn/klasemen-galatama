@@ -1,3 +1,6 @@
+import { avatarTarget, rankAvatarTargets, consistentAvatarTarget } from "@/lib/avatar-identity";
+import { PlayerIdentity, RankIdentity } from "@/components/player-avatar";
+import { publicAvatarProfiles } from "@/lib/avatar-identity-db";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -13,6 +16,7 @@ import { publicEvents } from "@/lib/public-events";
 import { fmt } from "@/lib/arena-utils";
 import {
   allTimeSoloChampions,
+  playerHistory,
   finalEvents,
   normalizedRobloxUsername,
   resultRows,
@@ -56,6 +60,7 @@ export default async function HallOfFame({
           .includes(query)),
   );
   const allTime = allTimeSoloChampions(filtered);
+  const profiles = await publicAvatarProfiles(filtered);
   const pages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
   const safePage = Math.min(page, pages);
   const showing = filtered.slice(
@@ -71,7 +76,7 @@ export default async function HallOfFame({
     return `/hall-of-fame?${q.toString()}`;
   };
   return (
-    <PublicShell>
+    <PublicShell profiles={profiles}>
       <main className="mx-auto max-w-[1220px] px-4 py-10 sm:px-6">
         <Breadcrumb label="Hall of Fame" />
         <section className="relative mb-7 overflow-hidden rounded-3xl bg-gradient-to-br from-[#102658] via-[#2052b9] to-[#3288ed] p-8 text-white sm:p-11">
@@ -184,15 +189,8 @@ export default async function HallOfFame({
                         {i + 1}
                       </td>
                       <td className="px-3 py-3">
-                        <Link
-                          href={`/pemain/${encodeURIComponent(p.username)}`}
-                          className="font-extrabold text-[#142A55] hover:text-blue-600"
-                        >
-                          {p.name}
-                        </Link>
-                        <div className="text-xs text-slate-400">
-                          @{p.username}
-                        </div>
+                        <PlayerIdentity target={consistentAvatarTarget(profiles, playerHistory(filtered, p.username).map(({event, row}) => avatarTarget(event, row.id)))} name={p.name} subtitle={`@${p.username}`} size="sm" />
+                        <Link href={`/pemain/${encodeURIComponent(p.username)}`} className="text-[11px] font-bold text-blue-600 hover:underline">Riwayat pemain</Link>
                       </td>
                       <td className="px-3 py-3 text-right font-extrabold">
                         {p.wins}
@@ -205,9 +203,7 @@ export default async function HallOfFame({
               </table>
             </div>
             <p className="mt-4 text-[11px] leading-5 text-slate-500">
-              Profil dikelompokkan berdasarkan username Roblox yang dicatat
-              panitia, belum diverifikasi melalui Roblox. Username yang tidak
-              valid atau kosong tidak digabungkan.
+              Peringkat lintas event masih berdasarkan username yang dicatat panitia. Avatar ditampilkan jika seluruh riwayat tersebut terhubung ke ID Roblox yang sama. Pengelompokan berdasarkan User ID akan hadir pada pembaruan profil berikutnya.
             </p>
           </section>
         )}
@@ -260,18 +256,7 @@ export default async function HallOfFame({
                             {i + 1}
                           </span>
                           <div className="min-w-0 flex-1">
-                            <div className="truncate text-xs font-extrabold text-[#142A55]">
-                              {profile ? (
-                                <Link
-                                  href={`/pemain/${encodeURIComponent(profile)}`}
-                                  className="hover:text-blue-600"
-                                >
-                                  {r.name}
-                                </Link>
-                              ) : (
-                                r.name
-                              )}
-                            </div>
+                            <RankIdentity targets={rankAvatarTargets(event, r.id)} name={r.name} subtitle={r.subtitle} team={event.mode === "squad"} />{profile && <Link href={`/pemain/${encodeURIComponent(profile)}`} className="text-[11px] font-bold text-blue-600 hover:underline">Riwayat pemain</Link>}
                             <p className="text-[11px] text-slate-400">
                               {fmt(r.catches)} Secret
                             </p>

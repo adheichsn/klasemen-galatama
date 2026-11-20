@@ -1,4 +1,6 @@
 "use client";
+import { rankAvatarTargets } from "@/lib/avatar-identity";
+import { RankIdentity } from "@/components/player-avatar";
 
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
@@ -72,9 +74,7 @@ export function LiveRanking({
                 >
                   {rankIndex + 1}
                 </span>
-                <div className="truncate text-xs font-extrabold text-slate-800 sm:text-sm">
-                  {r?.name ?? "—"}
-                </div>
+                {r ? <RankIdentity targets={rankAvatarTargets(event, r.id)} name={r.name} subtitle={r.subtitle} team={event.mode === "squad"} centered size="lg" /> : <p className="text-xs text-slate-500">—</p>}
                 <div className="mt-1 text-xs font-black tabular-nums text-blue-700">
                   {r ? fmt(r.points) : "—"} PTS
                 </div>
@@ -139,12 +139,7 @@ export function LiveRanking({
                     </span>
                   </td>
                   <td className="px-3 py-3">
-                    <strong className="block max-w-[250px] truncate text-slate-800">
-                      {r.name}
-                    </strong>
-                    <span className="text-[11px] text-slate-400">
-                      {r.subtitle}
-                    </span>
+                    <RankIdentity targets={rankAvatarTargets(event, r.id)} name={r.name} subtitle={r.subtitle} team={event.mode === "squad"} />
                   </td>
                   <td className="px-3 py-3 tabular-nums text-slate-500">
                     {fmt(r.catches)}

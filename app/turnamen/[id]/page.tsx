@@ -1,3 +1,6 @@
+import { avatarTarget } from "@/lib/avatar-identity";
+import { PlayerIdentity } from "@/components/player-avatar";
+import { publicAvatarProfiles } from "@/lib/avatar-identity-db";
 import Link from "next/link";
 import { LiveActivityFeed } from "@/components/live-activity-feed";
 import PublicAutoRefresh from "@/components/public-auto-refresh";
@@ -40,7 +43,7 @@ export default async function EventDetail({
   if (!e) notFound();
   const rules = Array.from(new Set(e.writtenRules.map((x) => x.group)));
   return (
-    <PublicShell>
+    <PublicShell profiles={await publicAvatarProfiles([e])}>
       <main className="mx-auto max-w-[1260px] px-4 py-10 sm:px-6">
         <Breadcrumb label={e.title} />
         <section className="relative mb-8 overflow-hidden rounded-[27px] bg-gradient-to-r from-[#142D70] via-[#2152C1] to-[#2980E6] p-7 text-white sm:p-10">
@@ -134,7 +137,7 @@ export default async function EventDetail({
                           key={p.id}
                           className="flex items-center justify-between border-t border-slate-200 py-2 text-xs"
                         >
-                          <span>{p.name}</span>
+                          <PlayerIdentity target={avatarTarget(e, p.id)} name={p.name} size="sm" />
                           <b className="text-blue-700">{fmt(p.points)} PTS</b>
                         </div>
                       ))}

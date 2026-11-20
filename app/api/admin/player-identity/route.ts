@@ -1,3 +1,5 @@
+import { getArenaSnapshot } from "@/lib/db";
+import { readAvatarProfiles } from "@/lib/avatar-identity-db";
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth";
 import { readLimitedText, sameOrigin } from "@/lib/request-security";
@@ -15,9 +17,15 @@ function failure(error: unknown) {
   logServerFailure("player-identity", error);
   return reply({ error: "Profil belum tersedia. Periksa migrasi SQL V3.2A atau koneksi Roblox/Supabase." }, 503);
 }
-export async function GET() {
+export async function GET(request: NextRequest) {
   if (!(await isAdminAuthenticated())) return reply({ error: "Login panitia diperlukan." }, 401);
-  try { return reply(await getIdentityIndex()); } catch (error) { return failure(error); }
+  try {
+    if (request.nextUrl.searchParams.get("view") === "avatars") {
+      const { data } = await getArenaSnapshot();
+      return reply({ profiles: await readAvatarProfiles(data.events) });
+    }
+    return reply(await getIdentityIndex());
+  } catch (error) { return failure(error); }
 }
 const validKey = (x: unknown): x is string => typeof x === "string" && x.length > 0 && x.length <= 128 && !/[\u0000-\u001f]/.test(x);
 export async function POST(request: NextRequest) {

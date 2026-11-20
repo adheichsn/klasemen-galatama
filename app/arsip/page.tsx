@@ -1,3 +1,7 @@
+import { publicAvatarProfiles } from "@/lib/avatar-identity-db";
+import { rankAvatarTargets } from "@/lib/avatar-identity";
+import { RankIdentity } from "@/components/player-avatar";
+import { standings } from "@/lib/arena-utils";
 import {
   Breadcrumb,
   EmptyEvents,
@@ -23,7 +27,7 @@ export default async function ArchivePage({
     )
     .sort((a, b) => (b.finishedAt || b.eventDate || "").localeCompare(a.finishedAt || a.eventDate || ""));
   return (
-    <PublicShell>
+    <PublicShell profiles={await publicAvatarProfiles(finished)}>
       <main className="mx-auto max-w-[1260px] px-4 py-10 sm:px-6">
         <Breadcrumb label="Arsip Galatama" />
         <div className="mb-7 text-[11px] font-black tracking-widest text-blue-600">
@@ -53,14 +57,18 @@ export default async function ArchivePage({
         </div>
         {finished.length ? (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {finished.map((e, i) => (
-              <div key={e.id} className="min-w-0 space-y-2">
-                <EventCard event={e} index={i} />
-                <Link href={`/turnamen/${encodeURIComponent(e.id)}/hasil`} className="inline-flex items-center gap-2 px-1 text-xs font-bold text-blue-600 hover:underline">
-                  Lihat Hasil Final <ArrowRight size={14} />
-                </Link>
-              </div>
-            ))}
+            {finished.map((e, i) => {
+              const winner = standings(e)[0];
+              return (
+                <div key={e.id} className="min-w-0 space-y-2">
+                  <EventCard event={e} index={i} />
+                  {winner && <div className="rounded-xl border border-blue-100 bg-white p-3"><p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-amber-700">Juara 1</p><RankIdentity targets={rankAvatarTargets(e, winner.id)} name={winner.name} subtitle={winner.subtitle} team={e.mode === "squad"} /></div>}
+                  <Link href={`/turnamen/${encodeURIComponent(e.id)}/hasil`} className="inline-flex items-center gap-2 px-1 text-xs font-bold text-blue-600 hover:underline">
+                    Lihat Hasil Final <ArrowRight size={14} />
+                  </Link>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <EmptyEvents type="arsip Galatama" />

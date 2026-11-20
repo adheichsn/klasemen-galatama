@@ -1,4 +1,6 @@
 "use client";
+import { avatarTarget, rankAvatarTargets } from "@/lib/avatar-identity";
+import { PlayerIdentity, RankIdentity } from "@/components/player-avatar";
 import { useState } from "react";
 import { Archive, Fish, LockKeyhole, Save, Settings2, Trophy } from "lucide-react";
 import type { ArenaStore } from "@/hooks/use-arena";
@@ -57,7 +59,7 @@ export function HistoricalEntryPanel({
             <tbody>
               {e.participants.map((p) => (
                 <tr className="border-t border-slate-100" key={p.id}>
-                  <td className="p-3"><b className="text-slate-800">{p.name}</b><span className="block text-slate-500">@{p.username || "—"}{e.mode === "squad" ? ` · ${e.squads.find((s) => s.id === p.squadId)?.name || "Belum pilih squad"}` : ""}</span></td>
+                  <td className="p-3"><PlayerIdentity target={avatarTarget(e, p.id)} name={p.name} subtitle={`@${p.username || "—"}`} size="sm" link={false} />{e.mode === "squad" && <span className="block text-slate-500">{e.squads.find(s => s.id === p.squadId)?.name || "Belum pilih squad"}</span>}</td>
                   <td className="p-3 font-black text-blue-700">{fmt(participantPoints(e.entries, p.id))} PTS</td>
                   <td className="p-2"><input aria-label={`Total poin resmi ${p.name}`} className="w-28 rounded-lg border border-slate-200 px-3 py-2 outline-none focus:border-blue-500" type="number" step="1" placeholder="Contoh: 25" value={targets[p.id] ?? ""} onChange={(ev) => setTargets((old) => ({ ...old, [p.id]: ev.target.value }))} /></td>
                   <td className="p-2"><button type="button" onClick={() => addOfficial(p.id)} className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-3 py-2 font-bold text-blue-700 hover:bg-blue-100"><Save size={13} /> Terapkan</button></td>
@@ -72,7 +74,7 @@ export function HistoricalEntryPanel({
       <div className="mt-5 rounded-xl bg-slate-50 p-4">
         <h3 className="flex items-center gap-2 text-sm font-black text-slate-800"><Trophy size={16} /> Preview Juara 1–3</h3>
         <div className="mt-2 grid gap-2 sm:grid-cols-3">
-          {rank.slice(0, 3).map((row, i) => <div key={row.id} className="rounded-lg border border-slate-200 bg-white p-3 text-xs"><span className="block font-bold text-slate-500">#{i + 1}</span><b className="block truncate text-slate-800">{row.name}</b><strong className="text-blue-600">{fmt(row.points)} PTS</strong></div>)}
+          {rank.slice(0, 3).map((row, i) => <div key={row.id} className="rounded-lg border border-slate-200 bg-white p-3 text-xs"><span className="block font-bold text-slate-500">#{i + 1}</span><RankIdentity targets={rankAvatarTargets(e, row.id)} name={row.name} team={e.mode === "squad"} size="sm" /><strong className="text-blue-600">{fmt(row.points)} PTS</strong></div>)}
         </div>
         {invalid && <p className="mt-3 text-xs font-semibold text-amber-700">Sebelum finalisasi: {invalid}</p>}
         <p className="mt-2 text-xs text-slate-500">Saat review, panitia dapat memilih Juara 1–3 resmi. Posisi peserta yang memiliki poin sama boleh disesuaikan; peserta berpoin lebih rendah tidak boleh mengungguli peserta dengan poin lebih tinggi.</p>

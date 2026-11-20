@@ -1,6 +1,5 @@
 # WEJI ARENA V3.2A — Roblox Player Identity & Database
 
-Baseline: `klasemen-galatama-main(20261120-191305).zip`, V3.1.1 including the Vercel route hotfix. Phase A only. Package version 3.2.0 identifies the foundation, not completion of V3.2B–G.
 
 ## Before deploy (production and local)
 

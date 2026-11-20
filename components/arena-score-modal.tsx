@@ -1,4 +1,6 @@
 "use client";
+import { avatarTarget } from "@/lib/avatar-identity";
+import { PlayerIdentity } from "@/components/player-avatar";
 import { useRef, useState } from "react";
 import {
   ArrowRight,
@@ -291,6 +293,7 @@ export default function ScoreModal({
                 </select>
               </label>
             </div>
+            {e.participants.filter(p => p.id === player).map(p => <div key={p.id} className="rounded-xl border border-blue-100 bg-blue-50 p-3"><PlayerIdentity target={avatarTarget(e, p.id)} name={p.name} subtitle={p.username ? `@${p.username}` : undefined} link={false} /></div>)}
             {kind === "catch" ? (
               <>
                 <div className="grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(110px,1fr)]">

@@ -1,4 +1,7 @@
 "use client";
+import { avatarTarget, rankAvatarTargets } from "@/lib/avatar-identity";
+import { PlayerIdentity, RankIdentity } from "@/components/player-avatar";
+import { AdminAvatarScope } from "@/components/player-avatar";
 import { useRef, useState } from "react";
 import {
   Activity,
@@ -434,6 +437,7 @@ export default function ArenaApp() {
       </div>
     );
   return (
+    <AdminAvatarScope section={page}>
     <div className="arena-root min-h-screen">
       {mobileMenu && (
         <button
@@ -761,18 +765,14 @@ export default function ArenaApp() {
                     </span>
                   </div>
                   {ranking.length ? (
-                    <div className="podium flex items-end justify-center gap-[13px] h-[265px] p-[10px_23px_25px]">
+                    <div className="podium flex items-end justify-center gap-[13px] h-auto min-h-[265px] p-[24px_23px_25px]">
                       <div className="podium-slot flex flex-col items-center w-[30%] max-w-[180px] min-w-[0] text-center relative second">
                         {ranking[1] && (
                           <>
-                            <div className="podium-medal absolute top-[-19px] bg-[#f3f6fc] text-[#8ca1c3] text-[10px] w-[25px] h-[25px] flex items-center justify-center rounded-full font-extrabold">
+                            <div className="podium-medal relative mb-1 bg-[#f3f6fc] text-[#8ca1c3] text-[10px] w-[25px] h-[25px] flex items-center justify-center rounded-full font-extrabold">
                               2
                             </div>
-                            <div className="podium-avatar flex items-center justify-center rounded-full [border:4px_solid_#fff] shadow-[0_4px_18px_#dfe5f5] h-[57px] w-[57px] text-white silver">
-                              <Medal size={24} />
-                            </div>
-                            <strong>{ranking[1].name}</strong>
-                            <small>{ranking[1].subtitle}</small>
+                            <RankIdentity targets={rankAvatarTargets(e, ranking[1].id)} name={ranking[1].name} subtitle={ranking[1].subtitle} team={e.mode === "squad"} centered size="lg" />
                             <span>{fmt(ranking[1].points)} PTS</span>
                           </>
                         )}
@@ -783,14 +783,10 @@ export default function ArenaApp() {
                       <div className="podium-slot flex flex-col items-center w-[30%] max-w-[180px] min-w-[0] text-center relative first">
                         {ranking[0] && (
                           <>
-                            <div className="podium-crown absolute top-[-22px] text-[#f9b74d]">
+                            <div className="podium-crown relative mb-1 text-[#f9b74d]">
                               <Crown size={25} />
                             </div>
-                            <div className="podium-avatar flex items-center justify-center rounded-full [border:4px_solid_#fff] shadow-[0_4px_18px_#dfe5f5] h-[57px] w-[57px] text-white gold">
-                              <Trophy size={29} />
-                            </div>
-                            <strong>{ranking[0].name}</strong>
-                            <small>{ranking[0].subtitle}</small>
+                            <RankIdentity targets={rankAvatarTargets(e, ranking[0].id)} name={ranking[0].name} subtitle={ranking[0].subtitle} team={e.mode === "squad"} centered size="lg" />
                             <span>{fmt(ranking[0].points)} PTS</span>
                           </>
                         )}
@@ -801,14 +797,10 @@ export default function ArenaApp() {
                       <div className="podium-slot flex flex-col items-center w-[30%] max-w-[180px] min-w-[0] text-center relative third">
                         {ranking[2] && (
                           <>
-                            <div className="podium-medal absolute top-[-19px] bg-[#f3f6fc] text-[#8ca1c3] text-[10px] w-[25px] h-[25px] flex items-center justify-center rounded-full font-extrabold">
+                            <div className="podium-medal relative mb-1 bg-[#f3f6fc] text-[#8ca1c3] text-[10px] w-[25px] h-[25px] flex items-center justify-center rounded-full font-extrabold">
                               3
                             </div>
-                            <div className="podium-avatar flex items-center justify-center rounded-full [border:4px_solid_#fff] shadow-[0_4px_18px_#dfe5f5] h-[57px] w-[57px] text-white bronze">
-                              <Medal size={24} />
-                            </div>
-                            <strong>{ranking[2].name}</strong>
-                            <small>{ranking[2].subtitle}</small>
+                            <RankIdentity targets={rankAvatarTargets(e, ranking[2].id)} name={ranking[2].name} subtitle={ranking[2].subtitle} team={e.mode === "squad"} centered size="lg" />
                             <span>{fmt(ranking[2].points)} PTS</span>
                           </>
                         )}
@@ -1080,15 +1072,7 @@ export default function ArenaApp() {
                               </td>
                               <td>
                                 <div className="player-name flex gap-[10px] items-center">
-                                  <div
-                                    className={`name-avatar avatar-${rank <= 3 ? rank : "other"}`}
-                                  >
-                                    {row.name.slice(0, 1).toUpperCase()}
-                                  </div>
-                                  <div>
-                                    <strong>{row.name}</strong>
-                                    <small>{row.subtitle}</small>
-                                  </div>
+<RankIdentity targets={rankAvatarTargets(e, row.id)} name={row.name} subtitle={row.subtitle} team={e.mode === "squad"} />
                                   {rank === 1 && (
                                     <Crown
                                       size={16}
@@ -1196,12 +1180,7 @@ export default function ArenaApp() {
                                 (member) => (
                                   <tr key={member.id}>
                                     <td className="px-4 py-3 font-semibold text-slate-800">
-                                      {member.name}
-                                      <span className="ml-2 font-normal text-slate-400">
-                                        {member.username
-                                          ? "@" + member.username
-                                          : ""}
-                                      </span>
+                                      <PlayerIdentity target={avatarTarget(e, member.id)} name={member.name} size="sm" />
                                     </td>
                                     <td className="px-4 py-3 text-slate-600">
                                       {fmt(member.catches)} ikan
@@ -1788,7 +1767,7 @@ export default function ArenaApp() {
                               >
                                 #{i + 1}
                               </span>
-                              <strong>{p.name}</strong>
+                              <div className="min-w-0 flex-1"><RankIdentity targets={rankAvatarTargets(ev, p.id)} name={p.name} subtitle={p.subtitle} team={ev.mode === "squad"} /></div>
                               <b>{fmt(p.points)} PTS</b>
                             </div>
                           ))
@@ -2040,5 +2019,6 @@ export default function ArenaApp() {
         </div>
       )}
     </div>
+    </AdminAvatarScope>
   );
 }

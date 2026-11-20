@@ -1,3 +1,5 @@
+import { avatarTarget } from "@/lib/avatar-identity";
+import { PlayerIdentity } from "@/components/player-avatar";
 import {
   Activity,
   ChartNoAxesCombined,
@@ -189,7 +191,7 @@ export function TournamentAnalytics({ event }: { event: ArenaEvent }) {
                 </span>
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs">
-                    <b className="truncate text-[#142A55]">{p.name}</b>
+                    <PlayerIdentity target={avatarTarget(event, p.id)} name={p.name} size="sm" />
                     {event.mode === "squad" && (
                       <span className="text-[10px] text-slate-500">
                         {p.squad || "Tanpa Squad"}
@@ -241,9 +243,7 @@ export function TournamentAnalytics({ event }: { event: ArenaEvent }) {
                       key={person.id}
                       className="flex justify-between gap-3 border-t border-slate-200 py-2 text-xs"
                     >
-                      <span className="truncate text-slate-600">
-                        {person.name}
-                      </span>
+                      <PlayerIdentity target={avatarTarget(event, person.id)} name={person.name} size="sm" />
                       <b className="shrink-0 text-[#142A55]">
                         {fmt(person.points)} PTS
                       </b>
