@@ -1,3 +1,6 @@
+import { eventMetadata } from "@/lib/seo-server";
+import { eventSeoAllowed, eventPath, eventSeoPath } from "@/lib/seo-core";
+import { BreadcrumbJsonLd } from "@/components/seo-json-ld";
 import { publicAvatarProfiles } from "@/lib/avatar-identity-db";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -8,6 +11,13 @@ import { Breadcrumb, PublicShell } from "@/components/public-site";
 import { publicEvents } from "@/lib/public-events";
 
 export const dynamic = "force-dynamic";
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  return eventMetadata((await params).id, "statistik");
+}
 export default async function StatisticsPage({
   params,
 }: {
@@ -20,11 +30,21 @@ export default async function StatisticsPage({
   if (!event) notFound();
   return (
     <PublicShell profiles={await publicAvatarProfiles([event])}>
+      {eventSeoAllowed(event, "statistik") && (
+        <BreadcrumbJsonLd
+          items={[
+            { name: "Turnamen", path: "/turnamen" },
+            { name: event.title, path: eventPath(event.id) },
+            { name: "Statistik", path: eventSeoPath(event.id, "statistik") },
+          ]}
+        />
+      )}
       <main className="mx-auto max-w-[1260px] px-4 py-10 sm:px-6">
         <Breadcrumb label="Statistik Turnamen" />
         <div className="mb-8 rounded-[26px] bg-gradient-to-r from-[#142D70] via-[#2152C1] to-[#2980E6] p-7 text-white sm:p-10">
           <div className="mb-3 flex items-center gap-2 text-[11px] font-extrabold tracking-[.16em] text-blue-100">
-            <ChartNoAxesCombined size={17} />TOURNAMENT INSIGHTS
+            <ChartNoAxesCombined size={17} />
+            TOURNAMENT INSIGHTS
           </div>
           <h1 className="text-3xl font-black sm:text-4xl">
             Statistik {event.title}

@@ -29,7 +29,7 @@ export async function generateMetadata({
   const { events } = await publicEvents();
   const event = events.find((item) => item.id === id);
   return {
-    title: event ? `Spectator • ${event.title}` : "Spectator",
+    title: event ? `Spectator ${event.title}` : "Spectator",
     robots: { index: false, follow: false },
   };
 }

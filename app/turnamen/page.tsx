@@ -1,3 +1,4 @@
+import { pageMetadata } from "@/lib/seo";
 import { MarketplaceCatalog } from "@/components/marketplace-catalog";
 import { Breadcrumb, PublicShell } from "@/components/public-site";
 import { publicEvents } from "@/lib/public-events";
@@ -8,6 +9,12 @@ import type {
   MarketplaceStatus,
   MarketplaceSort,
 } from "@/lib/marketplace-filters";
+export const metadata = pageMetadata({
+  title: "Turnamen Galatama Fish It Roblox",
+  description:
+    "Jelajahi katalog turnamen komunitas Roblox, jadwal Galatama Fish It, klasemen dan hasil pertandingan.",
+  path: "/turnamen",
+});
 export const dynamic = "force-dynamic";
 
 type Search = { mode?: string; status?: string; q?: string; sort?: string };

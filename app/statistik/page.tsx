@@ -1,3 +1,4 @@
+import { pageMetadata } from "@/lib/seo";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -11,6 +12,7 @@ import { publicEvents } from "@/lib/public-events";
 import { tournamentAnalytics } from "@/lib/tournament-analytics";
 import { fmt } from "@/lib/arena-utils";
 
+export const metadata = pageMetadata({ title: "Statistik Turnamen dan Leaderboard", description: "Lihat statistik turnamen, klasemen, poin dan kontribusi peserta WEJI ARENA, termasuk Galatama Fish It.", path: "/statistik" });
 export const dynamic = "force-dynamic";
 export default async function TournamentInsightsCatalog({
   searchParams,

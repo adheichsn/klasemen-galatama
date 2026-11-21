@@ -1,17 +1,18 @@
 import "server-only";
+import { cache } from "react";
+import { logServerFailure } from "./server-errors";
 import { getPublicEvents } from "@/lib/db";
 import type { ArenaEvent } from "@/lib/arena-types";
-export async function publicEvents(): Promise<{
-  events: ArenaEvent[];
-  unavailable: boolean;
-}> {
-  try {
-    return { events: await getPublicEvents(), unavailable: false };
-  } catch (err) {
-    console.error(
-      "WEJI public database unavailable",
-      err instanceof Error ? err.message : "error",
-    );
-    return { events: [], unavailable: true };
-  }
-}
+export const publicEvents = cache(
+  async (): Promise<{
+    events: ArenaEvent[];
+    unavailable: boolean;
+  }> => {
+    try {
+      return { events: await getPublicEvents(), unavailable: false };
+    } catch (err) {
+      logServerFailure("public-events", err);
+      return { events: [], unavailable: true };
+    }
+  },
+);

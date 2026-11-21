@@ -1,3 +1,6 @@
+import { pageMetadata } from "@/lib/seo";
+import { HOME_TITLE, HOME_DESCRIPTION } from "@/lib/seo-core";
+import { WebsiteJsonLd } from "@/components/seo-json-ld";
 import Link from "next/link";
 import { FeaturedCarousel } from "@/components/featured-carousel";
 import { PublicReveal } from "@/components/public-reveal";
@@ -27,7 +30,14 @@ import {
   PublicHeader,
   SectionTitle,
 } from "@/components/public-site";
+import { generalFaq } from "@/lib/general-faq";
 import { standings } from "@/lib/arena-utils";
+export const metadata = pageMetadata({
+  title: HOME_TITLE,
+  description: HOME_DESCRIPTION,
+  path: "/",
+  absoluteTitle: true,
+});
 export const dynamic = "force-dynamic";
 const categories = [
   {
@@ -102,12 +112,9 @@ export default async function HomePage() {
     .sort((a, b) => Number(!!b.featured) - Number(!!a.featured))
     .slice(0, 6);
   const totalPlayers = events.reduce((n, e) => n + e.participants.length, 0);
-  const faqs = events
-    .flatMap((e) => e.faqs)
-    .filter((x, i, a) => a.findIndex((y) => y.question === x.question) === i)
-    .slice(0, 4);
   return (
     <div className="weji-public min-h-screen bg-[#f5f8ff] text-[#172b4d]">
+      <WebsiteJsonLd />
       <PublicHeader />
       <main>
         <FeaturedCarousel
@@ -263,7 +270,7 @@ export default async function HomePage() {
               <SectionTitle
                 eyebrow="DISCOVER COMPETITIONS"
                 title="Explore Tournaments"
-                desc="Cari turnamen yang pas buat kamu."
+                desc="Temukan turnamen komunitas, termasuk Galatama Fish It di Roblox."
                 href="/turnamen"
               />
               {showcase.length ? (
@@ -334,7 +341,7 @@ export default async function HomePage() {
             <section>
               <SectionTitle
                 eyebrow="MEMORIES & LEGENDS"
-                title="Galatama Archives"
+                title="Tournament Archives"
                 desc="Setiap turnamen punya cerita dan pemenangnya."
                 href="/arsip"
                 link="Lihat Arsip"
@@ -346,7 +353,7 @@ export default async function HomePage() {
                   ))}
                 </div>
               ) : (
-                <EmptyEvents type="arsip Galatama" />
+                <EmptyEvents type="arsip turnamen" />
               )}
             </section>
           </PublicReveal>
@@ -376,29 +383,10 @@ export default async function HomePage() {
               <SectionTitle
                 eyebrow="NEED HELP?"
                 title="Frequently Asked Questions"
-                desc="Cari tahu cara kerja kompetisi di arena."
+                desc="Informasi umum seputar WEJI ARENA."
                 href="/faq"
               />
-              {faqs.length ? (
-                <FaqAccordion questions={faqs} />
-              ) : (
-                <div className="rounded-2xl border border-blue-100 bg-white p-6 text-sm leading-7 text-slate-600">
-                  <b className="block text-base text-[#142A55]">
-                    Bagaimana sistem poin WEJI ARENA?
-                  </b>
-                  <p className="mt-2">
-                    Setiap turnamen punya katalog ikan dan bonus poin sendiri
-                    yang ditentukan panitia. Periksa halaman detail event untuk
-                    aturan resminya.
-                  </p>
-                  <Link
-                    href="/faq"
-                    className="mt-3 inline-flex items-center gap-2 font-bold text-blue-600"
-                  >
-                    Baca FAQ <ArrowRight size={14} />
-                  </Link>
-                </div>
-              )}
+              <FaqAccordion questions={generalFaq.slice(0, 4)} />
             </div>
           </section>
         </div>

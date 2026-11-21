@@ -41,3 +41,89 @@
         }
     }
 }
+
+.weji-typewriter-space,
+.weji-typewriter-cursor {
+    display: inline-block;
+    width: .09em;
+    height: .85em;
+    margin-inline-start: .08em;
+    vertical-align: -.02em;
+}
+
+.weji-typewriter-cursor {
+    background: currentColor;
+    border-radius: 2px;
+    animation: weji-cursor-blink 1s step-end infinite;
+}
+
+.weji-typewriter-static {
+    display: none;
+}
+
+@keyframes weji-cursor-blink {
+    50% {
+        opacity: 0;
+    }
+}
+
+.weji-faq summary:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 3px;
+    border-radius: 16px;
+}
+
+.weji-faq summary::-webkit-details-marker {
+    display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .weji-faq[open]>div {
+        animation: weji-faq-open .2s ease-out;
+    }
+
+    @keyframes weji-faq-open {
+        from {
+            opacity: 0;
+            transform: translateY(-3px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .weji-typewriter-animated {
+        display: none;
+    }
+
+    .weji-typewriter-static {
+        display: inline;
+    }
+
+    .weji-typewriter-cursor,
+    .weji-public .weji-hero-orbit {
+        animation: none;
+    }
+
+    .weji-public .animate-pulse {
+        animation: none;
+    }
+
+    html[data-scroll-behavior="smooth"] {
+        scroll-behavior: auto;
+    }
+}
+
+.weji-typewriter-cursor.is-paused {
+    animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .weji-motion-toggle {
+        display: none;
+    }
+}

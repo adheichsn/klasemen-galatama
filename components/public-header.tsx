@@ -24,25 +24,24 @@ export function PublicHeader() {
       <div className="border-b border-blue-50 bg-[#f1f6ff]">
         <div className="mx-auto flex max-w-[1260px] items-center justify-center gap-2 px-4 py-1.5 text-center text-[10px] font-extrabold tracking-wide text-blue-700 sm:text-[11px]">
           <Trophy size={13} aria-hidden="true" className="text-amber-500" />
-          FISH IT TOURNAMENTS <span className="text-blue-300">•</span> YOUR
-          ARENA, YOUR GLORY
+          COMPETE AND MAKE HISTORY
         </div>
       </div>
       <div className="mx-auto flex max-w-[1260px] items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:gap-6">
         <Link
           href="/"
-          className="flex shrink-0 items-center gap-2.5"
+          className="flex min-w-0 items-center gap-2.5"
           aria-label="WEJI ARENA - Beranda"
           onClick={() => setOpen(false)}
         >
-          <span className="relative inline-flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#2563eb] to-[#1543af] text-white shadow-[0_7px_20px_rgba(37,99,235,.23)]">
+          <span className="relative inline-flex size-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#2563eb] to-[#1543af] text-white shadow-[0_7px_20px_rgba(37,99,235,.23)]">
             <Fish size={23} aria-hidden="true" />
             <span className="absolute -bottom-1 -right-1 size-3.5 rounded-full border-[3px] border-white bg-sky-400" />
           </span>
           <span className="text-[19px] font-black leading-none tracking-[-.055em] text-[#132855] sm:text-[22px]">
             WEJI <span className="text-blue-600">ARENA</span>
-            <span className="mt-1.5 block text-[8px] font-extrabold tracking-[.22em] text-slate-400 sm:text-[9px]">
-              FISH IT TOURNAMENTS
+            <span className="mt-1.5 block text-[8px] font-extrabold tracking-[.12em] text-slate-400 sm:text-[9px]">
+              COMPETITIVE GAMING PLATFORM
             </span>
           </span>
         </Link>
@@ -70,7 +69,7 @@ export function PublicHeader() {
             );
           })}
         </nav>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <Link
             href="/turnamen"
             className="inline-flex size-10 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-700 transition hover:bg-blue-100 sm:w-auto sm:gap-2 sm:px-4"

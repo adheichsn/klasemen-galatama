@@ -1,3 +1,6 @@
+import { eventMetadata } from "@/lib/seo-server";
+import { eventSeoAllowed, eventPath, eventSeoPath } from "@/lib/seo-core";
+import { BreadcrumbJsonLd } from "@/components/seo-json-ld";
 import { ChampionshipPodium } from "@/components/championship-podium";
 import { playerHref, legacyPlayerHref } from "@/lib/player-directory";
 import {
@@ -23,6 +26,13 @@ import { fmt } from "@/lib/arena-utils";
 import { normalizedRobloxUsername, resultRows } from "@/lib/tournament-results";
 
 export const dynamic = "force-dynamic";
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  return eventMetadata((await params).id, "hasil");
+}
 export default async function FinalResultsPage({
   params,
 }: {
@@ -38,6 +48,15 @@ export default async function FinalResultsPage({
   const profiles = await publicAvatarProfiles([event]);
   return (
     <PublicShell profiles={profiles}>
+      {eventSeoAllowed(event, "hasil") && (
+        <BreadcrumbJsonLd
+          items={[
+            { name: "Turnamen", path: "/turnamen" },
+            { name: event.title, path: eventPath(event.id) },
+            { name: "Hasil Final", path: eventSeoPath(event.id, "hasil") },
+          ]}
+        />
+      )}
       <main className="mx-auto max-w-[1180px] px-4 py-10 sm:px-6">
         <Breadcrumb label="Hasil Akhir" />
         <section className="mb-7 overflow-hidden rounded-3xl bg-gradient-to-br from-[#10265b] via-[#1d49ab] to-[#377feb] p-7 text-white sm:p-10">

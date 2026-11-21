@@ -56,8 +56,8 @@ export function PublicFooter() {
               <span className="text-blue-600">ARENA</span>
             </div>
             <p className="mt-2 max-w-lg text-sm text-slate-500">
-              Arena kompetisi Fish It: turnamen, klasemen, juara, dan kisah di
-              balik setiap pertandingan.
+              Platform kompetisi komunitas untuk turnamen Roblox, termasuk
+              Galatama Fish It, klasemen, dan riwayat prestasi.
             </p>
           </div>
           <div className="flex flex-wrap gap-5 text-xs font-bold text-slate-500">
@@ -69,7 +69,7 @@ export function PublicFooter() {
           </div>
         </div>
         <div className="mt-8 border-t border-slate-100 pt-5 text-xs text-slate-400">
-          © WEJI ARENA — Community Tournament Platform. Tidak berafiliasi dengan
+          © WEJI ARENA. Community Tournament Platform. Tidak berafiliasi dengan
           Roblox atau Fish It.
         </div>
       </div>
@@ -184,7 +184,7 @@ export function EventCard({
             </span>
           )}
           <div className="text-[10px] font-extrabold tracking-[.19em] text-blue-100">
-            WEJI ARENA • FISH IT
+            WEJI ARENA
           </div>
           <h3 className="mt-1 line-clamp-2 max-w-[90%] text-xl font-black leading-tight tracking-tight text-white">
             {event.title}
@@ -203,7 +203,7 @@ export function EventCard({
           </span>
         </div>
         <p className="mt-3 line-clamp-2 min-h-[35px] text-[13px] leading-relaxed text-slate-500">
-          {event.subtitle || "Turnamen custom Fish It"}
+          {event.subtitle || "Turnamen komunitas"}
         </p>
         <div className="mt-4 flex items-center justify-between border-t border-blue-50 pt-4 text-xs">
           <span className="flex items-center gap-1 font-bold text-slate-600">
@@ -392,13 +392,13 @@ export function FaqAccordion({
       {questions.map((item) => (
         <details
           key={item.id}
-          className="group rounded-2xl border border-blue-100 bg-white"
+          className="weji-faq group rounded-2xl border border-blue-100 bg-white"
         >
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5 text-sm font-bold text-[#142A55]">
             {item.question}
             <ChevronRight
               size={16}
-              className="shrink-0 text-blue-600 transition-transform group-open:rotate-90"
+              className="shrink-0 text-blue-600 transition-transform group-open:rotate-90 motion-reduce:transition-none"
             />
           </summary>
           <div className="border-t border-slate-100 px-5 pb-5 pt-4 text-sm leading-7 whitespace-pre-line text-slate-600">

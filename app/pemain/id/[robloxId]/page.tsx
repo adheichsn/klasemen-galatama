@@ -1,3 +1,5 @@
+import { playerMetadata } from "@/lib/seo-server";
+import { BreadcrumbJsonLd } from "@/components/seo-json-ld";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, ExternalLink, Trophy } from "lucide-react";
@@ -15,6 +17,13 @@ import { fmt } from "@/lib/arena-utils";
 import type { AvatarProfiles } from "@/lib/avatar-identity";
 
 export const dynamic = "force-dynamic";
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ robloxId: string }>;
+}) {
+  return playerMetadata((await params).robloxId);
+}
 const PER_PAGE = 12;
 export default async function RobloxPlayerPage({
   params,
@@ -85,6 +94,14 @@ export default async function RobloxPlayerPage({
   const selectedProfiles: AvatarProfiles = target ? { [target]: profile } : {};
   return (
     <PublicShell profiles={selectedProfiles}>
+      {player.history.some((h) => h.status !== "draft") && (
+        <BreadcrumbJsonLd
+          items={[
+            { name: "Pemain", path: "/pemain" },
+            { name: player.profile.displayName, path: playerHref(robloxId) },
+          ]}
+        />
+      )}
       <main className="mx-auto max-w-[1060px] px-4 py-10 sm:px-6">
         <Breadcrumb label="Profil Pemain" />
         <Link

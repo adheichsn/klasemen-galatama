@@ -1,3 +1,4 @@
+import { pageMetadata } from "@/lib/seo";
 import { publicAvatarProfiles } from "@/lib/avatar-identity-db";
 import {
   finalEditionMatches,
@@ -13,6 +14,12 @@ import {
 import { publicEvents } from "@/lib/public-events";
 import { LockKeyhole, ArrowRight, Search } from "lucide-react";
 import Link from "next/link";
+export const metadata = pageMetadata({
+  title: "Arsip Turnamen Galatama",
+  description:
+    "Telusuri arsip turnamen WEJI ARENA, klasemen akhir Galatama Fish It, juara dan hasil pertandingan.",
+  path: "/arsip",
+});
 export const dynamic = "force-dynamic";
 const PER_PAGE = 6;
 export default async function ArchivePage({

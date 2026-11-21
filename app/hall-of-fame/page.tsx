@@ -1,3 +1,4 @@
+import { pageMetadata } from "@/lib/seo";
 import { identitySoloChampions } from "@/lib/player-directory";
 import {
   finalEditionMatches,
@@ -18,6 +19,12 @@ import {
 } from "lucide-react";
 import { Breadcrumb, PublicShell, dateLabel } from "@/components/public-site";
 import { publicEvents } from "@/lib/public-events";
+export const metadata = pageMetadata({
+  title: "Hall of Fame dan Juara Turnamen",
+  description:
+    "Kenali para juara WEJI ARENA, podium Galatama Fish It Roblox dan pencapaian pemain sepanjang turnamen.",
+  path: "/hall-of-fame",
+});
 export const dynamic = "force-dynamic";
 const PER_PAGE = 9;
 export default async function HallOfFame({

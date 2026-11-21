@@ -1,3 +1,6 @@
+import { eventMetadata } from "@/lib/seo-server";
+import { eventSeoAllowed, eventPath } from "@/lib/seo-core";
+import { BreadcrumbJsonLd } from "@/components/seo-json-ld";
 import { avatarTarget } from "@/lib/avatar-identity";
 import { PlayerIdentity } from "@/components/player-avatar";
 import { publicAvatarProfiles } from "@/lib/avatar-identity-db";
@@ -32,6 +35,13 @@ import {
 import { fmt, squadContribution } from "@/lib/arena-utils";
 import { validBannerUrl } from "@/lib/banner";
 export const dynamic = "force-dynamic";
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  return eventMetadata((await params).id, "detail");
+}
 export default async function EventDetail({
   params,
 }: {
@@ -44,6 +54,14 @@ export default async function EventDetail({
   const rules = Array.from(new Set(e.writtenRules.map((x) => x.group)));
   return (
     <PublicShell profiles={await publicAvatarProfiles([e])}>
+      {eventSeoAllowed(e, "detail") && (
+        <BreadcrumbJsonLd
+          items={[
+            { name: "Turnamen", path: "/turnamen" },
+            { name: e.title, path: eventPath(e.id) },
+          ]}
+        />
+      )}
       <main className="mx-auto max-w-[1260px] px-4 py-10 sm:px-6">
         <Breadcrumb label={e.title} />
         <section className="relative mb-8 overflow-hidden rounded-[27px] bg-gradient-to-r from-[#142D70] via-[#2152C1] to-[#2980E6] p-7 text-white sm:p-10">
@@ -137,7 +155,11 @@ export default async function EventDetail({
                           key={p.id}
                           className="flex items-center justify-between border-t border-slate-200 py-2 text-xs"
                         >
-                          <PlayerIdentity target={avatarTarget(e, p.id)} name={p.name} size="sm" />
+                          <PlayerIdentity
+                            target={avatarTarget(e, p.id)}
+                            name={p.name}
+                            size="sm"
+                          />
                           <b className="text-blue-700">{fmt(p.points)} PTS</b>
                         </div>
                       ))}

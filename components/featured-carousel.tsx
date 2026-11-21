@@ -10,6 +10,8 @@ import {
   ChevronRight,
   Fish,
   MapPin,
+  Pause,
+  Play,
   Radio,
   Sparkles,
   Trophy,
@@ -17,6 +19,7 @@ import {
   Waves,
 } from "lucide-react";
 import type { EventMode, EventStatus } from "@/lib/arena-types";
+import { HeroTypewriter } from "@/components/hero-typewriter";
 import { validBannerUrl } from "@/lib/banner";
 
 export type FeaturedPromo = {
@@ -43,11 +46,11 @@ export function FeaturedCarousel({
   const slides = [
     {
       id: "welcome",
-      title: "Your Arena. Your Glory.",
+      title: "Setiap Pertandingan Punya Cerita",
       subtitle:
-        "Jelajahi turnamen Fish It, pantau klasemen secara publik, dan abadikan kemenanganmu di WEJI ARENA.",
+        "Jelajahi turnamen, pantau hasil pertandingan, dan temukan perjalanan para pemain dalam satu platform.",
       href: "/turnamen",
-      location: "FISH IT COMMUNITY",
+      location: "COMPETITIVE GAMING COMMUNITY",
       label: "WELCOME TO WEJI ARENA",
       mode: "solo",
       status: "draft",
@@ -62,23 +65,40 @@ export function FeaturedCarousel({
   ];
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [pausedByUser, setPausedByUser] = useState(false);
+  const [visible, setVisible] = useState(true);
   const reduceMotion = useReducedMotion();
   const touchStart = useRef<number | null>(null);
   const current = slides[active] ?? slides[0];
   useEffect(() => {
+    const update = () => setVisible(document.visibilityState === "visible");
+    update();
+    document.addEventListener("visibilitychange", update);
+    return () => document.removeEventListener("visibilitychange", update);
+  }, []);
+  useEffect(() => {
     if (
       slides.length <= 1 ||
       paused ||
-      document.visibilityState !== "visible" ||
+      pausedByUser ||
+      !visible ||
       reduceMotion
     )
       return;
-    const timer = window.setInterval(
+    const timer = window.setTimeout(
       () => setActive((prev) => (prev + 1) % slides.length),
-      6500,
+      current.id === "welcome" ? 14500 : 6500,
     );
-    return () => window.clearInterval(timer);
-  }, [slides.length, paused, reduceMotion]);
+    return () => window.clearTimeout(timer);
+  }, [
+    slides.length,
+    paused,
+    pausedByUser,
+    visible,
+    reduceMotion,
+    current.id,
+    active,
+  ]);
   const move = (direction: number) =>
     setActive((prev) => (prev + direction + slides.length) % slides.length);
   const hasImage = !!current.bannerUrl && validBannerUrl(current.bannerUrl);
@@ -87,7 +107,9 @@ export function FeaturedCarousel({
       <div className="mx-auto max-w-[1260px] px-4 sm:px-6">
         <div
           className="relative isolate overflow-hidden rounded-[28px] bg-gradient-to-br from-[#0E2862] via-[#1D4FB6] to-[#267CF0] text-white shadow-[0_22px_65px_rgba(30,75,160,.20)] sm:rounded-[34px]"
-          onTouchStart={(event) => { touchStart.current = event.touches[0]?.clientX ?? null; }}
+          onTouchStart={(event) => {
+            touchStart.current = event.touches[0]?.clientX ?? null;
+          }}
           onTouchEnd={(event) => {
             if (touchStart.current === null) return;
             const delta = event.changedTouches[0]?.clientX - touchStart.current;
@@ -123,10 +145,14 @@ export function FeaturedCarousel({
             </div>
           )}
           <div className="relative z-10 flex min-h-[348px] flex-col justify-between gap-8 p-7 sm:min-h-[405px] sm:p-11 lg:p-12">
-            <motion.div className="max-w-[680px]" key={current.id}
+            <motion.div
+              className="max-w-[680px]"
+              key={current.id}
               initial={reduceMotion ? false : { opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.38, ease: "easeOut" }} aria-live="off">
+              transition={{ duration: 0.38, ease: "easeOut" }}
+              aria-live="off"
+            >
               <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 text-[10px] font-extrabold tracking-[.18em] text-blue-100 backdrop-blur-sm">
                 {current.status === "live" ? (
                   <Radio size={13} />
@@ -135,11 +161,11 @@ export function FeaturedCarousel({
                 )}{" "}
                 {current.label}
               </span>
-              <h1 className="mt-5 max-w-[700px] text-[37px] font-black leading-[1.1] tracking-[-.055em] text-white sm:text-[54px] lg:text-[61px]">
+              <h1 className="mt-5 max-w-[700px] text-[28px] font-black leading-[1.15] tracking-[-.045em] text-white sm:text-[40px] lg:text-[46px]">
                 {current.id === "welcome" ? (
                   <>
-                    Your Arena.
-                    <span className="block text-[#9BDFFF]">Your Glory.</span>
+                    Setiap Pertandingan Punya Cerita
+                    <HeroTypewriter paused={pausedByUser} />
                   </>
                 ) : (
                   current.title
@@ -147,7 +173,7 @@ export function FeaturedCarousel({
               </h1>
               <p className="mt-4 max-w-[510px] text-sm leading-7 text-blue-100 sm:text-base">
                 {current.subtitle ||
-                  "Bergabunglah dalam keseruan turnamen Fish It dan pantau hasilnya secara langsung."}
+                  "Jelajahi pertandingan dan pantau hasilnya secara langsung."}
               </p>
               <div className="mt-6 flex flex-wrap items-center gap-3">
                 <Link
@@ -169,7 +195,7 @@ export function FeaturedCarousel({
               </div>
             </motion.div>
             <div className="flex flex-wrap items-end justify-between gap-4 border-t border-white/20 pt-5">
-              <div className="grid grid-cols-3 gap-6 text-white sm:gap-12">
+              <div className="grid min-w-0 grid-cols-3 gap-3 text-white sm:gap-12">
                 <div>
                   <b className="block text-xl font-black tabular-nums">
                     {eventCount}
@@ -193,7 +219,24 @@ export function FeaturedCarousel({
                   </span>
                 </div>
               </div>
-              <div className="flex items-center gap-2" aria-label="Navigasi banner">
+              <div
+                className="flex items-center gap-2"
+                aria-label="Navigasi banner"
+              >
+                <button
+                  type="button"
+                  aria-label={
+                    pausedByUser ? "Lanjutkan animasi" : "Jeda animasi"
+                  }
+                  aria-pressed={pausedByUser}
+                  onClick={() => setPausedByUser((p) => !p)}
+                  className="weji-motion-toggle inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-white/10 px-3 py-2.5 text-xs font-bold text-white hover:bg-white/25"
+                >
+                  {pausedByUser ? <Play size={15} /> : <Pause size={15} />}
+                  <span className="hidden sm:inline">
+                    {pausedByUser ? "Lanjutkan" : "Jeda"}
+                  </span>
+                </button>
                 {slides.length > 1 && (
                   <>
                     <button
@@ -204,11 +247,20 @@ export function FeaturedCarousel({
                     >
                       <ChevronLeft size={17} />
                     </button>
-                    <div className="flex items-center gap-1.5" role="group" aria-label="Pilih banner">
+                    <div
+                      className="flex items-center gap-1.5"
+                      role="group"
+                      aria-label="Pilih banner"
+                    >
                       {slides.map((slide, index) => (
-                        <button key={slide.id} type="button" aria-label={`Tampilkan banner ${index + 1}`} aria-current={active === index ? "true" : undefined}
+                        <button
+                          key={slide.id}
+                          type="button"
+                          aria-label={`Tampilkan banner ${index + 1}`}
+                          aria-current={active === index ? "true" : undefined}
                           onClick={() => setActive(index)}
-                          className={`h-1.5 rounded-full transition-all ${active === index ? "w-6 bg-white" : "w-2 bg-white/40 hover:bg-white/70"}`} />
+                          className={`h-1.5 rounded-full transition-all ${active === index ? "w-6 bg-white" : "w-2 bg-white/40 hover:bg-white/70"}`}
+                        />
                       ))}
                     </div>
                     <button
@@ -228,7 +280,7 @@ export function FeaturedCarousel({
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs font-semibold text-slate-500">
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />{" "}
-            Platform turnamen komunitas Fish It
+            Platform kompetisi komunitas
           </div>
           <Link
             href="/turnamen?status=live"

@@ -1,3 +1,4 @@
+import { pageMetadata } from "@/lib/seo";
 import Link from "next/link";
 import { ArrowRight, Search, Users } from "lucide-react";
 import { PublicShell, Breadcrumb } from "@/components/public-site";
@@ -12,6 +13,12 @@ import {
 } from "@/lib/player-directory";
 import type { AvatarProfiles } from "@/lib/avatar-identity";
 
+export const metadata = pageMetadata({
+  title: "Profil Pemain Roblox",
+  description:
+    "Cari username, nama tampilan, dan User ID Roblox peserta WEJI ARENA. Lihat prestasi dan riwayat turnamen.",
+  path: "/pemain",
+});
 export const dynamic = "force-dynamic";
 const PAGE_SIZE = 16;
 const stringParam = (value: string | string[] | undefined) =>
