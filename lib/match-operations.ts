@@ -4,7 +4,11 @@ import { tournamentReadiness } from "./tournament-readiness";
 
 /** Operations deliberately keep ArenaData V2 and its PostgreSQL schema unchanged. */
 export function startMatch(event: ArenaEvent, now = Date.now()): ArenaEvent {
-  if (event.status !== "draft" || !tournamentReadiness(event).canStart)
+  if (
+    event.status !== "draft" ||
+    event.historical ||
+    !tournamentReadiness(event).canStart
+  )
     return event;
   return {
     ...event,
@@ -114,7 +118,8 @@ export function validateMatchTransition(
       !(
         (old.status === "draft" &&
           current.status === "live" &&
-          !old.historical && !current.historical &&
+          !old.historical &&
+          !current.historical &&
           tournamentReadiness(current).canStart) ||
         (old.status === "live" && current.status === "finished")
       )

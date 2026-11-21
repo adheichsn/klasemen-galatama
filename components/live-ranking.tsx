@@ -57,7 +57,12 @@ export function LiveRanking({
         </h2>
         <span className="inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-1 text-[11px] font-black text-red-600">
           <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />{" "}
-          LIVE • {ranking.length} {event.mode === "solo" ? "Peserta" : "Squad"}
+          LIVE • {ranking.length}{" "}
+          {event.mode === "solo"
+            ? "Peserta"
+            : event.mode === "duo"
+              ? "Pasangan"
+              : "Squad"}
         </span>
       </div>
       {ranking.length > 0 && (
@@ -74,7 +79,18 @@ export function LiveRanking({
                 >
                   {rankIndex + 1}
                 </span>
-                {r ? <RankIdentity targets={rankAvatarTargets(event, r.id)} name={r.name} subtitle={r.subtitle} team={event.mode === "squad"} centered size="lg" /> : <p className="text-xs text-slate-500">—</p>}
+                {r ? (
+                  <RankIdentity
+                    targets={rankAvatarTargets(event, r.id)}
+                    name={r.name}
+                    subtitle={r.subtitle}
+                    team={event.mode !== "solo"}
+                    centered
+                    size="lg"
+                  />
+                ) : (
+                  <p className="text-xs text-slate-500">—</p>
+                )}
                 <div className="mt-1 text-xs font-black tabular-nums text-blue-700">
                   {r ? fmt(r.points) : "—"} PTS
                 </div>
@@ -89,7 +105,11 @@ export function LiveRanking({
             <tr>
               <th className="px-4 py-3 sm:px-6">Rank</th>
               <th className="px-3 py-3">
-                {event.mode === "solo" ? "Pemain" : "Squad"}
+                {event.mode === "solo"
+                  ? "Pemain"
+                  : event.mode === "duo"
+                    ? "Pasangan"
+                    : "Squad"}
               </th>
               <th className="px-3 py-3">Tangkapan</th>
               <th className="px-4 py-3 text-right sm:px-6">Poin</th>
@@ -139,7 +159,12 @@ export function LiveRanking({
                     </span>
                   </td>
                   <td className="px-3 py-3">
-                    <RankIdentity targets={rankAvatarTargets(event, r.id)} name={r.name} subtitle={r.subtitle} team={event.mode === "squad"} />
+                    <RankIdentity
+                      targets={rankAvatarTargets(event, r.id)}
+                      name={r.name}
+                      subtitle={r.subtitle}
+                      team={event.mode !== "solo"}
+                    />
                   </td>
                   <td className="px-3 py-3 tabular-nums text-slate-500">
                     {fmt(r.catches)}

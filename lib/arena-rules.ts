@@ -16,8 +16,15 @@ export function canAssignSquad(
   squadId: string | null,
 ) {
   const p = e.participants.find((player) => player.id === participantId);
-  if (!p || e.mode !== "squad") return false;
+  if (!p || e.mode === "solo") return false;
   if (squadId !== null && !e.squads.some((s) => s.id === squadId)) return false;
+  if (
+    e.mode === "duo" &&
+    squadId &&
+    p.squadId !== squadId &&
+    e.participants.filter((member) => member.squadId === squadId).length >= 2
+  )
+    return false;
   return (
     p.squadId === squadId ||
     !e.entries.some((entry) => entry.participantId === participantId)
@@ -45,4 +52,25 @@ export function calculateCatch(
     bonuses: bonuses.map((b) => ({ id: b.id, name: b.name, points: b.points })),
     delta,
   };
+}
+
+/** DUO permits incomplete drafts, but scoring/start/final require two distinct members per pair. */
+export function completeDuoRoster(e: ArenaEvent): boolean {
+  if (e.mode !== "duo") return true;
+  const teams = new Map(e.squads.map((s) => [s.id, 0]));
+  if (
+    teams.size < 1 ||
+    teams.size !== e.squads.length ||
+    new Set(e.participants.map((p) => p.id)).size !== e.participants.length
+  )
+    return false;
+  const usernames = new Set<string>();
+  for (const p of e.participants) {
+    if (!p.squadId || !teams.has(p.squadId)) return false;
+    const key = p.username.trim().replace(/^@/, "").toLowerCase();
+    if (!/^[a-z0-9_]{3,20}$/.test(key) || usernames.has(key)) return false;
+    usernames.add(key);
+    teams.set(p.squadId, teams.get(p.squadId)! + 1);
+  }
+  return [...teams.values()].every((n) => n === 2);
 }

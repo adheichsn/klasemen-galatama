@@ -1,5 +1,9 @@
 import { playerHref, legacyPlayerHref } from "@/lib/player-directory";
-import { avatarTarget, avatarProfile, rankAvatarTargets } from "@/lib/avatar-identity";
+import {
+  avatarTarget,
+  avatarProfile,
+  rankAvatarTargets,
+} from "@/lib/avatar-identity";
 import { PlayerIdentity, RankIdentity } from "@/components/player-avatar";
 import { publicAvatarProfiles } from "@/lib/avatar-identity-db";
 import Link from "next/link";
@@ -77,7 +81,14 @@ export default async function FinalResultsPage({
                 )}{" "}
                 Juara {i + 1}
               </div>
-              <RankIdentity targets={rankAvatarTargets(event, row.id)} name={row.name} subtitle={row.subtitle} team={event.mode === "squad"} centered size="lg" />
+              <RankIdentity
+                targets={rankAvatarTargets(event, row.id)}
+                name={row.name}
+                subtitle={row.subtitle}
+                team={event.mode !== "solo"}
+                centered
+                size="lg"
+              />
               <div className="mt-4 text-center text-2xl font-black text-blue-700">
                 {fmt(row.points)} <span className="text-xs">PTS</span>
               </div>
@@ -93,7 +104,9 @@ export default async function FinalResultsPage({
               <p className="mt-1 text-xs text-slate-500">
                 {event.mode === "solo"
                   ? "Peringkat individu"
-                  : "Peringkat squad dan kontribusi anggota"}{" "}
+                  : event.mode === "duo"
+                    ? "Peringkat pasangan dan kontribusi anggota"
+                    : "Peringkat squad dan kontribusi anggota"}{" "}
                 • {rows.length} peserta/tim
               </p>
             </div>
@@ -104,9 +117,19 @@ export default async function FinalResultsPage({
           {rows.length ? (
             <div className="divide-y divide-blue-50">
               {rows.map((row) => {
-                const linked = event.mode === "solo" ? avatarProfile(profiles, avatarTarget(event, row.id)) : undefined;
-                const legacy = event.mode === "solo" ? normalizedRobloxUsername(row.username) : null;
-                const profile = linked ? playerHref(linked.robloxId) : legacy ? legacyPlayerHref(legacy) : null;
+                const linked =
+                  event.mode === "solo"
+                    ? avatarProfile(profiles, avatarTarget(event, row.id))
+                    : undefined;
+                const legacy =
+                  event.mode === "solo"
+                    ? normalizedRobloxUsername(row.username)
+                    : null;
+                const profile = linked
+                  ? playerHref(linked.robloxId)
+                  : legacy
+                    ? legacyPlayerHref(legacy)
+                    : null;
                 return (
                   <div key={row.id} className="px-5 py-4 sm:px-7">
                     <div className="grid grid-cols-[34px_minmax(0,1fr)_auto] items-center gap-3">
@@ -116,7 +139,12 @@ export default async function FinalResultsPage({
                         {row.rank}
                       </span>
                       <div className="min-w-0">
-                        <RankIdentity targets={rankAvatarTargets(event, row.id)} name={row.name} subtitle={row.subtitle} team={event.mode === "squad"} />
+                        <RankIdentity
+                          targets={rankAvatarTargets(event, row.id)}
+                          name={row.name}
+                          subtitle={row.subtitle}
+                          team={event.mode !== "solo"}
+                        />
                         <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-slate-500">
                           <span>
                             <Fish size={12} className="mr-1 inline" />
@@ -126,7 +154,8 @@ export default async function FinalResultsPage({
                           <span>{row.subtitle}</span>
                           {profile && (
                             <Link
-                              prefetch={false} href={profile}
+                              prefetch={false}
+                              href={profile}
                               className="font-bold text-blue-600 hover:underline"
                             >
                               Riwayat pemain
@@ -138,7 +167,7 @@ export default async function FinalResultsPage({
                         {fmt(row.points)} PTS
                       </strong>
                     </div>
-                    {event.mode === "squad" && row.members.length > 0 && (
+                    {event.mode !== "solo" && row.members.length > 0 && (
                       <details className="ml-12 mt-3 rounded-xl bg-slate-50 p-3">
                         <summary className="cursor-pointer text-xs font-bold text-blue-700">
                           <Users size={14} className="mr-1 inline" /> Lihat
@@ -150,7 +179,16 @@ export default async function FinalResultsPage({
                               key={m.id}
                               className="flex justify-between gap-3 py-2 text-xs"
                             >
-                              <PlayerIdentity target={avatarTarget(event, m.id)} name={m.name} size="sm" subtitle={m.username ? `@${m.username.replace(/^@/, "")}` : undefined} />
+                              <PlayerIdentity
+                                target={avatarTarget(event, m.id)}
+                                name={m.name}
+                                size="sm"
+                                subtitle={
+                                  m.username
+                                    ? `@${m.username.replace(/^@/, "")}`
+                                    : undefined
+                                }
+                              />
                               <b className="shrink-0">{fmt(m.points)} PTS</b>
                             </div>
                           ))}

@@ -1,5 +1,13 @@
-import { identitySoloChampions, playerHref, legacyPlayerHref } from "@/lib/player-directory";
-import { avatarTarget, avatarProfile, rankAvatarTargets } from "@/lib/avatar-identity";
+import {
+  identitySoloChampions,
+  playerHref,
+  legacyPlayerHref,
+} from "@/lib/player-directory";
+import {
+  avatarTarget,
+  avatarProfile,
+  rankAvatarTargets,
+} from "@/lib/avatar-identity";
 import { PlayerIdentity, RankIdentity } from "@/components/player-avatar";
 import { publicAvatarProfiles } from "@/lib/avatar-identity-db";
 import Link from "next/link";
@@ -34,7 +42,9 @@ export default async function HallOfFame({
 }) {
   const params = await searchParams;
   const mode =
-    params.mode === "solo" || params.mode === "squad" ? params.mode : "all";
+    params.mode === "solo" || params.mode === "duo" || params.mode === "squad"
+      ? params.mode
+      : "all";
   const location = (params.location || "").slice(0, 150);
   const query = (params.q || "").trim().slice(0, 100).toLocaleLowerCase();
   const pageParam = Number(params.page);
@@ -59,8 +69,12 @@ export default async function HallOfFame({
           .includes(query)),
   );
   let identityUnavailable = false;
-  const profiles = await publicAvatarProfiles(filtered, () => { identityUnavailable = true; });
-  const allTime = identityUnavailable ? [] : identitySoloChampions(filtered, profiles);
+  const profiles = await publicAvatarProfiles(filtered, () => {
+    identityUnavailable = true;
+  });
+  const allTime = identityUnavailable
+    ? []
+    : identitySoloChampions(filtered, profiles);
   const pages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
   const safePage = Math.min(page, pages);
   const showing = filtered.slice(
@@ -89,7 +103,7 @@ export default async function HallOfFame({
             Hall of Fame
           </h1>
           <p className="mt-3 max-w-xl text-sm leading-7 text-blue-100">
-            Riwayat juara SOLO dan SQUAD, gelar sepanjang edisi, dan klasemen
+            Riwayat juara berbagai mode, gelar sepanjang edisi, dan klasemen
             resmi dari pertandingan final.
           </p>
           <div className="mt-6 flex flex-wrap gap-3 text-xs font-bold">
@@ -98,6 +112,9 @@ export default async function HallOfFame({
             </span>
             <span className="rounded-full bg-white/15 px-3 py-2">
               {completed.filter((e) => e.mode === "solo").length} SOLO
+            </span>
+            <span className="rounded-full bg-white/15 px-3 py-2">
+              {completed.filter((e) => e.mode === "duo").length} DUO
             </span>
             <span className="rounded-full bg-white/15 px-3 py-2">
               {completed.filter((e) => e.mode === "squad").length} SQUAD
@@ -128,6 +145,7 @@ export default async function HallOfFame({
             >
               <option value="all">Semua</option>
               <option value="solo">SOLO</option>
+              <option value="duo">DUO</option>
               <option value="squad">SQUAD</option>
             </select>
           </label>
@@ -159,8 +177,13 @@ export default async function HallOfFame({
             pulih.
           </p>
         )}
-        {identityUnavailable && <p className="mb-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-800">Rekap identitas pemain sementara tidak tersedia. Hasil per edisi tetap ditampilkan.</p>}
-        {mode !== "squad" && allTime.length > 0 && (
+        {identityUnavailable && (
+          <p className="mb-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-800">
+            Rekap identitas pemain sementara tidak tersedia. Hasil per edisi
+            tetap ditampilkan.
+          </p>
+        )}
+        {(mode === "all" || mode === "solo") && allTime.length > 0 && (
           <section className="mb-9 rounded-2xl border border-blue-100 bg-white p-5 shadow-sm sm:p-7">
             <div className="mb-2 flex items-center gap-2">
               <Crown className="text-amber-500" size={24} />
@@ -190,9 +213,24 @@ export default async function HallOfFame({
                         {i + 1}
                       </td>
                       <td className="px-3 py-3">
-                        <PlayerIdentity target={p.target} name={p.name} subtitle={`@${p.username}`} size="sm" />
-                        <Link prefetch={false} href={p.href} className="text-[11px] font-bold text-blue-600 hover:underline">{p.linked ? "Profil pemain" : "Arsip username"}</Link>
-                        {!p.linked && <p className="text-[10px] text-slate-500">Belum terhubung</p>}
+                        <PlayerIdentity
+                          target={p.target}
+                          name={p.name}
+                          subtitle={`@${p.username}`}
+                          size="sm"
+                        />
+                        <Link
+                          prefetch={false}
+                          href={p.href}
+                          className="text-[11px] font-bold text-blue-600 hover:underline"
+                        >
+                          {p.linked ? "Profil pemain" : "Arsip username"}
+                        </Link>
+                        {!p.linked && (
+                          <p className="text-[10px] text-slate-500">
+                            Belum terhubung
+                          </p>
+                        )}
                       </td>
                       <td className="px-3 py-3 text-right font-extrabold">
                         {p.wins}
@@ -205,7 +243,9 @@ export default async function HallOfFame({
               </table>
             </div>
             <p className="mt-4 text-[11px] leading-5 text-slate-500">
-              Gelar pemain yang terhubung dikelompokkan berdasarkan Roblox User ID. Catatan username yang belum terhubung dipisahkan dan ditandai sebagai arsip lama, bukan identitas terkonfirmasi.
+              Gelar pemain yang terhubung dikelompokkan berdasarkan Roblox User
+              ID. Catatan username yang belum terhubung dipisahkan dan ditandai
+              sebagai arsip lama, bukan identitas terkonfirmasi.
             </p>
           </section>
         )}
@@ -243,9 +283,19 @@ export default async function HallOfFame({
                 <div className="mt-5 divide-y divide-blue-50">
                   {top.length ? (
                     top.map((r, i) => {
-                      const linked = event.mode === "solo" ? avatarProfile(profiles, avatarTarget(event,r.id)) : undefined;
-                      const legacy = event.mode === "solo" ? normalizedRobloxUsername(r.username) : null;
-                      const profile = linked ? playerHref(linked.robloxId) : legacy ? legacyPlayerHref(legacy) : null;
+                      const linked =
+                        event.mode === "solo"
+                          ? avatarProfile(profiles, avatarTarget(event, r.id))
+                          : undefined;
+                      const legacy =
+                        event.mode === "solo"
+                          ? normalizedRobloxUsername(r.username)
+                          : null;
+                      const profile = linked
+                        ? playerHref(linked.robloxId)
+                        : legacy
+                          ? legacyPlayerHref(legacy)
+                          : null;
                       return (
                         <div
                           key={r.id}
@@ -257,7 +307,21 @@ export default async function HallOfFame({
                             {i + 1}
                           </span>
                           <div className="min-w-0 flex-1">
-                            <RankIdentity targets={rankAvatarTargets(event, r.id)} name={r.name} subtitle={r.subtitle} team={event.mode === "squad"} />{profile && <Link prefetch={false} href={profile} className="text-[11px] font-bold text-blue-600 hover:underline">Riwayat pemain</Link>}
+                            <RankIdentity
+                              targets={rankAvatarTargets(event, r.id)}
+                              name={r.name}
+                              subtitle={r.subtitle}
+                              team={event.mode !== "solo"}
+                            />
+                            {profile && (
+                              <Link
+                                prefetch={false}
+                                href={profile}
+                                className="text-[11px] font-bold text-blue-600 hover:underline"
+                              >
+                                Riwayat pemain
+                              </Link>
+                            )}
                             <p className="text-[11px] text-slate-400">
                               {fmt(r.catches)} Secret
                             </p>
@@ -322,9 +386,9 @@ export default async function HallOfFame({
           </nav>
         )}
         <p className="mt-7 text-xs leading-6 text-slate-500">
-          Untuk SQUAD, pemenang ditampilkan per edisi. Nama squad yang sama pada
-          turnamen berbeda tidak otomatis digabung sebagai identitas tim global;
-          poin turnamen tidak pernah diakumulasi lintas event.
+          Untuk DUO dan SQUAD, pemenang ditampilkan per edisi. Nama tim yang
+          sama pada turnamen berbeda tidak otomatis digabung sebagai identitas
+          tim global; poin turnamen tidak pernah diakumulasi lintas event.
         </p>
       </main>
     </PublicShell>

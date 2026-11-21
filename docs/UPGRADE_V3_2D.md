@@ -1,0 +1,20 @@
+# WEJI ARENA V3.2D — DUO Tournament System (3.2.3)
+
+## DUO workflow
+
+1. Admin → Turnamen → Turnamen DUO (or Arsip Historis DUO for a completed offline event). Mode may be changed only before any roster/teams/scores exist, as before. Fill event information, fish, bonus and written rules.
+2. Peserta → Manajemen Pasangan DUO → create a custom pair name; add exactly two members using their unique valid Roblox usernames. Incomplete draft pairs can be saved, but cannot be locked, started or scored. Size is fixed at two; neither a third member, an alternate casing of a registered username, nor an assignment to a full pair is allowed. Use Profil Pemain after saving to confirm Roblox User IDs (existing event-scoped uniqueness constraint is unchanged). Unlinked participants remain supported with fallback avatar. The CSV template still uses `squad` for pair name; import preview rejects excess members. A live DUO requires at least one fully populated pair (same existing team readiness minimum), active fish and the usual server save. Historical finalization needs three complete pairs to award three podium places.
+3. Save draft. For a regular match start LIVE, save, select pair and member in Input Poin. Enter catch, bonus or correction as before, then save. Ledger captures team ID at transaction time; team points are net sum of member transactions. Reversals, timer, tie breaker and server validation remain unchanged. Roster cannot move once locked or scored.
+4. For historical DUO, enter actual catches or reconcile each member's official individual total after roster is complete. Do not start LIVE. Use Review & Finalisasi Arsip, three team IDs for podium (tied results may be ordered officially). Date, score and final snapshot remain locked as before.
+5. Public DUO filter and team display work in tournament catalog/home category, spectator, result, archive, stats, Hall of Fame, and player directory/profile. Both members receive their own recorded contribution and team placement (one podium per player per event); team points are never attributed in full to both players. Existing all-time SOLO champions remain SOLO-only. DUO/SQUAD winners appear per event; a team name alone is not a permanent identity. More extensive mode-specific presentation/aggregates can be refined in V3.2E; FAQ/typewriter generalization remains V3.2F. Header tagline generalized to avoid excluding DUO.
+
+## QA (use private test events, not the official 18 Nov results)
+
+- Save incomplete DUO draft; attempt lock/start, must be prevented. Add second member to each pair. Third member or duplicate username cannot be added. Check move to full pair and CSV overcapacity. Confirm fixed size cannot be changed.
+- Run regular test event, score members of two pairs; check team totals sum members and correct pair receives points. Test reversal, pause/resume, final lock. Publish only test results as appropriate. Check two member avatars and contribution lines.
+- Record historical DUO with 3 complete pairs and real/fixture individual scores, finalize via historical flow. No LIVE timestamp. Confirm 1st/2nd/3rd pairs and result locks. Compare filter, archive, stats, CSV and Hall of Fame; both members' profiles show separate DUO statistics and correct contributions. Hide/trash QA event and confirm profiles/records exclude it publicly.
+- Existing 19-player Galatama archive: compare points, winners, participant links, directory totals. Check SOLO and SQUAD workflow and admin login. Verify mobile/desktop and Vercel deployment.
+
+## Verification in patch environment
+
+All original smoke suites through V3.2C plus V3.2D passed. V2.4 test loader updated to resolve the new pure readiness dependency; V3.1 assertion updated for the expanded EventMode union (other tests preserved). Source parser and targeted strict TypeScript for core event, roster, identity, leaderboard/results and analytics modules passed. `npm ci --offline` was blocked by missing cached `xtend@4.0.2`. Full project typecheck, Next.js build, browser/real DB QA and deployment remain unverified. No production data or connections touched.

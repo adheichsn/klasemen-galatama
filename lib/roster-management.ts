@@ -1,4 +1,5 @@
 import type { ArenaData, ArenaEvent, Participant } from "./arena-types";
+import { completeDuoRoster } from "./arena-rules";
 import { newId } from "./arena-data";
 
 /** V2.7: Participant roster is per-event; registry is an index of historic events.
@@ -12,7 +13,8 @@ export const validRobloxUsername = (value: string) =>
   /^[A-Za-z0-9_]{3,20}$/.test(value.trim().replace(/^@/, ""));
 export const rosterEditable = (event: ArenaEvent) =>
   event.status === "draft" && !event.rosterLocked && event.entries.length === 0;
-export const squadLimit = (event: ArenaEvent) => event.squadSizeLimit ?? 0;
+export const squadLimit = (event: ArenaEvent) =>
+  event.mode === "duo" ? 2 : (event.squadSizeLimit ?? 0);
 
 export function rosterRegistry(data: ArenaData) {
   const players = new Map<
@@ -66,7 +68,7 @@ export function addRosterMember(
     )
   )
     return null;
-  if (event.mode === "squad") {
+  if (event.mode !== "solo") {
     if (!squadId || !event.squads.some((s) => s.id === squadId)) return null;
     if (
       squadLimit(event) > 0 &&
@@ -80,7 +82,7 @@ export function addRosterMember(
     name: cleanName,
     username: cleanUsername,
     checkedIn: false,
-    squadId: event.mode === "squad" ? squadId : null,
+    squadId: event.mode !== "solo" ? squadId : null,
   };
   return { ...event, participants: [...event.participants, player] };
 }
@@ -92,7 +94,7 @@ export function addRosterSquad(
   const clean = name.trim().slice(0, 70);
   if (
     !rosterEditable(event) ||
-    event.mode !== "squad" ||
+    event.mode === "solo" ||
     !clean ||
     event.squads.length >= 200 ||
     event.squads.some((s) => squadKey(s.name) === squadKey(clean))
@@ -175,11 +177,11 @@ export function planCsvImport(event: ArenaEvent, input: string): CsvPlan {
     userCol = idx("username"),
     squadCol = idx("squad"),
     checkCol = idx("checkedin");
-  if (nameCol < 0 || userCol < 0 || (event.mode === "squad" && squadCol < 0))
+  if (nameCol < 0 || userCol < 0 || (event.mode !== "solo" && squadCol < 0))
     return {
       ...empty,
       errors: [
-        event.mode === "squad"
+        event.mode !== "solo"
           ? "Header wajib: name,username,squad,checkedIn"
           : "Header wajib: name,username (checkedIn opsional)",
       ],
@@ -213,7 +215,7 @@ export function planCsvImport(event: ArenaEvent, input: string): CsvPlan {
     if (validRobloxUsername(username) && seen.has(playerKey(username)))
       errors.push(`Baris ${line}: username @${username} sudah terdaftar.`);
     seen.add(playerKey(username));
-    if (event.mode === "squad" && (!squad || squad.length > 70))
+    if (event.mode !== "solo" && (!squad || squad.length > 70))
       errors.push(`Baris ${line}: squad wajib, maksimal 70 karakter.`);
     if (
       rawChecked &&
@@ -240,7 +242,7 @@ export function planCsvImport(event: ArenaEvent, input: string): CsvPlan {
   let addedSquads = 0;
   for (const row of rows) {
     if (
-      event.mode === "squad" &&
+      event.mode !== "solo" &&
       row.squad &&
       !prepared.squads.some((s) => squadKey(s.name) === squadKey(row.squad))
     ) {
@@ -252,10 +254,10 @@ export function planCsvImport(event: ArenaEvent, input: string): CsvPlan {
       addedSquads++;
     }
     const target =
-      event.mode === "squad"
+      event.mode !== "solo"
         ? prepared.squads.find((s) => squadKey(s.name) === squadKey(row.squad))
         : undefined;
-    if (event.mode === "squad" && !target) continue;
+    if (event.mode !== "solo" && !target) continue;
     prepared.participants.push({
       id: newId(),
       name: row.name,
@@ -297,6 +299,15 @@ export function validateRosterChange(
       next.squadSizeLimit > 100)
   )
     return "Batas anggota squad harus 0–100 (0 tanpa batas).";
+  if (
+    next.mode === "duo" &&
+    ((next.squadSizeLimit ?? 2) !== 2 ||
+      ((next.status !== "draft" ||
+        next.entries.length > 0 ||
+        next.rosterLocked) &&
+        !completeDuoRoster(next)))
+  )
+    return "DUO wajib tepat 2 anggota dengan username Roblox unik per pasangan sebelum roster dikunci, skor dicatat, atau pertandingan dimulai.";
   const details = (event: ArenaEvent) => ({
     squads: event.squads,
     participants: event.participants.map((p) => ({
@@ -339,7 +350,7 @@ export function validateRosterChange(
       next.participants.length
   )
     return "ID roster harus unik.";
-  if (next.mode === "squad") {
+  if (next.mode !== "solo") {
     for (const p of next.participants)
       if (p.squadId && !next.squads.some((s) => s.id === p.squadId))
         return `Squad peserta ${p.name} tidak ditemukan.`;
@@ -354,7 +365,7 @@ export function validateRosterChange(
     )
       return `Kapten ${squad.name} harus anggota squad itu.`;
     if (
-      next.mode === "squad" &&
+      next.mode !== "solo" &&
       squadLimit(next) > 0 &&
       next.participants.filter((p) => p.squadId === squad.id).length >
         squadLimit(next)

@@ -34,7 +34,7 @@ export function recentPublicActivity(
         at: entry.createdAt,
         name: person?.name || "Peserta",
         squad:
-          event.mode === "squad"
+          event.mode !== "solo"
             ? squads.get(entry.squadId || person?.squadId || "")
             : undefined,
         action: entry.kind,

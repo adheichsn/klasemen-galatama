@@ -120,11 +120,11 @@ export default async function EventDetail({
             {(e.status === "live" || e.status === "finished") && (
               <LiveActivityFeed event={e} />
             )}
-            {e.mode === "squad" && e.squads.length > 0 && (
+            {e.mode !== "solo" && e.squads.length > 0 && (
               <section className="rounded-2xl border border-blue-100 bg-white p-5">
                 <h2 className="mb-4 flex items-center gap-2 text-base font-black text-[#142A55]">
                   <Users size={20} className="text-blue-600" /> Kontribusi
-                  Anggota Squad
+                  Anggota {e.mode === "duo" ? "Pasangan" : "Squad"}
                 </h2>
                 <div className="space-y-4">
                   {e.squads.map((s) => (

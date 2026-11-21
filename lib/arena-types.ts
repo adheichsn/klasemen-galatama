@@ -1,4 +1,4 @@
-export type EventMode = "solo" | "squad";
+export type EventMode = "solo" | "duo" | "squad";
 export type EventStatus = "draft" | "live" | "finished";
 export type TieBreaker = "catches" | "bonus" | "alphabetical";
 export type FishRule = {

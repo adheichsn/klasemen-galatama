@@ -15,6 +15,7 @@ import {
   Users,
 } from "lucide-react";
 import type { ArenaStore } from "@/hooks/use-arena";
+import { completeDuoRoster } from "@/lib/arena-rules";
 import type { Participant } from "@/lib/arena-types";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,7 +32,7 @@ const inputClass =
 const labelClass = "grid min-w-0 gap-1 text-xs font-bold text-slate-600";
 
 const templateCsv = (mode: string) =>
-  mode === "squad"
+  mode !== "solo"
     ? "name,username,squad,checkedIn\nPeserta Satu,RobloxPlayer1,Alpha,false\nPeserta Dua,RobloxPlayer2,Alpha,true\n"
     : "name,username,checkedIn\nPeserta Satu,RobloxPlayer1,false\nPeserta Dua,RobloxPlayer2,true\n";
 
@@ -90,6 +91,12 @@ export function ParticipantRoster({ store }: { store: ArenaStore }) {
   );
   const handleAdd = (name: string, user: string) => {
     if (!editable) return;
+    if (event.mode === "duo" && !validRobloxUsername(user)) {
+      setNotice(
+        "DUO membutuhkan username Roblox yang valid untuk setiap anggota.",
+      );
+      return;
+    }
     if (user.trim() && !validRobloxUsername(user)) {
       setNotice(
         "Username Roblox harus 3–20 karakter (huruf, angka, underscore).",
@@ -116,14 +123,14 @@ export function ParticipantRoster({ store }: { store: ArenaStore }) {
       return;
     }
     if (
-      event.mode === "squad" &&
+      event.mode !== "solo" &&
       !event.squads.some((s) => s.id === selectedSquad)
     ) {
-      setNotice("Pilih squad dahulu.");
+      setNotice("Pilih tim atau pasangan dahulu.");
       return;
     }
     if (
-      event.mode === "squad" &&
+      event.mode !== "solo" &&
       squadLimit(event) > 0 &&
       event.participants.filter((p) => p.squadId === selectedSquad).length >=
         squadLimit(event)
@@ -134,7 +141,7 @@ export function ParticipantRoster({ store }: { store: ArenaStore }) {
     store.addParticipant(
       name,
       user,
-      event.mode === "squad" ? selectedSquad : null,
+      event.mode !== "solo" ? selectedSquad : null,
     );
     setNotice(
       `Peserta ${name} ditambahkan. Klik Simpan ke Server untuk menerbitkan perubahan.`,
@@ -154,10 +161,14 @@ export function ParticipantRoster({ store }: { store: ArenaStore }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="text-lg font-black text-slate-900">
-            {event.mode === "solo" ? "Peserta SOLO" : "Squad & Anggota"}
+            {event.mode === "solo"
+              ? "Peserta SOLO"
+              : event.mode === "duo"
+                ? "Pasangan DUO & Anggota"
+                : "Squad & Anggota"}
           </h3>
           <p className="mt-1 text-sm text-slate-500">
-            Pemain dan squad hanya berlaku untuk event ini. Riwayat skor event
+            Pemain dan tim hanya berlaku untuk event ini. Riwayat skor event
             lain tidak ikut berubah.
           </p>
         </div>
@@ -168,9 +179,10 @@ export function ParticipantRoster({ store }: { store: ArenaStore }) {
           <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700">
             {event.participants.filter((p) => p.checkedIn).length} check-in
           </span>
-          {event.mode === "squad" && (
+          {event.mode !== "solo" && (
             <span className="rounded-full bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-700">
-              {event.squads.length} squad
+              {event.squads.length}{" "}
+              {event.mode === "duo" ? "pasangan" : "squad"}
             </span>
           )}
         </div>
@@ -198,6 +210,7 @@ export function ParticipantRoster({ store }: { store: ArenaStore }) {
             <Button
               variant="secondary"
               size="sm"
+              disabled={!event.rosterLocked && !completeDuoRoster(event)}
               onClick={() => store.setRosterLocked(!event.rosterLocked)}
             >
               {event.rosterLocked ? (
@@ -210,19 +223,35 @@ export function ParticipantRoster({ store }: { store: ArenaStore }) {
           )}
         </div>
       </div>
-      {event.mode === "squad" && (
+      {event.mode === "duo" && !completeDuoRoster(event) && (
+        <p
+          role="status"
+          className="rounded-xl bg-amber-50 p-3 text-xs font-semibold text-amber-800"
+        >
+          Lengkapi tepat dua anggota dengan username Roblox unik pada setiap
+          pasangan sebelum mengunci roster, memulai LIVE atau mencatat skor
+          historis.
+        </p>
+      )}
+      {event.mode !== "solo" && (
         <div className="rounded-2xl border border-slate-200 bg-white p-4">
           <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
-            <h4 className="font-extrabold text-slate-900">Manajemen Squad</h4>
+            <h4 className="font-extrabold text-slate-900">
+              {event.mode === "duo"
+                ? "Manajemen Pasangan DUO"
+                : "Manajemen Squad"}
+            </h4>
             <label className="grid gap-1 text-xs font-semibold text-slate-600">
-              Batas anggota (0 = tanpa batas)
+              {event.mode === "duo"
+                ? "Tepat 2 anggota per pasangan"
+                : "Batas anggota (0 = tanpa batas)"}
               <input
                 className={`${inputClass} w-32`}
                 type="number"
                 min={0}
                 max={100}
                 value={squadLimit(event)}
-                disabled={!editable}
+                disabled={!editable || event.mode === "duo"}
                 onChange={(ev) =>
                   store.setSquadSizeLimit(Number(ev.target.value))
                 }
@@ -303,10 +332,14 @@ export function ParticipantRoster({ store }: { store: ArenaStore }) {
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
             <input
-              aria-label="Nama squad baru"
+              aria-label={
+                event.mode === "duo" ? "Nama pasangan baru" : "Nama squad baru"
+              }
               className={`${inputClass} flex-1`}
               maxLength={70}
-              placeholder="Nama squad baru"
+              placeholder={
+                event.mode === "duo" ? "Nama pasangan baru" : "Nama squad baru"
+              }
               disabled={!editable}
               value={newSquad}
               onChange={(ev) => setNewSquad(ev.target.value)}
@@ -350,7 +383,7 @@ export function ParticipantRoster({ store }: { store: ArenaStore }) {
               onChange={(ev) => setUsername(ev.target.value)}
             />
           </label>
-          {event.mode === "squad" && (
+          {event.mode !== "solo" && (
             <label className={labelClass}>
               Squad
               <select
@@ -359,7 +392,9 @@ export function ParticipantRoster({ store }: { store: ArenaStore }) {
                 value={selectedSquad}
                 onChange={(ev) => setSelectedSquad(ev.target.value)}
               >
-                <option value="">Pilih squad</option>
+                <option value="">
+                  {event.mode === "duo" ? "Pilih pasangan" : "Pilih squad"}
+                </option>
                 {event.squads.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
@@ -381,7 +416,7 @@ export function ParticipantRoster({ store }: { store: ArenaStore }) {
                 !/^[A-Za-z0-9_]{3,20}$/.test(
                   username.trim().replace(/^@/, ""),
                 )) ||
-              (event.mode === "squad" && !selectedSquad)
+              (event.mode !== "solo" && !selectedSquad)
             }
             onClick={() => handleAdd(displayName, username)}
           >
@@ -431,7 +466,7 @@ export function ParticipantRoster({ store }: { store: ArenaStore }) {
                 variant="secondary"
                 size="sm"
                 disabled={
-                  !editable || (event.mode === "squad" && !selectedSquad)
+                  !editable || (event.mode !== "solo" && !selectedSquad)
                 }
                 onClick={() => handleAdd(p.name, p.username)}
               >
@@ -459,8 +494,9 @@ export function ParticipantRoster({ store }: { store: ArenaStore }) {
         </div>
         <p className="my-2 text-xs text-slate-500">
           Maksimal 300 baris per impor, 200 KB. Username wajib pada CSV, unik
-          per event. Pada SQUAD, nama squad yang belum ada dibuat otomatis.
-          Preview wajib lolos sebelum import.
+          per event. Pada mode tim, nama pada kolom squad (termasuk pasangan
+          DUO) yang belum ada dibuat otomatis. Preview wajib lolos sebelum
+          import.
         </p>
         <label className={`${labelClass} mt-3`}>
           Pilih file CSV
@@ -493,7 +529,7 @@ export function ParticipantRoster({ store }: { store: ArenaStore }) {
               {csvPreview.rows.slice(0, 8).map((row) => (
                 <p key={row.line}>
                   {row.line}. {row.name} (@{row.username}){" "}
-                  {event.mode === "squad" ? `— ${row.squad}` : ""}
+                  {event.mode !== "solo" ? `— ${row.squad}` : ""}
                 </p>
               ))}
             </div>
@@ -549,7 +585,7 @@ export function ParticipantRoster({ store }: { store: ArenaStore }) {
               onChange={(ev) => setSearch(ev.target.value)}
             />
           </div>
-          {event.mode === "squad" && (
+          {event.mode !== "solo" && (
             <select
               aria-label="Filter squad"
               className={inputClass}
@@ -572,17 +608,17 @@ export function ParticipantRoster({ store }: { store: ArenaStore }) {
               key={p.id}
             >
               <div className="flex min-w-0 items-center gap-2">
-              <PlayerAvatar target={avatarTarget(event, p.id)} size="sm" />
-              <input
-                aria-label={`Nama ${p.name}`}
-                className={inputClass}
-                maxLength={80}
-                value={p.name}
-                disabled={!editable}
-                onChange={(ev) =>
-                  store.changeParticipant(p.id, { name: ev.target.value })
-                }
-              />
+                <PlayerAvatar target={avatarTarget(event, p.id)} size="sm" />
+                <input
+                  aria-label={`Nama ${p.name}`}
+                  className={inputClass}
+                  maxLength={80}
+                  value={p.name}
+                  disabled={!editable}
+                  onChange={(ev) =>
+                    store.changeParticipant(p.id, { name: ev.target.value })
+                  }
+                />
               </div>
               <input
                 aria-label={`Username ${p.name}`}
@@ -595,7 +631,7 @@ export function ParticipantRoster({ store }: { store: ArenaStore }) {
                   store.changeParticipant(p.id, { username: ev.target.value })
                 }
               />
-              {event.mode === "squad" && (
+              {event.mode !== "solo" && (
                 <select
                   aria-label={`Squad ${p.name}`}
                   className={inputClass}
@@ -607,7 +643,9 @@ export function ParticipantRoster({ store }: { store: ArenaStore }) {
                     })
                   }
                 >
-                  <option value="">Tanpa squad</option>
+                  <option value="">
+                    {event.mode === "duo" ? "Tanpa pasangan" : "Tanpa squad"}
+                  </option>
                   {event.squads.map((s) => (
                     <option value={s.id} key={s.id}>
                       {s.name}
@@ -643,7 +681,7 @@ export function ParticipantRoster({ store }: { store: ArenaStore }) {
                   <Trash2 size={16} />
                 </Button>
               </div>
-              {event.mode === "squad" && (
+              {event.mode !== "solo" && (
                 <p className="text-xs text-slate-500 lg:col-span-4">
                   {getSquad(p)}{" "}
                   {event.squads.some((s) => s.captainId === p.id)

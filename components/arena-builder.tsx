@@ -48,8 +48,8 @@ const sections: { id: EditorSection; text: string; icon: typeof Fish }[] = [
 ];
 const parsePoints = (text: string) =>
   text.trim() !== "" &&
-    Number.isSafeInteger(Number(text)) &&
-    validPoints(Number(text))
+  Number.isSafeInteger(Number(text)) &&
+  validPoints(Number(text))
     ? Number(text)
     : null;
 export default function ArenaBuilder({ store }: { store: ArenaStore }) {
@@ -131,8 +131,15 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
       </div>
       {e.historical && (
         <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900">
-          <b>ARSIP HISTORIS — {e.status === "finished" ? "FINISHED" : "DRAFT PRIVAT"}</b>
-          <p>Isi tanggal pertandingan asli, lokasi, durasi, aturan ikan dan daftar peserta. Input tangkapan/poin resmi dilakukan dari Dashboard. Tidak ada Start/Timer LIVE. Finalisasi akan mengunci arsip.</p>
+          <b>
+            ARSIP HISTORIS —{" "}
+            {e.status === "finished" ? "FINISHED" : "DRAFT PRIVAT"}
+          </b>
+          <p>
+            Isi tanggal pertandingan asli, lokasi, durasi, aturan ikan dan
+            daftar peserta. Input tangkapan/poin resmi dilakukan dari Dashboard.
+            Tidak ada Start/Timer LIVE. Finalisasi akan mengunci arsip.
+          </p>
         </div>
       )}
       <BuilderProgress event={e} active={tab} onNavigate={navigate} />
@@ -174,7 +181,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                 </p>
               </div>
               <div
-                className="mb-6 grid gap-3 sm:grid-cols-2"
+                className="mb-6 grid gap-3 lg:grid-cols-3"
                 role="group"
                 aria-label="Pilih format turnamen"
               >
@@ -186,6 +193,13 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                       "Kompetisi individual",
                       "Skor, podium, dan ranking milik setiap pemain.",
                       UserRound,
+                    ],
+                    [
+                      "duo",
+                      "DUO",
+                      "Kompetisi pasangan",
+                      "Tepat dua pemain per pasangan; skor individu dijumlah ke pasangan.",
+                      UsersRound,
                     ],
                     [
                       "squad",
@@ -295,9 +309,14 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                   />
                 </label>
                 <label className="field flex flex-col gap-[7px] text-[11px] text-[#4f6585] font-extrabold">
-                  Visibilitas event {e.historical && e.status === "draft" ? "(terkunci sampai finalisasi)" : ""}
+                  Visibilitas event{" "}
+                  {e.historical && e.status === "draft"
+                    ? "(terkunci sampai finalisasi)"
+                    : ""}
                   <select
-                    disabled={locked || (!!e.historical && e.status === "draft")}
+                    disabled={
+                      locked || (!!e.historical && e.status === "draft")
+                    }
                     value={e.published ? "published" : "private"}
                     onChange={(v) =>
                       store.publish(v.target.value === "published")
@@ -352,9 +371,9 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
               </div>
               <div className="notice p-[12px_15px] bg-[#eef5ff] [border:1px_solid_#d8e6ff] text-[#3263a9] rounded-[10px] flex items-center gap-[10px] text-[12px] leading-[1.6]">
                 <Info size={18} />
-                Mode SOLO dan SQUAD terpisah sepenuhnya. Pilih format sebelum
-                mendaftarkan pemain atau squad. Mengganti durasi akan mereset
-                timer event ini.
+                Mode SOLO, DUO dan SQUAD terpisah sepenuhnya. Pilih format
+                sebelum mendaftarkan pemain atau squad. Mengganti durasi akan
+                mereset timer event ini.
               </div>
             </div>
           )}
@@ -527,11 +546,11 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                     onChange={(v) =>
                       tab === "fish"
                         ? store.changeFish(item.id, {
-                          enabled: v.target.checked,
-                        })
+                            enabled: v.target.checked,
+                          })
                         : store.changeBonus(item.id, {
-                          enabled: v.target.checked,
-                        })
+                            enabled: v.target.checked,
+                          })
                     }
                   />
                   <input

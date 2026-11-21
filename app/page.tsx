@@ -47,6 +47,14 @@ const categories = [
     color: "text-indigo-600",
   },
   {
+    href: "/turnamen?mode=duo",
+    name: "Duo",
+    desc: "Pair competition",
+    icon: Users,
+    gradient: "from-[#E0F2FE] to-[#EFF6FF]",
+    color: "text-blue-700",
+  },
+  {
     href: "/turnamen?mode=squad",
     name: "Squad",
     desc: "Team competition",
@@ -154,6 +162,7 @@ export default async function HomePage() {
             >
               <option value="all">Semua Mode</option>
               <option value="solo">SOLO</option>
+              <option value="duo">DUO</option>
               <option value="squad">SQUAD</option>
             </select>
             <button
@@ -165,14 +174,57 @@ export default async function HomePage() {
           </form>
           <div className="grid gap-3 sm:grid-cols-3">
             {[
-              { href: "/turnamen?status=live", title: "Sedang Berlangsung", count: live.length, detail: "Ikuti persaingan realtime", icon: Radio, tint: "from-blue-600 to-[#2d84ed]" },
-              { href: "/turnamen?status=draft", title: "Segera Dimulai", count: upcoming.length, detail: "Cari event berikutnya", icon: CalendarDays, tint: "from-[#354b99] to-[#6980d2]" },
-              { href: "/arsip", title: "Selesai & Diarsipkan", count: recent.length, detail: "Jelajahi sejarah juara", icon: Trophy, tint: "from-[#15557c] to-[#238eb2]" },
+              {
+                href: "/turnamen?status=live",
+                title: "Sedang Berlangsung",
+                count: live.length,
+                detail: "Ikuti persaingan realtime",
+                icon: Radio,
+                tint: "from-blue-600 to-[#2d84ed]",
+              },
+              {
+                href: "/turnamen?status=draft",
+                title: "Segera Dimulai",
+                count: upcoming.length,
+                detail: "Cari event berikutnya",
+                icon: CalendarDays,
+                tint: "from-[#354b99] to-[#6980d2]",
+              },
+              {
+                href: "/arsip",
+                title: "Selesai & Diarsipkan",
+                count: recent.length,
+                detail: "Jelajahi sejarah juara",
+                icon: Trophy,
+                tint: "from-[#15557c] to-[#238eb2]",
+              },
             ].map((item) => (
-              <Link key={item.href} href={item.href} className={`group flex items-center gap-4 rounded-[20px] bg-gradient-to-br ${item.tint} px-5 py-5 text-white shadow-[0_12px_30px_rgba(25,67,143,.10)] transition hover:-translate-y-1 hover:shadow-xl motion-reduce:transform-none`}>
-                <span className="inline-flex size-12 shrink-0 items-center justify-center rounded-2xl bg-white/15"><item.icon size={23} /></span>
-                <span className="min-w-0 flex-1"><span className="block text-[11px] font-bold text-blue-100">{item.title}</span><span className="mt-0.5 block text-[21px] font-black tabular-nums">{item.count} <span className="text-[11px] font-bold text-white/80">Event</span></span><span className="block truncate text-[10px] text-white/70">{item.detail}</span></span>
-                <ArrowRight size={17} className="text-white/70 transition group-hover:translate-x-1" />
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`group flex items-center gap-4 rounded-[20px] bg-gradient-to-br ${item.tint} px-5 py-5 text-white shadow-[0_12px_30px_rgba(25,67,143,.10)] transition hover:-translate-y-1 hover:shadow-xl motion-reduce:transform-none`}
+              >
+                <span className="inline-flex size-12 shrink-0 items-center justify-center rounded-2xl bg-white/15">
+                  <item.icon size={23} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[11px] font-bold text-blue-100">
+                    {item.title}
+                  </span>
+                  <span className="mt-0.5 block text-[21px] font-black tabular-nums">
+                    {item.count}{" "}
+                    <span className="text-[11px] font-bold text-white/80">
+                      Event
+                    </span>
+                  </span>
+                  <span className="block truncate text-[10px] text-white/70">
+                    {item.detail}
+                  </span>
+                </span>
+                <ArrowRight
+                  size={17}
+                  className="text-white/70 transition group-hover:translate-x-1"
+                />
               </Link>
             ))}
           </div>
@@ -183,7 +235,7 @@ export default async function HomePage() {
                 title="Mau Jelajahi Apa Nih?"
                 desc="Akses semua bagian arena dengan satu klik."
               />
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-7">
                 {categories.map((c) => (
                   <Link
                     href={c.href}
@@ -211,7 +263,7 @@ export default async function HomePage() {
               <SectionTitle
                 eyebrow="DISCOVER COMPETITIONS"
                 title="Explore Tournaments"
-                desc="Cari turnamen yang pas buat kamu, dari SOLO hingga SQUAD."
+                desc="Cari turnamen yang pas buat kamu."
                 href="/turnamen"
               />
               {showcase.length ? (
@@ -311,7 +363,7 @@ export default async function HomePage() {
                 Every Champion Has a Story.
               </h2>
               <p className="mt-3 max-w-[330px] text-sm leading-7 text-blue-100">
-                Kenali para juara dari setiap edisi, baik SOLO maupun SQUAD.
+                Kenali para juara dari setiap edisi.
               </p>
               <Link
                 href="/hall-of-fame"

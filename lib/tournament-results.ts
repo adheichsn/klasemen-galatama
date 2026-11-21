@@ -33,7 +33,7 @@ export function resultRows(event: ArenaEvent): ResultRow[] {
     string,
     Map<string, ResultRow["members"][number]>
   >();
-  if (event.mode === "squad") {
+  if (event.mode !== "solo") {
     for (const squad of event.squads) contributions.set(squad.id, new Map());
     // Include current zero-score members, but attribute every ledger delta to
     // the *historical squad snapshot* first, even after a legacy roster move.
@@ -68,7 +68,7 @@ export function resultRows(event: ArenaEvent): ResultRow[] {
     rank: index + 1,
     username: event.mode === "solo" ? people.get(row.id)?.username || "" : "",
     members:
-      event.mode === "squad"
+      event.mode !== "solo"
         ? [...(contributions.get(row.id)?.values() || [])].sort(
             (a, b) => b.points - a.points || a.name.localeCompare(b.name),
           )
@@ -169,7 +169,7 @@ export function exportResultsCsv(event: ArenaEvent, kind: ExportKind) {
         r.rank,
         r.name,
         r.username,
-        event.mode === "squad" ? r.members.map((m) => m.name).join("; ") : "",
+        event.mode !== "solo" ? r.members.map((m) => m.name).join("; ") : "",
         r.points,
         r.catches,
         r.bonusCatches,

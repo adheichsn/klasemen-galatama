@@ -42,7 +42,11 @@ export function AdminCommandCenter({
   const actions = [
     {
       label: "Input tangkapan",
-      detail: isHistoricalDraft ? "Catat skor historis" : isLive ? "Catat skor SOLO / SQUAD" : "Tersedia saat event LIVE",
+      detail: isHistoricalDraft
+        ? "Catat skor historis"
+        : isLive
+          ? `Catat skor ${event.mode.toUpperCase()}`
+          : "Tersedia saat event LIVE",
       icon: Fish,
       onClick: onOpenScore,
       disabled: !isLive && !isHistoricalDraft,

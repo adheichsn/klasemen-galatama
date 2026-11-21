@@ -27,7 +27,7 @@ export function newEvent(
     faqs: [],
     squads: [],
     rosterLocked: false,
-    squadSizeLimit: 0,
+    squadSizeLimit: mode === "duo" ? 2 : 0,
     participants: [],
     entries: [],
     timer: { durationSec: 90 * 60, remainingSec: 90 * 60, runningSince: null },

@@ -13,13 +13,13 @@ export type ScoreAuditChange = {
   eventId: string;
   eventTitle: string;
   action:
-  | "catch"
-  | "manual"
-  | "reversal"
-  | "start"
-  | "pause"
-  | "resume"
-  | "finish";
+    | "catch"
+    | "manual"
+    | "reversal"
+    | "start"
+    | "pause"
+    | "resume"
+    | "finish";
   entryId?: string;
   participantId?: string;
   delta?: number;
@@ -89,9 +89,14 @@ export function prepareSnapshot(
       return fail("Tipe event historis tidak valid.");
     if (before && !!before.historical !== !!event.historical)
       return fail("Jenis turnamen historis tidak dapat diubah setelah dibuat.");
-    if (before && (event.historicalRecordedAt !== before.historicalRecordedAt ||
-      !same(event.historicalPodium, before.historicalPodium)))
-      return fail("Catatan final dan podium resmi hanya boleh ditetapkan server.");
+    if (
+      before &&
+      (event.historicalRecordedAt !== before.historicalRecordedAt ||
+        !same(event.historicalPodium, before.historicalPodium))
+    )
+      return fail(
+        "Catatan final dan podium resmi hanya boleh ditetapkan server.",
+      );
     if (!before) {
       if (
         event.trashedAt ||
@@ -121,7 +126,7 @@ export function prepareSnapshot(
         before.status !== "draft")
     )
       return fail(
-        `Mode SOLO/SQUAD ${event.title} tidak dapat berubah setelah pendaftaran.`,
+        `Mode turnamen ${event.title} tidak dapat berubah setelah pendaftaran.`,
       );
     for (const member of before.participants) {
       const updated = event.participants.find((p) => p.id === member.id);
@@ -150,14 +155,20 @@ export function prepareSnapshot(
         event.timer.remainingSec = event.timer.durationSec;
         for (const entry of check.appended) {
           entry.createdAt = new Date(now).toISOString();
-          addActivity(activity, event, entry.kind, {
-            description: entry.description,
-            historical: "true",
-            eventDate: event.eventDate,
-            fishName: entry.fishName || "",
-            reference: entry.catchRef || "",
-            reversesEntryId: entry.reversesEntryId || "",
-          }, entry);
+          addActivity(
+            activity,
+            event,
+            entry.kind,
+            {
+              description: entry.description,
+              historical: "true",
+              eventDate: event.eventDate,
+              fishName: entry.fishName || "",
+              reference: entry.catchRef || "",
+              reversesEntryId: entry.reversesEntryId || "",
+            },
+            entry,
+          );
         }
         continue;
       }
@@ -188,7 +199,9 @@ export function prepareSnapshot(
     }
     if (before.status === "draft" && event.status === "live") {
       if (before.historical || event.historical)
-        return fail("Arsip historis tidak boleh masuk mode LIVE. Gunakan finalisasi historis.");
+        return fail(
+          "Arsip historis tidak boleh masuk mode LIVE. Gunakan finalisasi historis.",
+        );
       if (event.entries.length !== before.entries.length)
         return fail(
           `Simpan mulai pertandingan ${event.title} terlebih dahulu, baru input skor.`,
@@ -337,7 +350,7 @@ export function prepareSnapshot(
       );
       if (
         !player ||
-        (event.mode === "squad" &&
+        (event.mode !== "solo" &&
           (!player.squadId || player.squadId !== entry.squadId)) ||
         (event.mode === "solo" && entry.squadId)
       )
@@ -388,7 +401,7 @@ export function prepareSnapshot(
           entry.delta !== -original.delta ||
           entry.participantId !== original.participantId ||
           (entry.squadId ?? null) !==
-          (original.squadId ?? player.squadId ?? null)
+            (original.squadId ?? player.squadId ?? null)
         )
           return fail(
             `Pembatalan ${entry.id} harus merujuk transaksi tersimpan yang belum pernah dibatalkan.`,

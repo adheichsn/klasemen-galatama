@@ -36,17 +36,19 @@ export function validArena(x: unknown): x is ArenaData {
         !isString(e.location) ||
         !isString(e.host) ||
         !isString(e.eventDate) ||
-        !["solo", "squad"].includes(String(e.mode)) ||
+        !["solo", "duo", "squad"].includes(String(e.mode)) ||
         !["draft", "live", "finished"].includes(String(e.status)) ||
         !isBool(e.published) ||
         (e.bannerUrl !== undefined && !validBannerUrl(e.bannerUrl)) ||
         (e.featured !== undefined && !isBool(e.featured)) ||
         (e.historical !== undefined && !isBool(e.historical)) ||
-        (e.historicalRecordedAt !== undefined && !isString(e.historicalRecordedAt)) ||
-        (e.historicalPodium !== undefined && (!Array.isArray(e.historicalPodium) ||
-          e.historicalPodium.length !== 3 ||
-          !(e.historicalPodium as unknown[]).every(isString) ||
-          new Set(e.historicalPodium).size !== 3)) ||
+        (e.historicalRecordedAt !== undefined &&
+          !isString(e.historicalRecordedAt)) ||
+        (e.historicalPodium !== undefined &&
+          (!Array.isArray(e.historicalPodium) ||
+            e.historicalPodium.length !== 3 ||
+            !(e.historicalPodium as unknown[]).every(isString) ||
+            new Set(e.historicalPodium).size !== 3)) ||
         (e.trashedAt !== undefined && !isString(e.trashedAt)) ||
         (e.trashedBy !== undefined && !isString(e.trashedBy)) ||
         (e.rosterLocked !== undefined && !isBool(e.rosterLocked)) ||

@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import type { ArenaStore } from "@/hooks/use-arena";
 import { fmt } from "@/lib/arena-utils";
-import { calculateCatch } from "@/lib/arena-rules";
+import { calculateCatch, completeDuoRoster } from "@/lib/arena-rules";
 import {
   Dialog,
   DialogContent,
@@ -73,9 +73,11 @@ export default function ScoreModal({
     reason.trim() !== "";
   const canSubmit =
     !!player &&
+    completeDuoRoster(e) &&
     (e.status === "live" || (e.historical && e.status === "draft")) &&
     (kind === "catch"
-      ? !!calculated && (e.historical || (store.remaining > 0 && e.timer.runningSince !== null))
+      ? !!calculated &&
+        (e.historical || (store.remaining > 0 && e.timer.runningSince !== null))
       : manualValid);
 
   const submit = (keepOpen: boolean) => {
@@ -83,7 +85,8 @@ export default function ScoreModal({
     setSavedMessage("");
     if (!canSubmit) {
       setError(
-        kind === "catch" && !e.historical &&
+        kind === "catch" &&
+          !e.historical &&
           (store.remaining === 0 || e.timer.runningSince === null)
           ? "Timer harus berjalan dan belum habis untuk mencatat tangkapan. Koreksi manual tersedia sebelum finalisasi."
           : "Pilih peserta dan lengkapi data. Arsip historis bisa diisi saat Draft; turnamen biasa harus LIVE.",
@@ -178,7 +181,7 @@ export default function ScoreModal({
                 ? "Masukkan tangkapan yang benar-benar tercatat pada event lama. Input tidak menjalankan timer dan akan disimpan sebagai catatan historis."
                 : e.mode === "solo"
                   ? "Pilih peserta, ikan dan bonus. Poin langsung masuk ke individu."
-                  : "Pilih squad terlebih dahulu, kemudian anggota yang menangkap. Poin masuk ke klasemen tim."}
+                  : "Pilih tim atau pasangan terlebih dahulu, kemudian anggota yang menangkap. Poin masuk ke klasemen tim."}
             </DialogDescription>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <Badge tone={e.mode === "solo" ? "blue" : "amber"}>
@@ -190,6 +193,15 @@ export default function ScoreModal({
             </div>
           </header>
           <div className="max-h-[60vh] space-y-4 overflow-y-auto px-5 py-5 sm:px-7">
+            {!completeDuoRoster(e) && (
+              <p
+                role="alert"
+                className="rounded-xl bg-amber-50 p-3 text-xs font-semibold text-amber-800"
+              >
+                Lengkapi dua anggota dan username unik setiap pasangan DUO
+                sebelum mencatat skor.
+              </p>
+            )}
             <div
               className="flex gap-1 rounded-xl bg-slate-100 p-1"
               role="group"
@@ -224,9 +236,9 @@ export default function ScoreModal({
                 <CircleCheck size={17} className="shrink-0" /> {savedMessage}
               </div>
             )}
-            {e.mode === "squad" && (
+            {e.mode !== "solo" && (
               <label className={labelStyle}>
-                1. Squad penerima poin
+                1. {e.mode === "duo" ? "Pasangan" : "Squad"} penerima poin
                 <select
                   value={squad}
                   onChange={(event) => {
@@ -236,7 +248,9 @@ export default function ScoreModal({
                   }}
                   className={inputStyle}
                 >
-                  <option value="">Pilih squad</option>
+                  <option value="">
+                    {e.mode === "duo" ? "Pilih pasangan" : "Pilih squad"}
+                  </option>
                   {e.squads.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name} (
@@ -249,7 +263,7 @@ export default function ScoreModal({
             )}
             <div className="grid gap-3 sm:grid-cols-2">
               <label className={labelStyle}>
-                {e.mode === "squad"
+                {e.mode !== "solo"
                   ? "2. Cari nama anggota"
                   : "Cari peserta SOLO"}
                 <span className="relative block">
@@ -259,7 +273,7 @@ export default function ScoreModal({
                   />
                   <input
                     value={playerQuery}
-                    disabled={e.mode === "squad" && !squad}
+                    disabled={e.mode !== "solo" && !squad}
                     onChange={(event) => {
                       setPlayerQuery(event.target.value);
                       setPlayer("");
@@ -271,16 +285,16 @@ export default function ScoreModal({
                 </span>
               </label>
               <label className={labelStyle}>
-                {e.mode === "squad" ? "Pilih anggota squad" : "Pilih peserta"}
+                {e.mode !== "solo" ? "Pilih anggota tim" : "Pilih peserta"}
                 <select
                   value={player}
-                  disabled={e.mode === "squad" && !squad}
+                  disabled={e.mode !== "solo" && !squad}
                   onChange={(event) => setPlayer(event.target.value)}
                   className={inputStyle}
                 >
                   <option value="">
-                    {e.mode === "squad" && !squad
-                      ? "Pilih squad dahulu"
+                    {e.mode !== "solo" && !squad
+                      ? "Pilih tim dahulu"
                       : "Pilih pemain"}
                   </option>
                   {activeEntries.map((p) => (
@@ -293,7 +307,21 @@ export default function ScoreModal({
                 </select>
               </label>
             </div>
-            {e.participants.filter(p => p.id === player).map(p => <div key={p.id} className="rounded-xl border border-blue-100 bg-blue-50 p-3"><PlayerIdentity target={avatarTarget(e, p.id)} name={p.name} subtitle={p.username ? `@${p.username}` : undefined} link={false} /></div>)}
+            {e.participants
+              .filter((p) => p.id === player)
+              .map((p) => (
+                <div
+                  key={p.id}
+                  className="rounded-xl border border-blue-100 bg-blue-50 p-3"
+                >
+                  <PlayerIdentity
+                    target={avatarTarget(e, p.id)}
+                    name={p.name}
+                    subtitle={p.username ? `@${p.username}` : undefined}
+                    link={false}
+                  />
+                </div>
+              ))}
             {kind === "catch" ? (
               <>
                 <div className="grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(110px,1fr)]">

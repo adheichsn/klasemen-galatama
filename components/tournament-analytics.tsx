@@ -87,7 +87,13 @@ export function TournamentAnalytics({ event }: { event: ArenaEvent }) {
         />
         <Metric
           icon={Users}
-          name={event.mode === "solo" ? "Peserta SOLO" : "Peserta / Squad"}
+          name={
+            event.mode === "solo"
+              ? "Peserta SOLO"
+              : event.mode === "duo"
+                ? "Peserta / Pasangan"
+                : "Peserta / Squad"
+          }
           value={
             event.mode === "solo"
               ? fmt(data.participantCount)
@@ -168,7 +174,12 @@ export function TournamentAnalytics({ event }: { event: ArenaEvent }) {
           <div>
             <h2 className="flex items-center gap-2 text-lg font-black text-[#142A55]">
               <ChartNoAxesCombined className="text-blue-600" size={21} />{" "}
-              Performa {event.mode === "solo" ? "Peserta" : "Anggota Squad"}
+              Performa{" "}
+              {event.mode === "solo"
+                ? "Peserta"
+                : event.mode === "duo"
+                  ? "Anggota Pasangan"
+                  : "Anggota Squad"}
             </h2>
             <p className="mt-1 text-xs leading-5 text-slate-500">
               Kontribusi poin bersih per pemain, termasuk koreksi dan pembatalan
@@ -191,10 +202,14 @@ export function TournamentAnalytics({ event }: { event: ArenaEvent }) {
                 </span>
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs">
-                    <PlayerIdentity target={avatarTarget(event, p.id)} name={p.name} size="sm" />
-                    {event.mode === "squad" && (
+                    <PlayerIdentity
+                      target={avatarTarget(event, p.id)}
+                      name={p.name}
+                      size="sm"
+                    />
+                    {event.mode !== "solo" && (
                       <span className="text-[10px] text-slate-500">
-                        {p.squad || "Tanpa Squad"}
+                        {p.squad || "Tanpa Tim"}
                       </span>
                     )}
                   </div>
@@ -214,10 +229,11 @@ export function TournamentAnalytics({ event }: { event: ArenaEvent }) {
         )}
       </section>
 
-      {event.mode === "squad" && (
+      {event.mode !== "solo" && (
         <section className="rounded-2xl border border-blue-100 bg-white p-5 shadow-sm sm:p-6">
           <h2 className="mb-4 flex items-center gap-2 text-lg font-black text-[#142A55]">
-            <Medal className="text-blue-600" size={21} /> Rekap Squad
+            <Medal className="text-blue-600" size={21} /> Rekap{" "}
+            {event.mode === "duo" ? "Pasangan" : "Squad"}
           </h2>
           {data.squads.length ? (
             <div className="grid gap-3 md:grid-cols-2">
@@ -243,7 +259,11 @@ export function TournamentAnalytics({ event }: { event: ArenaEvent }) {
                       key={person.id}
                       className="flex justify-between gap-3 border-t border-slate-200 py-2 text-xs"
                     >
-                      <PlayerIdentity target={avatarTarget(event, person.id)} name={person.name} size="sm" />
+                      <PlayerIdentity
+                        target={avatarTarget(event, person.id)}
+                        name={person.name}
+                        size="sm"
+                      />
                       <b className="shrink-0 text-[#142A55]">
                         {fmt(person.points)} PTS
                       </b>
@@ -253,7 +273,7 @@ export function TournamentAnalytics({ event }: { event: ArenaEvent }) {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-slate-500">Belum ada squad terdaftar.</p>
+            <p className="text-sm text-slate-500">Belum ada tim terdaftar.</p>
           )}
         </section>
       )}

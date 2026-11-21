@@ -6,7 +6,7 @@ export const metadata: Metadata = {
     template: "%s | WEJI ARENA",
   },
   description:
-    "WEJI ARENA - portal turnamen Fish It. Temukan kompetisi SOLO dan SQUAD, pantau klasemen, jelajahi arsip dan Hall of Fame.",
+    "WEJI ARENA - portal turnamen Fish It. Temukan kompetisi, pantau klasemen, jelajahi arsip dan Hall of Fame.",
 };
 export default function RootLayout({
   children,

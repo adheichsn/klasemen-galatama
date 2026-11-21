@@ -25,7 +25,16 @@ const mod = { exports: {} };
 new Function("module", "exports", "require", compiled)(
   mod,
   mod.exports,
-  require,
+  (name) => {
+    if (name !== "./arena-rules") return require(name);
+    const dep = { exports: {} };
+    const js = ts.transpileModule(
+      fs.readFileSync(path.join(root, "lib/arena-rules.ts"), "utf8"),
+      { compilerOptions: { module: ts.ModuleKind.CommonJS } },
+    ).outputText;
+    new Function("module", "exports", "require", js)(dep, dep.exports, require);
+    return dep.exports;
+  },
 );
 const { tournamentReadiness } = mod.exports;
 const base = {

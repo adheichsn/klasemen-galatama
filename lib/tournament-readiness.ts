@@ -1,10 +1,13 @@
 import type { ArenaEvent, EditorSection } from "@/lib/arena-types";
 
+import { completeDuoRoster } from "./arena-rules";
+
 /** Presentation-only readiness: must mirror the existing LIVE guard, never alter scoring. */
 export function tournamentReadiness(e: ArenaEvent) {
   const activeFish = e.fish.filter((fish) => fish.enabled).length;
   const hasRoster =
     e.participants.length > 0 &&
+    completeDuoRoster(e) &&
     (e.mode === "solo" ||
       (e.squads.length > 0 &&
         e.participants.every(

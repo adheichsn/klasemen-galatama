@@ -23,9 +23,15 @@ export default async function ArchivePage({
     .filter(
       (e) =>
         e.status === "finished" &&
-        (q.mode === "solo" || q.mode === "squad" ? e.mode === q.mode : true),
+        (q.mode === "solo" || q.mode === "duo" || q.mode === "squad"
+          ? e.mode === q.mode
+          : true),
     )
-    .sort((a, b) => (b.finishedAt || b.eventDate || "").localeCompare(a.finishedAt || a.eventDate || ""));
+    .sort((a, b) =>
+      (b.finishedAt || b.eventDate || "").localeCompare(
+        a.finishedAt || a.eventDate || "",
+      ),
+    );
   return (
     <PublicShell profiles={await publicAvatarProfiles(finished)}>
       <main className="mx-auto max-w-[1260px] px-4 py-10 sm:px-6">
@@ -39,11 +45,15 @@ export default async function ArchivePage({
         <p className="mt-2 text-sm text-slate-500">
           Kenang hasil akhir dan para juara dari seluruh edisi.
         </p>
-        <div className="mt-5 inline-flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-800"><LockKeyhole size={16} /> {finished.length} turnamen selesai • skor dan hasil final dikunci</div>
+        <div className="mt-5 inline-flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-800">
+          <LockKeyhole size={16} /> {finished.length} turnamen selesai • skor
+          dan hasil final dikunci
+        </div>
         <div className="my-7 flex flex-wrap gap-2">
           {[
             { label: "Semua", value: "" },
             { label: "SOLO", value: "solo" },
+            { label: "DUO", value: "duo" },
             { label: "SQUAD", value: "squad" },
           ].map((f) => (
             <a
@@ -62,8 +72,23 @@ export default async function ArchivePage({
               return (
                 <div key={e.id} className="min-w-0 space-y-2">
                   <EventCard event={e} index={i} />
-                  {winner && <div className="rounded-xl border border-blue-100 bg-white p-3"><p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-amber-700">Juara 1</p><RankIdentity targets={rankAvatarTargets(e, winner.id)} name={winner.name} subtitle={winner.subtitle} team={e.mode === "squad"} /></div>}
-                  <Link href={`/turnamen/${encodeURIComponent(e.id)}/hasil`} className="inline-flex items-center gap-2 px-1 text-xs font-bold text-blue-600 hover:underline">
+                  {winner && (
+                    <div className="rounded-xl border border-blue-100 bg-white p-3">
+                      <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-amber-700">
+                        Juara 1
+                      </p>
+                      <RankIdentity
+                        targets={rankAvatarTargets(e, winner.id)}
+                        name={winner.name}
+                        subtitle={winner.subtitle}
+                        team={e.mode !== "solo"}
+                      />
+                    </div>
+                  )}
+                  <Link
+                    href={`/turnamen/${encodeURIComponent(e.id)}/hasil`}
+                    className="inline-flex items-center gap-2 px-1 text-xs font-bold text-blue-600 hover:underline"
+                  >
                     Lihat Hasil Final <ArrowRight size={14} />
                   </Link>
                 </div>

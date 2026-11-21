@@ -42,6 +42,7 @@ import {
 } from "@/lib/match-operations";
 import {
   canAssignSquad,
+  completeDuoRoster,
   canSwitchMode,
   calculateCatch,
 } from "@/lib/arena-rules";
@@ -215,7 +216,7 @@ export function useArena() {
       ...prev,
       events: prev.events.map((e) =>
         e.id === prev.activeEventId &&
-          (allowFinished || e.status !== "finished")
+        (allowFinished || e.status !== "finished")
           ? fn(e)
           : e,
       ),
@@ -227,10 +228,7 @@ export function useArena() {
         : prev,
     );
   const create = (mode: EventMode = "solo") => {
-    const e = newEvent(
-      mode === "solo" ? "Galatama Solo Baru" : "Galatama Squad Baru",
-      mode,
-    );
+    const e = newEvent(`Galatama ${mode.toUpperCase()} Baru`, mode);
     setData((prev) => ({
       ...prev,
       activeEventId: e.id,
@@ -345,29 +343,61 @@ export function useArena() {
     }
   };
   const finalizeHistorical = async (confirmTitle: string, podium: string[]) => {
-    if (!ready || saving || eventBusy || dirty || !active?.historical || active.status !== "draft")
-      return { ok: false, error: dirty ? "Klik Simpan ke Server terlebih dahulu." : "Draft historis belum siap." };
+    if (
+      !ready ||
+      saving ||
+      eventBusy ||
+      dirty ||
+      !active?.historical ||
+      active.status !== "draft"
+    )
+      return {
+        ok: false,
+        error: dirty
+          ? "Klik Simpan ke Server terlebih dahulu."
+          : "Draft historis belum siap.",
+      };
     setEventBusy(true);
     try {
       const response = await fetch("/api/admin/historical", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ eventId: active.id, revision, confirmTitle, podium }),
+        body: JSON.stringify({
+          eventId: active.id,
+          revision,
+          confirmTitle,
+          podium,
+        }),
       });
-      const result: { error?: string; data?: unknown; revision?: number } = await response.json();
-      if (!response.ok || !validArena(result.data) || !Number.isSafeInteger(result.revision))
-        return { ok: false, error: result.error || "Gagal mengunci hasil historis." };
+      const result: { error?: string; data?: unknown; revision?: number } =
+        await response.json();
+      if (
+        !response.ok ||
+        !validArena(result.data) ||
+        !Number.isSafeInteger(result.revision)
+      )
+        return {
+          ok: false,
+          error: result.error || "Gagal mengunci hasil historis.",
+        };
       skipDirtyEffect.current = true;
       dataRef.current = result.data;
       setData(result.data);
       setRevision(result.revision as number);
-      persistedEntryIds.current = new Set(result.data.events.flatMap((ev: ArenaEvent) => ev.entries.map((entry: ScoreEntry) => entry.id)));
+      persistedEntryIds.current = new Set(
+        result.data.events.flatMap((ev: ArenaEvent) =>
+          ev.entries.map((entry: ScoreEntry) => entry.id),
+        ),
+      );
       setDirty(false);
       setSaveError("");
       return { ok: true };
     } catch {
-      return { ok: false, error: "Server tidak bisa dihubungi. Data historis belum difinalisasi." };
+      return {
+        ok: false,
+        error: "Server tidak bisa dihubungi. Data historis belum difinalisasi.",
+      };
     } finally {
       setEventBusy(false);
     }
@@ -386,7 +416,11 @@ export function useArena() {
       [key]: value.slice(0, key === "subtitle" ? 180 : 100),
     }));
   const mode = (value: EventMode) =>
-    update((e) => (!canSwitchMode(e) ? e : { ...e, mode: value }));
+    update((e) =>
+      !canSwitchMode(e)
+        ? e
+        : { ...e, mode: value, squadSizeLimit: value === "duo" ? 2 : 0 },
+    );
   const setTie = (value: TieBreaker, bonusId: string | null) =>
     update((e) => ({ ...e, tieBreaker: value, tieBonusId: bonusId }));
   const banner = (value: string) => {
@@ -394,9 +428,17 @@ export function useArena() {
     update((e) => ({ ...e, bannerUrl: value }), true);
   };
   const feature = (value: boolean) =>
-    update((e) => e.historical && e.status === "draft" ? e : ({ ...e, featured: value }), true);
+    update(
+      (e) =>
+        e.historical && e.status === "draft" ? e : { ...e, featured: value },
+      true,
+    );
   const publish = (value: boolean) =>
-    update((e) => e.historical && e.status === "draft" ? e : ({ ...e, published: value }), true);
+    update(
+      (e) =>
+        e.historical && e.status === "draft" ? e : { ...e, published: value },
+      true,
+    );
   const status = (value: EventStatus) =>
     update((e) => {
       if (value === "live") return startMatch(e);
@@ -412,9 +454,9 @@ export function useArena() {
         sec >= 60 &&
         sec <= 86400
         ? {
-          ...e,
-          timer: { durationSec: sec, remainingSec: sec, runningSince: null },
-        }
+            ...e,
+            timer: { durationSec: sec, remainingSec: sec, runningSince: null },
+          }
         : e;
     });
   const toggleTimer = () =>
@@ -428,17 +470,17 @@ export function useArena() {
       e.fish.length >= 500
         ? e
         : {
-          ...e,
-          fish: [
-            ...e.fish,
-            {
-              id: newId(),
-              name: name.trim().slice(0, 70),
-              points,
-              enabled: true,
-            },
-          ],
-        },
+            ...e,
+            fish: [
+              ...e.fish,
+              {
+                id: newId(),
+                name: name.trim().slice(0, 70),
+                points,
+                enabled: true,
+              },
+            ],
+          },
     );
   };
   const changeFish = (id: string, fields: Partial<FishRule>) =>
@@ -454,17 +496,17 @@ export function useArena() {
       e.bonuses.length >= 200
         ? e
         : {
-          ...e,
-          bonuses: [
-            ...e.bonuses,
-            {
-              id: newId(),
-              name: name.trim().slice(0, 70),
-              points,
-              enabled: true,
-            },
-          ],
-        },
+            ...e,
+            bonuses: [
+              ...e.bonuses,
+              {
+                id: newId(),
+                name: name.trim().slice(0, 70),
+                points,
+                enabled: true,
+              },
+            ],
+          },
     );
   };
   const changeBonus = (id: string, fields: Partial<BonusRule>) =>
@@ -561,7 +603,9 @@ export function useArena() {
     );
   const setRosterLocked = (locked: boolean) =>
     update((e) =>
-      e.status === "draft" && e.entries.length === 0
+      e.status === "draft" &&
+      e.entries.length === 0 &&
+      (!locked || completeDuoRoster(e))
         ? { ...e, rosterLocked: locked }
         : e,
     );
@@ -632,15 +676,15 @@ export function useArena() {
           fields.squadId &&
           squadLimit(e) > 0 &&
           e.participants.filter((p) => p.squadId === fields.squadId).length >=
-          squadLimit(e)
+            squadLimit(e)
         )
           return e;
       }
       const nextSquads =
         fields.squadId !== undefined && fields.squadId !== existing.squadId
           ? e.squads.map((s) =>
-            s.captainId === id ? { ...s, captainId: null } : s,
-          )
+              s.captainId === id ? { ...s, captainId: null } : s,
+            )
           : e.squads;
       return {
         ...e,
@@ -648,17 +692,17 @@ export function useArena() {
         participants: e.participants.map((p) =>
           p.id === id
             ? {
-              ...p,
-              ...fields,
-              name:
-                fields.name !== undefined ? fields.name.slice(0, 80) : p.name,
-              squadId:
-                e.mode === "solo"
-                  ? null
-                  : fields.squadId === undefined
-                    ? p.squadId
-                    : fields.squadId,
-            }
+                ...p,
+                ...fields,
+                name:
+                  fields.name !== undefined ? fields.name.slice(0, 80) : p.name,
+                squadId:
+                  e.mode === "solo"
+                    ? null
+                    : fields.squadId === undefined
+                      ? p.squadId
+                      : fields.squadId,
+              }
             : p,
         ),
       };
@@ -668,12 +712,12 @@ export function useArena() {
       !rosterEditable(e) || e.entries.some((s) => s.participantId === id)
         ? e
         : {
-          ...e,
-          squads: e.squads.map((s) =>
-            s.captainId === id ? { ...s, captainId: null } : s,
-          ),
-          participants: e.participants.filter((p) => p.id !== id),
-        },
+            ...e,
+            squads: e.squads.map((s) =>
+              s.captainId === id ? { ...s, captainId: null } : s,
+            ),
+            participants: e.participants.filter((p) => p.id !== id),
+          },
     );
   const addCatch = (
     participantId: string,
@@ -685,11 +729,13 @@ export function useArena() {
     const e = active;
     if (
       !e ||
+      !completeDuoRoster(e) ||
       !e.participants.some((p) => p.id === participantId) ||
       !(e.status === "live" || (e.historical && e.status === "draft")) ||
-      (!e.historical && (e.timer.runningSince === null ||
-        secondsLeft(e.timer, Date.now()) <= 0)) ||
-      (e.mode === "squad" &&
+      (!e.historical &&
+        (e.timer.runningSince === null ||
+          secondsLeft(e.timer, Date.now()) <= 0)) ||
+      (e.mode !== "solo" &&
         !e.participants.find((p) => p.id === participantId)?.squadId)
     )
       return false;
@@ -712,7 +758,7 @@ export function useArena() {
       id: newId(),
       participantId,
       squadId:
-        e.mode === "squad"
+        e.mode !== "solo"
           ? e.participants.find((p) => p.id === participantId)?.squadId
           : null,
       kind: "catch",
@@ -735,7 +781,11 @@ export function useArena() {
       points === 0 ||
       !reason.trim() ||
       !active ||
-      !(active.status === "live" || (active.historical && active.status === "draft")) ||
+      !completeDuoRoster(active) ||
+      !(
+        active.status === "live" ||
+        (active.historical && active.status === "draft")
+      ) ||
       !active.participants.some(
         (p) =>
           p.id === participantId && (active.mode === "solo" || !!p.squadId),
@@ -746,7 +796,7 @@ export function useArena() {
       id: newId(),
       participantId,
       squadId:
-        active.mode === "squad"
+        active.mode !== "solo"
           ? active.participants.find((p) => p.id === participantId)?.squadId
           : null,
       kind: "manual",
@@ -789,17 +839,37 @@ export function useArena() {
       };
       return { ...e, entries: [reversal, ...e.entries] };
     });
-  const setHistoricalOfficialPoints = (participantId: string, total: number) => {
-    const event = dataRef.current.events.find((item) => item.id === dataRef.current.activeEventId);
-    if (!event || !event.historical || event.status !== "draft" || !Number.isSafeInteger(total) || Math.abs(total) > 1_000_000)
+  const setHistoricalOfficialPoints = (
+    participantId: string,
+    total: number,
+  ) => {
+    const event = dataRef.current.events.find(
+      (item) => item.id === dataRef.current.activeEventId,
+    );
+    if (
+      !event ||
+      !event.historical ||
+      event.status !== "draft" ||
+      !Number.isSafeInteger(total) ||
+      Math.abs(total) > 1_000_000
+    )
       return false;
     const participant = event.participants.find((p) => p.id === participantId);
-    if (!participant || (event.mode === "squad" && !participant.squadId)) return false;
-    const current = event.entries.reduce((sum, entry) => sum + (entry.participantId === participantId ? entry.delta : 0), 0);
+    if (!participant || (event.mode !== "solo" && !participant.squadId))
+      return false;
+    const current = event.entries.reduce(
+      (sum, entry) =>
+        sum + (entry.participantId === participantId ? entry.delta : 0),
+      0,
+    );
     const adjustment = total - current;
     if (adjustment === 0) return true;
     if (!validPoints(adjustment)) return false;
-    return addManual(participantId, adjustment, "Rekonsiliasi total poin resmi • arsip historis");
+    return addManual(
+      participantId,
+      adjustment,
+      "Rekonsiliasi total poin resmi • arsip historis",
+    );
   };
   const importBackup = (value: unknown) => {
     const candidate = validArena(value) ? value : migrateLegacy(value);

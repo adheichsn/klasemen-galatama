@@ -20,7 +20,9 @@ export default async function TournamentInsightsCatalog({
   const q = await searchParams;
   const { events, unavailable } = await publicEvents();
   const filtered = events.filter((event) =>
-    q.mode === "solo" || q.mode === "squad" ? event.mode === q.mode : true,
+    q.mode === "solo" || q.mode === "duo" || q.mode === "squad"
+      ? event.mode === q.mode
+      : true,
   );
   return (
     <PublicShell>
@@ -42,6 +44,7 @@ export default async function TournamentInsightsCatalog({
           {[
             { label: "Semua", value: "" },
             { label: "SOLO", value: "solo" },
+            { label: "DUO", value: "duo" },
             { label: "SQUAD", value: "squad" },
           ].map((f) => (
             <Link

@@ -36,8 +36,7 @@ export const dateLabel = (date: string) => {
     year: "numeric",
   });
 };
-export const modeText = (mode: EventMode) =>
-  mode === "solo" ? "SOLO" : "SQUAD";
+export const modeText = (mode: EventMode) => mode.toUpperCase();
 
 export const stageText = (e: Pick<ArenaEvent, "status">) =>
   e.status === "live"
@@ -45,7 +44,6 @@ export const stageText = (e: Pick<ArenaEvent, "status">) =>
     : e.status === "finished"
       ? "SELESAI"
       : "SEGERA HADIR";
-
 
 export function PublicFooter() {
   return (
@@ -78,11 +76,19 @@ export function PublicFooter() {
     </footer>
   );
 }
-export function PublicShell({ children, profiles = {} }: { children: React.ReactNode; profiles?: AvatarProfiles }) {
+export function PublicShell({
+  children,
+  profiles = {},
+}: {
+  children: React.ReactNode;
+  profiles?: AvatarProfiles;
+}) {
   return (
     <div className="weji-public min-h-screen bg-[#f5f8ff] text-[#172b4d]">
       <PublicHeader />
-      <AvatarScope profiles={profiles} publicLinks>{children}</AvatarScope>
+      <AvatarScope profiles={profiles} publicLinks>
+        {children}
+      </AvatarScope>
       <PublicFooter />
     </div>
   );
@@ -204,7 +210,10 @@ export function EventCard({
             <Users size={15} className="text-blue-600" />
             {count} peserta
           </span>
-          <Link href={`/turnamen/${encodeURIComponent(event.id)}`} className="inline-flex items-center gap-1 font-extrabold text-blue-700 transition group-hover:gap-2">
+          <Link
+            href={`/turnamen/${encodeURIComponent(event.id)}`}
+            className="inline-flex items-center gap-1 font-extrabold text-blue-700 transition group-hover:gap-2"
+          >
             {typeof topPoints === "number" && event.status !== "draft"
               ? `${fmt(topPoints)} PTS tertinggi`
               : "Lihat Event"}{" "}
@@ -271,7 +280,18 @@ export function PublicRanking({
                 >
                   {index + 1}
                 </span>
-                {r ? <RankIdentity targets={rankAvatarTargets(event, r.id)} name={r.name} subtitle={r.subtitle} team={event.mode === "squad"} centered size="lg" /> : <p className="text-xs text-slate-500">—</p>}
+                {r ? (
+                  <RankIdentity
+                    targets={rankAvatarTargets(event, r.id)}
+                    name={r.name}
+                    subtitle={r.subtitle}
+                    team={event.mode !== "solo"}
+                    centered
+                    size="lg"
+                  />
+                ) : (
+                  <p className="text-xs text-slate-500">—</p>
+                )}
                 <p className="mt-1 text-xs font-black text-blue-700">
                   {r ? fmt(r.points) : "—"} PTS
                 </p>
@@ -286,7 +306,12 @@ export function PublicRanking({
           {modeText(event.mode)}
         </h3>
         <span className="rounded-full bg-blue-50 px-3 py-1 text-[10px] font-bold text-blue-700">
-          {ranking.length} {event.mode === "solo" ? "Peserta" : "Squad"}
+          {ranking.length}{" "}
+          {event.mode === "solo"
+            ? "Peserta"
+            : event.mode === "duo"
+              ? "Pasangan"
+              : "Squad"}
         </span>
       </div>
       {rows.length ? (
@@ -296,7 +321,11 @@ export function PublicRanking({
               <tr className="bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
                 <th className="px-5 py-3">Posisi</th>
                 <th className="px-5 py-3">
-                  {event.mode === "solo" ? "Pemain" : "Squad"}
+                  {event.mode === "solo"
+                    ? "Pemain"
+                    : event.mode === "duo"
+                      ? "Pasangan"
+                      : "Squad"}
                 </th>
                 <th className="px-5 py-3">Tangkapan</th>
                 <th className="px-5 py-3 text-right">Poin</th>
@@ -313,7 +342,12 @@ export function PublicRanking({
                     </span>
                   </td>
                   <td className="px-5 py-3">
-                    <RankIdentity targets={rankAvatarTargets(event, rank.id)} name={rank.name} subtitle={rank.subtitle} team={event.mode === "squad"} />
+                    <RankIdentity
+                      targets={rankAvatarTargets(event, rank.id)}
+                      name={rank.name}
+                      subtitle={rank.subtitle}
+                      team={event.mode !== "solo"}
+                    />
                   </td>
                   <td className="px-5 py-3 text-slate-500">
                     {fmt(rank.catches)}

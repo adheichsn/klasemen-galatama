@@ -113,7 +113,7 @@ export function tournamentAnalytics(
     catchPoints += entry.delta;
     if (contributor) contributor.catches += qty;
     const snapSquad = entry.squadId || people.get(entry.participantId)?.squadId;
-    if (event.mode === "squad" && snapSquad)
+    if (event.mode !== "solo" && snapSquad)
       squadCatches.set(snapSquad, (squadCatches.get(snapSquad) || 0) + qty);
 
     // Prefer immutable entry snapshots. Legacy data without fish identity is
@@ -159,9 +159,9 @@ export function tournamentAnalytics(
   );
   // Use the existing standings algorithm for team totals and tiebreakers, so
   // these values agree with the public leaderboard even for legacy snapshots.
-  const squadStandings = event.mode === "squad" ? standings(event) : [];
+  const squadStandings = event.mode !== "solo" ? standings(event) : [];
   const squads =
-    event.mode === "squad"
+    event.mode !== "solo"
       ? squadStandings.map((team) => ({
           id: team.id,
           name: team.name,
@@ -176,7 +176,7 @@ export function tournamentAnalytics(
   return {
     mode: event.mode,
     participantCount: event.participants.length,
-    squadCount: event.mode === "squad" ? event.squads.length : 0,
+    squadCount: event.mode !== "solo" ? event.squads.length : 0,
     validCatches,
     catchRecords,
     reversedCatches,
