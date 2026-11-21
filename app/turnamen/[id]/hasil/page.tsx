@@ -1,3 +1,4 @@
+import { ChampionshipPodium } from "@/components/championship-podium";
 import { playerHref, legacyPlayerHref } from "@/lib/player-directory";
 import {
   avatarTarget,
@@ -11,10 +12,8 @@ import { notFound } from "next/navigation";
 import {
   ArrowLeft,
   ChartNoAxesCombined,
-  Crown,
   Fish,
   LockKeyhole,
-  Medal,
   Trophy,
   Users,
 } from "lucide-react";
@@ -67,33 +66,8 @@ export default async function FinalResultsPage({
             </Link>
           </div>
         </section>
-        <div className="mb-7 grid gap-3 sm:grid-cols-3">
-          {rows.slice(0, 3).map((row, i) => (
-            <div
-              key={row.id}
-              className={`rounded-2xl border p-5 ${i === 0 ? "border-amber-200 bg-amber-50" : "border-blue-100 bg-white"}`}
-            >
-              <div className="mb-3 flex items-center gap-2 text-xs font-black text-blue-800">
-                {i === 0 ? (
-                  <Crown size={20} className="text-amber-500" />
-                ) : (
-                  <Medal size={20} className="text-blue-500" />
-                )}{" "}
-                Juara {i + 1}
-              </div>
-              <RankIdentity
-                targets={rankAvatarTargets(event, row.id)}
-                name={row.name}
-                subtitle={row.subtitle}
-                team={event.mode !== "solo"}
-                centered
-                size="lg"
-              />
-              <div className="mt-4 text-center text-2xl font-black text-blue-700">
-                {fmt(row.points)} <span className="text-xs">PTS</span>
-              </div>
-            </div>
-          ))}
+        <div className="mb-7">
+          <ChampionshipPodium event={event} />
         </div>
         <section className="overflow-hidden rounded-2xl border border-blue-100 bg-white shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-blue-100 px-5 py-5 sm:px-7">
@@ -189,7 +163,12 @@ export default async function FinalResultsPage({
                                     : undefined
                                 }
                               />
-                              <b className="shrink-0">{fmt(m.points)} PTS</b>
+                              <div className="shrink-0 text-right">
+                                <b>{fmt(m.points)} PTS</b>
+                                <p className="text-[11px] text-slate-500">
+                                  {fmt(m.catches)} Secret
+                                </p>
+                              </div>
                             </div>
                           ))}
                         </div>

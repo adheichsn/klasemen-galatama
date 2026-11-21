@@ -1,5 +1,5 @@
 import type { ArenaEvent, ScoreEntry } from "./arena-types";
-import { standings } from "./arena-utils";
+import { resultRows } from "./tournament-results";
 
 /**
  * V2.9 analytics are calculated from a single event's score ledger. No extra
@@ -159,7 +159,7 @@ export function tournamentAnalytics(
   );
   // Use the existing standings algorithm for team totals and tiebreakers, so
   // these values agree with the public leaderboard even for legacy snapshots.
-  const squadStandings = event.mode !== "solo" ? standings(event) : [];
+  const squadStandings = event.mode !== "solo" ? resultRows(event) : [];
   const squads =
     event.mode !== "solo"
       ? squadStandings.map((team) => ({
@@ -169,7 +169,11 @@ export function tournamentAnalytics(
           catches: squadCatches.get(team.id) || 0,
           memberCount: event.participants.filter((p) => p.squadId === team.id)
             .length,
-          contributors: contributors.filter((p) => p.squadId === team.id),
+          contributors: team.members.map((member) => ({
+            ...member,
+            squadId: team.id,
+            squad: team.name,
+          })),
         }))
       : [];
 

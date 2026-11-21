@@ -230,8 +230,12 @@ export default async function RobloxPlayerPage({
                     </span>
                     {h.rank !== null && (
                       <span>
-                        {h.mode !== "solo" ? "Peringkat tim" : "Peringkat"} #
-                        {h.rank}
+                        {h.mode === "duo"
+                          ? "Peringkat pasangan"
+                          : h.mode === "squad"
+                            ? "Peringkat tim"
+                            : "Peringkat"}{" "}
+                        #{h.rank}
                       </span>
                     )}
                   </div>
@@ -240,7 +244,9 @@ export default async function RobloxPlayerPage({
                   </h3>
                   <p className="mt-1 text-xs leading-5 text-slate-500">
                     {dateLabel(h.eventDate)} · {h.location || "Semua pulau"}
-                    {h.teamName ? ` · Tim ${h.teamName}` : ""}
+                    {h.teamName
+                      ? ` · ${h.mode === "duo" ? "Pasangan" : "Tim"} ${h.teamName}`
+                      : ""}
                   </p>
                   <p className="mt-1 break-words text-xs text-slate-500">
                     Tercatat sebagai {h.recordedName}

@@ -24,11 +24,22 @@ export function normalizedRobloxUsername(input: string): string | null {
 export type ResultRow = ReturnType<typeof standings>[number] & {
   rank: number;
   username: string;
-  members: { id: string; name: string; username: string; points: number }[];
+  members: {
+    id: string;
+    name: string;
+    username: string;
+    points: number;
+    catches: number;
+  }[];
 };
 
 export function resultRows(event: ArenaEvent): ResultRow[] {
   const people = new Map(event.participants.map((p) => [p.id, p]));
+  const reversed = new Set(
+    event.entries.flatMap((e) =>
+      e.reversesEntryId ? [e.reversesEntryId] : [],
+    ),
+  );
   const contributions = new Map<
     string,
     Map<string, ResultRow["members"][number]>
@@ -46,6 +57,7 @@ export function resultRows(event: ArenaEvent): ResultRow[] {
         name: participant.name,
         username: participant.username,
         points: 0,
+        catches: 0,
       });
     }
     for (const entry of event.entries) {
@@ -58,8 +70,11 @@ export function resultRows(event: ArenaEvent): ResultRow[] {
         name: person?.name || "Peserta lama",
         username: person?.username || "",
         points: 0,
+        catches: 0,
       };
       current.points += entry.delta;
+      if (entry.kind === "catch" && !reversed.has(entry.id))
+        current.catches += entry.quantity || 1;
       bucket.set(entry.participantId, current);
     }
   }

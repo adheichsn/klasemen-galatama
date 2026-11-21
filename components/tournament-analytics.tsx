@@ -251,24 +251,44 @@ export function TournamentAnalytics({ event }: { event: ArenaEvent }) {
                     </span>
                   </div>
                   <div className="mb-3 text-[11px] text-slate-500">
-                    {fmt(squad.memberCount)} anggota · {fmt(squad.catches)}{" "}
-                    Secret
+                    {fmt(squad.memberCount)} anggota roster ·{" "}
+                    {fmt(squad.catches)} Secret
                   </div>
                   {squad.contributors.map((person) => (
                     <div
                       key={person.id}
-                      className="flex justify-between gap-3 border-t border-slate-200 py-2 text-xs"
+                      className="border-t border-slate-200 py-3 text-xs"
                     >
-                      <PlayerIdentity
-                        target={avatarTarget(event, person.id)}
-                        name={person.name}
-                        size="sm"
-                      />
-                      <b className="shrink-0 text-[#142A55]">
-                        {fmt(person.points)} PTS
-                      </b>
+                      <div className="flex items-center justify-between gap-3">
+                        <PlayerIdentity
+                          target={avatarTarget(event, person.id)}
+                          name={person.name}
+                          size="sm"
+                        />
+                        <div className="shrink-0 text-right">
+                          <b className="text-[#142A55]">
+                            {fmt(person.points)} PTS
+                          </b>
+                          <p className="text-[11px] text-slate-500">
+                            {fmt(person.catches)} Secret
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-2">
+                        <Meter
+                          value={person.points}
+                          max={Math.max(
+                            0,
+                            ...squad.contributors.map((p) => p.points),
+                          )}
+                        />
+                      </div>
                     </div>
                   ))}
+                  <p className="mt-2 text-[10px] leading-5 text-slate-500">
+                    Bar membandingkan kontribusi positif terhadap anggota dengan
+                    poin positif tertinggi. Koreksi negatif tetap masuk total.
+                  </p>
                 </div>
               ))}
             </div>

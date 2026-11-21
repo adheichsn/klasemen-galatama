@@ -1,46 +1,44 @@
+import { identitySoloChampions } from "@/lib/player-directory";
 import {
-  identitySoloChampions,
-  playerHref,
-  legacyPlayerHref,
-} from "@/lib/player-directory";
-import {
-  avatarTarget,
-  avatarProfile,
-  rankAvatarTargets,
-} from "@/lib/avatar-identity";
-import { PlayerIdentity, RankIdentity } from "@/components/player-avatar";
+  finalEditionMatches,
+  publicFinalEditions,
+  teamModeChampions,
+} from "@/lib/championship-insights";
+import { ChampionshipPodium } from "@/components/championship-podium";
+import { PlayerIdentity } from "@/components/player-avatar";
 import { publicAvatarProfiles } from "@/lib/avatar-identity-db";
 import Link from "next/link";
 import {
   ArrowRight,
   Crown,
   LockKeyhole,
-  Medal,
   Search,
   Trophy,
   Users,
 } from "lucide-react";
 import { Breadcrumb, PublicShell, dateLabel } from "@/components/public-site";
 import { publicEvents } from "@/lib/public-events";
-import { fmt } from "@/lib/arena-utils";
-import {
-  finalEvents,
-  normalizedRobloxUsername,
-  resultRows,
-} from "@/lib/tournament-results";
 export const dynamic = "force-dynamic";
 const PER_PAGE = 9;
 export default async function HallOfFame({
   searchParams,
 }: {
   searchParams: Promise<{
-    mode?: string;
-    location?: string;
-    q?: string;
-    page?: string;
+    mode?: string | string[];
+    location?: string | string[];
+    q?: string | string[];
+    page?: string | string[];
   }>;
 }) {
-  const params = await searchParams;
+  const raw = await searchParams;
+  const single = (value?: string | string[]) =>
+    typeof value === "string" ? value : "";
+  const params = {
+    mode: single(raw.mode),
+    location: single(raw.location),
+    q: single(raw.q),
+    page: single(raw.page),
+  };
   const mode =
     params.mode === "solo" || params.mode === "duo" || params.mode === "squad"
       ? params.mode
@@ -53,28 +51,40 @@ export default async function HallOfFame({
       ? Math.min(pageParam, 99999)
       : 1;
   const { events, unavailable } = await publicEvents();
-  const completed = finalEvents(events);
+  const completed = publicFinalEditions(events);
   const locations = [
     ...new Set(completed.map((e) => e.location || "Semua pulau")),
   ].sort((a, b) => a.localeCompare(b));
-  const filtered = completed.filter(
+  const candidates = completed.filter(
     (e) =>
       (mode === "all" || e.mode === mode) &&
-      (!location || (e.location || "Semua pulau") === location) &&
-      (!query ||
-        `${e.title} ${e.location} ${resultRows(e)
-          .map((r) => r.name)
-          .join(" ")}`
-          .toLocaleLowerCase()
-          .includes(query)),
+      (!location || (e.location || "Semua pulau") === location),
   );
   let identityUnavailable = false;
-  const profiles = await publicAvatarProfiles(filtered, () => {
+  const profiles = await publicAvatarProfiles(candidates, () => {
     identityUnavailable = true;
   });
+  const filtered = candidates.filter((e) =>
+    finalEditionMatches(e, profiles, query),
+  );
   const allTime = identityUnavailable
     ? []
     : identitySoloChampions(filtered, profiles);
+  const groups = [
+    { mode: "solo", players: allTime },
+    {
+      mode: "duo",
+      players: identityUnavailable
+        ? []
+        : teamModeChampions(filtered, profiles, "duo"),
+    },
+    {
+      mode: "squad",
+      players: identityUnavailable
+        ? []
+        : teamModeChampions(filtered, profiles, "squad"),
+    },
+  ];
   const pages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
   const safePage = Math.min(page, pages);
   const showing = filtered.slice(
@@ -131,7 +141,7 @@ export default async function HallOfFame({
             <input
               name="q"
               maxLength={100}
-              defaultValue={params.q || ""}
+              defaultValue={params.q.slice(0, 100)}
               placeholder="Cari turnamen atau pemenang..."
               className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm outline-none focus:border-blue-500"
             />
@@ -183,72 +193,87 @@ export default async function HallOfFame({
             tetap ditampilkan.
           </p>
         )}
-        {(mode === "all" || mode === "solo") && allTime.length > 0 && (
-          <section className="mb-9 rounded-2xl border border-blue-100 bg-white p-5 shadow-sm sm:p-7">
-            <div className="mb-2 flex items-center gap-2">
-              <Crown className="text-amber-500" size={24} />
-              <h2 className="text-xl font-black text-[#142A55]">
-                All-Time SOLO Champions
-              </h2>
-            </div>
-            <p className="mb-5 text-xs leading-6 text-slate-500">
-              Peringkat berdasarkan jumlah gelar juara, lalu podium. Skor
-              berbeda event tidak dijumlahkan.
-            </p>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[490px] text-left text-sm">
-                <thead className="bg-blue-50 text-[11px] uppercase text-blue-700">
-                  <tr>
-                    <th className="rounded-l-lg px-3 py-3">#</th>
-                    <th className="px-3 py-3">Pemain</th>
-                    <th className="px-3 py-3 text-right">Gelar</th>
-                    <th className="px-3 py-3 text-right">Podium</th>
-                    <th className="rounded-r-lg px-3 py-3 text-right">Edisi</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-blue-50">
-                  {allTime.slice(0, 20).map((p, i) => (
-                    <tr key={p.key} className="hover:bg-blue-50/50">
-                      <td className="px-3 py-3 font-black text-blue-600">
-                        {i + 1}
-                      </td>
-                      <td className="px-3 py-3">
-                        <PlayerIdentity
-                          target={p.target}
-                          name={p.name}
-                          subtitle={`@${p.username}`}
-                          size="sm"
-                        />
-                        <Link
-                          prefetch={false}
-                          href={p.href}
-                          className="text-[11px] font-bold text-blue-600 hover:underline"
-                        >
-                          {p.linked ? "Profil pemain" : "Arsip username"}
-                        </Link>
-                        {!p.linked && (
-                          <p className="text-[10px] text-slate-500">
-                            Belum terhubung
-                          </p>
-                        )}
-                      </td>
-                      <td className="px-3 py-3 text-right font-extrabold">
-                        {p.wins}
-                      </td>
-                      <td className="px-3 py-3 text-right">{p.podiums}</td>
-                      <td className="px-3 py-3 text-right">{p.appearances}</td>
+        {groups
+          .filter(
+            (group) =>
+              (mode === "all" || mode === group.mode) &&
+              group.players.length > 0,
+          )
+          .map((group) => (
+            <section
+              key={group.mode}
+              className="mb-9 rounded-2xl border border-blue-100 bg-white p-5 shadow-sm sm:p-7"
+            >
+              <div className="mb-2 flex items-center gap-2">
+                <Crown className="text-amber-500" size={24} />
+                <h2 className="text-xl font-black text-[#142A55]">
+                  All-Time {group.mode.toUpperCase()} Champions
+                </h2>
+              </div>
+              <p className="mb-5 text-xs leading-6 text-slate-500">
+                Gelar pribadi per edisi yang cocok dengan filter, lalu podium.
+                Setiap anggota tim pemenang memperoleh satu gelar, bukan gelar
+                tambahan per tangkapan.
+              </p>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[490px] text-left text-sm">
+                  <thead className="bg-blue-50 text-[11px] uppercase text-blue-700">
+                    <tr>
+                      <th className="rounded-l-lg px-3 py-3">#</th>
+                      <th className="px-3 py-3">Pemain</th>
+                      <th className="px-3 py-3 text-right">Gelar</th>
+                      <th className="px-3 py-3 text-right">Podium</th>
+                      <th className="rounded-r-lg px-3 py-3 text-right">
+                        Edisi
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <p className="mt-4 text-[11px] leading-5 text-slate-500">
-              Gelar pemain yang terhubung dikelompokkan berdasarkan Roblox User
-              ID. Catatan username yang belum terhubung dipisahkan dan ditandai
-              sebagai arsip lama, bukan identitas terkonfirmasi.
-            </p>
-          </section>
-        )}
+                  </thead>
+                  <tbody className="divide-y divide-blue-50">
+                    {group.players.slice(0, 20).map((p, i) => (
+                      <tr key={p.key} className="hover:bg-blue-50/50">
+                        <td className="px-3 py-3 font-black text-blue-600">
+                          {i + 1}
+                        </td>
+                        <td className="px-3 py-3">
+                          <PlayerIdentity
+                            target={p.target}
+                            name={p.name}
+                            subtitle={`@${p.username}`}
+                            size="sm"
+                          />
+                          <Link
+                            prefetch={false}
+                            href={p.href}
+                            className="text-[11px] font-bold text-blue-600 hover:underline"
+                          >
+                            {p.linked ? "Profil pemain" : "Arsip username"}
+                          </Link>
+                          {!p.linked && (
+                            <p className="text-[10px] text-slate-500">
+                              Belum terhubung
+                            </p>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 text-right font-extrabold">
+                          {p.wins}
+                        </td>
+                        <td className="px-3 py-3 text-right">{p.podiums}</td>
+                        <td className="px-3 py-3 text-right">
+                          {p.appearances}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="mt-4 text-[11px] leading-5 text-slate-500">
+                Gelar pemain yang terhubung dikelompokkan berdasarkan Roblox
+                User ID. Catatan username SOLO yang belum terhubung dipisahkan.
+                Untuk DUO dan SQUAD, hanya akun terhubung yang masuk rekap
+                pribadi; semua juara tetap tercatat per edisi.
+              </p>
+            </section>
+          ))}
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <h2 className="flex items-center gap-2 text-xl font-black text-[#142A55]">
             <Trophy size={22} className="text-blue-600" /> Juara per Edisi
@@ -259,7 +284,6 @@ export default async function HallOfFame({
         </div>
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {showing.map((event) => {
-            const top = resultRows(event).slice(0, 3);
             return (
               <article
                 key={event.id}
@@ -280,63 +304,8 @@ export default async function HallOfFame({
                   {dateLabel(event.eventDate)} •{" "}
                   {event.location || "Semua pulau"}
                 </p>
-                <div className="mt-5 divide-y divide-blue-50">
-                  {top.length ? (
-                    top.map((r, i) => {
-                      const linked =
-                        event.mode === "solo"
-                          ? avatarProfile(profiles, avatarTarget(event, r.id))
-                          : undefined;
-                      const legacy =
-                        event.mode === "solo"
-                          ? normalizedRobloxUsername(r.username)
-                          : null;
-                      const profile = linked
-                        ? playerHref(linked.robloxId)
-                        : legacy
-                          ? legacyPlayerHref(legacy)
-                          : null;
-                      return (
-                        <div
-                          key={r.id}
-                          className="flex items-center gap-3 py-3"
-                        >
-                          <span
-                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-black ${i === 0 ? "bg-amber-100 text-amber-700" : "bg-blue-50 text-blue-700"}`}
-                          >
-                            {i + 1}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <RankIdentity
-                              targets={rankAvatarTargets(event, r.id)}
-                              name={r.name}
-                              subtitle={r.subtitle}
-                              team={event.mode !== "solo"}
-                            />
-                            {profile && (
-                              <Link
-                                prefetch={false}
-                                href={profile}
-                                className="text-[11px] font-bold text-blue-600 hover:underline"
-                              >
-                                Riwayat pemain
-                              </Link>
-                            )}
-                            <p className="text-[11px] text-slate-400">
-                              {fmt(r.catches)} Secret
-                            </p>
-                          </div>
-                          <b className="shrink-0 text-xs text-blue-700">
-                            {fmt(r.points)} PTS
-                          </b>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <p className="py-4 text-sm text-slate-500">
-                      Belum ada peringkat.
-                    </p>
-                  )}
+                <div className="mt-5">
+                  <ChampionshipPodium event={event} compact />
                 </div>
                 <Link
                   href={`/turnamen/${encodeURIComponent(event.id)}/hasil`}
