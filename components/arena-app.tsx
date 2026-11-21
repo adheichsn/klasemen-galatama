@@ -3,6 +3,7 @@ import { avatarTarget, rankAvatarTargets } from "@/lib/avatar-identity";
 import { PlayerIdentity, RankIdentity } from "@/components/player-avatar";
 import { AdminAvatarScope } from "@/components/player-avatar";
 import { useRef, useState } from "react";
+import { FaqAccordion, RulesAccordion } from "@/components/event-accordions";
 import {
   Activity,
   Archive,
@@ -14,7 +15,6 @@ import {
   CalendarDays,
   ChartNoAxesCombined,
   CheckCircle2,
-  ChevronDown,
   ChevronRight,
   CircleHelp,
   Clock3,
@@ -100,10 +100,10 @@ const mainNav: { id: Page; label: string; icon: typeof Home }[] = [
 const prettyDate = (iso: string) =>
   iso
     ? new Date(`${iso}T12:00:00`).toLocaleDateString("id-ID", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      })
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    })
     : "Tanggal fleksibel";
 const statusText: Record<EventStatus, string> = {
   draft: "Draft",
@@ -255,7 +255,6 @@ export default function ArenaApp() {
   const [search, setSearch] = useState("");
   const [eventSearch, setEventSearch] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
-  const [openFaq, setOpenFaq] = useState<string[]>([]);
   const [eventFilter, setEventFilter] = useState<"all" | EventStatus>("all");
   const [eventModeFilter, setEventModeFilter] = useState<"all" | EventMode>(
     "all",
@@ -1150,8 +1149,8 @@ export default function ArenaApp() {
                                   <span className="ranking-label text-[9px] tracking-[.5px] font-extrabold text-[#90a0b7]">
                                     {rank <= 3
                                       ? ["TOP RANK", "RUNNER-UP", "TOP 3"][
-                                          rank - 1
-                                        ]
+                                      rank - 1
+                                      ]
                                       : "COMPETING"}
                                   </span>
                                 </td>
@@ -1396,17 +1395,7 @@ export default function ArenaApp() {
                       </button>
                     </div>
                     {e.writtenRules.length ? (
-                      <div className="rule-list-preview p-[0_24px]">
-                        {e.writtenRules.slice(0, 5).map((r, i) => (
-                          <div key={r.id}>
-                            <span>{String(i + 1).padStart(2, "0")}</span>
-                            <p>
-                              <b>{r.group}</b>
-                              {r.content}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
+                      <div className="px-6"><RulesAccordion key={e.id} rules={e.writtenRules} /></div>
                     ) : (
                       <Empty
                         icon={BookOpen}
@@ -1623,9 +1612,9 @@ export default function ArenaApp() {
                         onDuplicate={
                           admin
                             ? () => {
-                                store.duplicate(x.id);
-                                go("builder");
-                              }
+                              store.duplicate(x.id);
+                              go("builder");
+                            }
                             : undefined
                         }
                         onDelete={admin ? () => void moveToTrash(x) : undefined}
@@ -1922,28 +1911,7 @@ export default function ArenaApp() {
                       </div>
                     </div>
                     {e.faqs.length ? (
-                      <div className="faq-items p-[0_22px_24px]">
-                        {e.faqs.map((q) => (
-                          <div
-                            key={q.id}
-                            className={`faq-item [border:1px_solid_#e5ebf4] rounded-[11px] mb-[10px] overflow-hidden ${openFaq.includes(q.id) ? "opened" : ""}`}
-                          >
-                            <button
-                              onClick={() =>
-                                setOpenFaq((prev) =>
-                                  prev.includes(q.id)
-                                    ? prev.filter((x) => x !== q.id)
-                                    : [...prev, q.id],
-                                )
-                              }
-                            >
-                              <span>{q.question}</span>
-                              <ChevronDown size={19} />
-                            </button>
-                            {openFaq.includes(q.id) && <p>{q.answer}</p>}
-                          </div>
-                        ))}
-                      </div>
+                      <div className="px-[22px] pb-6"><FaqAccordion key={e.id} questions={e.faqs} /></div>
                     ) : (
                       <Empty
                         icon={CircleHelp}
@@ -1964,29 +1932,7 @@ export default function ArenaApp() {
                       </div>
                     </div>
                     {e.writtenRules.length ? (
-                      <div className="full-rules p-[0_23px_23px]">
-                        {Array.from(
-                          new Set(e.writtenRules.map((x) => x.group)),
-                        ).map((group) => (
-                          <div className="rules-group mb-[19px]" key={group}>
-                            <h3>
-                              <ShieldCheck size={17} />
-                              {group}
-                            </h3>
-                            {e.writtenRules
-                              .filter((x) => x.group === group)
-                              .map((r, i) => (
-                                <div
-                                  key={r.id}
-                                  className="rules-line flex gap-[10px] mb-[11px]"
-                                >
-                                  <span>{i + 1}.</span>
-                                  <p>{r.content}</p>
-                                </div>
-                              ))}
-                          </div>
-                        ))}
-                      </div>
+                      <div className="px-[23px] pb-[23px]"><RulesAccordion key={e.id} rules={e.writtenRules} /></div>
                     ) : (
                       <Empty
                         icon={BookOpen}

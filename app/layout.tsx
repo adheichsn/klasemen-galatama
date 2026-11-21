@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "@/styles/public-effects.css";
 import { HOME_TITLE, HOME_DESCRIPTION } from "@/lib/seo-core";
 import { sitePolicy } from "@/lib/seo";
 const policy = sitePolicy();
@@ -13,10 +14,10 @@ export const metadata: Metadata = {
   description: HOME_DESCRIPTION,
   ...(process.env.WEJI_GOOGLE_SITE_VERIFICATION?.trim()
     ? {
-        verification: {
-          google: process.env.WEJI_GOOGLE_SITE_VERIFICATION.trim(),
-        },
-      }
+      verification: {
+        google: process.env.WEJI_GOOGLE_SITE_VERIFICATION.trim(),
+      },
+    }
     : {}),
 };
 export default function RootLayout({

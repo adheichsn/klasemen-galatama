@@ -35,6 +35,7 @@ import {
   BuilderProgress,
   builderSteps,
 } from "@/components/admin/builder-progress";
+import { FormatHelp, FormatPreview } from "@/components/admin/format-preview";
 import { ParticipantRoster } from "@/components/admin/participant-roster";
 
 const sections: { id: EditorSection; text: string; icon: typeof Fish }[] = [
@@ -48,8 +49,8 @@ const sections: { id: EditorSection; text: string; icon: typeof Fish }[] = [
 ];
 const parsePoints = (text: string) =>
   text.trim() !== "" &&
-  Number.isSafeInteger(Number(text)) &&
-  validPoints(Number(text))
+    Number.isSafeInteger(Number(text)) &&
+    validPoints(Number(text))
     ? Number(text)
     : null;
 export default function ArenaBuilder({ store }: { store: ArenaStore }) {
@@ -262,7 +263,8 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                 </label>
                 <label className="field flex flex-col gap-[7px] text-[11px] text-[#4f6585] font-extrabold span-2">
                   Deskripsi singkat
-                  <input
+                  <textarea
+                    rows={2}
                     disabled={locked}
                     value={e.subtitle}
                     maxLength={180}
@@ -546,11 +548,11 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                     onChange={(v) =>
                       tab === "fish"
                         ? store.changeFish(item.id, {
-                            enabled: v.target.checked,
-                          })
+                          enabled: v.target.checked,
+                        })
                         : store.changeBonus(item.id, {
-                            enabled: v.target.checked,
-                          })
+                          enabled: v.target.checked,
+                        })
                     }
                   />
                   <input
@@ -651,8 +653,9 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                 <h3>Peraturan Tertulis</h3>
                 <p>
                   Aturan pengunjung (diizinkan, dilarang, teknis, atau kategori
-                  bebas). Terpisah dari mesin hitung skor.
+                  bebas). Terpisah dari mesin hitung skor. Setiap kategori tampil sebagai accordion.
                 </p>
+                <FormatHelp />
               </div>
               {e.writtenRules.map((r, i) => (
                 <div className="editable-rule" key={r.id}>
@@ -672,13 +675,14 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                     <textarea
                       disabled={locked}
                       aria-label="Isi aturan"
-                      rows={2}
+                      rows={6}
                       value={r.content}
                       maxLength={1000}
                       onChange={(v) =>
                         store.changeRule(r.id, { content: v.target.value })
                       }
                     />
+                    <FormatPreview text={r.content} />
                   </div>
                   <button
                     disabled={locked}
@@ -716,13 +720,14 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                     Isi peraturan
                     <textarea
                       disabled={locked}
-                      rows={3}
+                      rows={8}
                       value={ruleText}
                       maxLength={1000}
                       onChange={(v) => setRuleText(v.target.value)}
-                      placeholder="Ketik peraturan turnamen..."
+                      placeholder={"1. Peraturan pertama\n2. Peraturan kedua\n3. Peraturan ketiga"}
                     />
                   </label>
+                  <div className="col-span-full"><FormatPreview text={ruleText} /></div>
                 </div>
                 <button
                   disabled={locked || !ruleText.trim()}
@@ -746,6 +751,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                   Pertanyaan yang sering ditanyakan, tampil seperti accordion di
                   halaman publik.
                 </p>
+                <FormatHelp />
               </div>
               {e.faqs.map((f, i) => (
                 <div className="editable-faq" key={f.id}>
@@ -772,6 +778,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                         store.changeFaq(f.id, { answer: v.target.value })
                       }
                     />
+                    <FormatPreview text={f.answer} />
                   </div>
                   <button
                     disabled={locked}
@@ -815,6 +822,7 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                     placeholder="Tulis jawabannya..."
                   />
                 </label>
+                <FormatPreview text={answer} />
                 <button
                   className="btn inline-flex items-center justify-center gap-[9px] [border:1px_solid_transparent] rounded-[10px] min-h-[41px] p-[0_16px] whitespace-nowrap text-[12px] font-extrabold [transition:background_.2s,_transform_.2s,_box-shadow_.2s] primary"
                   disabled={locked || !question.trim() || !answer.trim()}

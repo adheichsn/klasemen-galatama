@@ -1,3 +1,4 @@
+import { RulesAccordion } from "@/components/event-accordions";
 import { listenerDatabaseUrl } from "@/lib/public-broker";
 import { eventMetadata } from "@/lib/seo-server";
 import { eventSeoAllowed, eventPath } from "@/lib/seo-core";
@@ -52,7 +53,6 @@ export default async function EventDetail({
   const { events } = await publicEvents();
   const e = events.find((x) => x.id === id);
   if (!e) notFound();
-  const rules = Array.from(new Set(e.writtenRules.map((x) => x.group)));
   return (
     <PublicShell profiles={await publicAvatarProfiles([e])}>
       {eventSeoAllowed(e, "detail") && (
@@ -84,7 +84,7 @@ export default async function EventDetail({
             <h1 className="text-3xl font-black tracking-tight sm:text-5xl">
               {e.title}
             </h1>
-            <p className="mt-3 text-sm leading-7 text-blue-100 sm:text-base">
+            <p className="mt-3 whitespace-pre-line text-sm leading-7 text-blue-100 sm:text-base [overflow-wrap:anywhere]">
               {e.subtitle}
             </p>
             <div className="mt-6 flex flex-wrap gap-4 text-xs font-bold text-blue-100">
@@ -177,23 +177,8 @@ export default async function EventDetail({
                 <ListChecks size={20} className="text-blue-600" /> Peraturan
                 Resmi
               </h2>
-              {rules.length ? (
-                rules.map((group) => (
-                  <div className="mb-5" key={group}>
-                    <h3 className="mb-2 text-sm font-extrabold text-blue-700">
-                      {group}
-                    </h3>
-                    <ol className="space-y-2 text-sm leading-6 text-slate-600">
-                      {e.writtenRules
-                        .filter((r) => r.group === group)
-                        .map((r, i) => (
-                          <li key={r.id}>
-                            {i + 1}. {r.content}
-                          </li>
-                        ))}
-                    </ol>
-                  </div>
-                ))
+              {e.writtenRules.length ? (
+                <RulesAccordion rules={e.writtenRules} />
               ) : (
                 <p className="text-sm text-slate-500">
                   Panitia belum menambahkan peraturan tertulis.

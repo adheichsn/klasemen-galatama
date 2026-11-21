@@ -2,7 +2,6 @@ import { AvatarScope, RankIdentity } from "@/components/player-avatar";
 import { rankAvatarTargets, type AvatarProfiles } from "@/lib/avatar-identity";
 export { PublicHeader } from "@/components/public-header";
 import { PublicHeader } from "@/components/public-header";
-import "@/styles/public-effects.css";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -382,30 +381,4 @@ export function Breadcrumb({ label }: { label: string }) {
     </nav>
   );
 }
-export function FaqAccordion({
-  questions,
-}: {
-  questions: { id: string; question: string; answer: string }[];
-}) {
-  return (
-    <div className="space-y-3">
-      {questions.map((item) => (
-        <details
-          key={item.id}
-          className="weji-faq group rounded-2xl border border-blue-100 bg-white"
-        >
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5 text-sm font-bold text-[#142A55]">
-            {item.question}
-            <ChevronRight
-              size={16}
-              className="shrink-0 text-blue-600 transition-transform group-open:rotate-90 motion-reduce:transition-none"
-            />
-          </summary>
-          <div className="border-t border-slate-100 px-5 pb-5 pt-4 text-sm leading-7 whitespace-pre-line text-slate-600">
-            {item.answer}
-          </div>
-        </details>
-      ))}
-    </div>
-  );
-}
+export { FaqAccordion } from "@/components/event-accordions";
