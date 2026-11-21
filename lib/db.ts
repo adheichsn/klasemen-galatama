@@ -9,6 +9,8 @@ import {
   applyEventLifecycle,
   type EventLifecycleAction,
 } from "@/lib/event-lifecycle";
+import { logServerFailure } from "./server-errors";
+import { projectPublicEvents } from "./public-event-projection";
 import { WEJI_ASSET_URL } from "@/lib/banner";
 import {
   changedPublicEventIds,
@@ -44,6 +46,11 @@ export function getDatabasePool(): Pool {
       statement_timeout: 10_000,
       application_name: "weji-arena-api",
     });
+    // An idle connection can fail during a network interruption. Without an
+    // error listener the pg Pool emits an unhandled EventEmitter error.
+    globalForDb.__wejiPool.on("error", (error) => {
+      logServerFailure("database-idle-pool", error);
+    });
     globalForDb.__wejiPoolFingerprint = fingerprint;
   }
   return globalForDb.__wejiPool;
@@ -73,7 +80,51 @@ export async function getDatabaseHealth() {
     to_regclass('public.weji_arena_player_links') IS NOT NULL AS player_links_ready,
     to_regclass('public.weji_arena_identity_audit') IS NOT NULL AS identity_audit_ready`);
   const tables = result.rows[0];
-  return { ready: !!tables && Object.values(tables).every(Boolean), tables };
+  // Check effective access, not just table existence. This is admin-only.
+  const securityResult = await db().query<{
+    name: string;
+    rls: boolean;
+    api_access: boolean;
+  }>(
+    `SELECT c.relname AS name, c.relrowsecurity AS rls,
+    EXISTS (SELECT 1 FROM pg_roles r WHERE r.rolname IN ('anon','authenticated','service_role')
+      AND (has_table_privilege(r.oid, c.oid, 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+        OR has_any_column_privilege(r.oid,c.oid,'SELECT,INSERT,UPDATE,REFERENCES'))) AS api_access
+    FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname = ANY($1::text[])
+    ORDER BY c.relname`,
+    [
+      [
+        "weji_arena_state",
+        "weji_arena_audit",
+        "weji_arena_assets",
+        "weji_arena_score_audit",
+        "weji_arena_event_audit",
+        "weji_arena_login_limits",
+        "weji_arena_players",
+        "weji_arena_player_links",
+        "weji_arena_identity_audit",
+      ],
+    ],
+  );
+  const security = securityResult.rows;
+  const securityReady =
+    security.length === 9 &&
+    security.every((row) => row.rls && !row.api_access);
+  const size = tables?.state_ready
+    ? await db().query<{ snapshot_bytes: number }>(
+        "SELECT coalesce(max(octet_length(payload::text)),0)::integer AS snapshot_bytes FROM public.weji_arena_state",
+      )
+    : null;
+  const snapshotBytes = size?.rows[0]?.snapshot_bytes ?? 0;
+  return {
+    ready: !!tables && Object.values(tables).every(Boolean) && securityReady,
+    tables,
+    securityReady,
+    security,
+    snapshotBytes,
+    snapshotSizeWarning: snapshotBytes >= 3_000_000,
+  };
 }
 
 export type ArenaSnapshot = { data: ArenaData; revision: number };
@@ -86,27 +137,7 @@ export async function getArenaSnapshot(): Promise<ArenaSnapshot> {
 }
 export async function getPublicEvents() {
   const { data } = await getArenaSnapshot();
-  return data.events
-    .filter((e) => e.published && !e.trashedAt)
-    .map((e) => ({
-      ...e,
-      // Public only needs these immutable score fields, not private staff correction notes.
-      entries: e.entries.map((entry) => ({
-        id: entry.id,
-        participantId: entry.participantId,
-        squadId: entry.squadId,
-        kind: entry.kind,
-        delta: entry.delta,
-        description: entry.kind === "catch" ? entry.description : "",
-        createdAt: entry.createdAt,
-        quantity: entry.quantity,
-        fishId: entry.fishId,
-        fishName: entry.fishName,
-        basePoints: entry.basePoints,
-        bonuses: entry.bonuses,
-        reversesEntryId: entry.reversesEntryId,
-      })),
-    }));
+  return projectPublicEvents(data.events);
 }
 export type SaveResult =
   | { ok: true; revision: number; data: ArenaData }
@@ -148,13 +179,13 @@ export async function saveArenaSnapshot(
     const result =
       expectedRevision === 0
         ? await client.query<{ revision: number }>(
-          "INSERT INTO weji_arena_state (id, revision, payload, updated_at) VALUES (1, 1, $1::jsonb, now()) ON CONFLICT (id) DO NOTHING RETURNING revision",
-          [JSON.stringify(safeValue)],
-        )
+            "INSERT INTO weji_arena_state (id, revision, payload, updated_at) VALUES (1, 1, $1::jsonb, now()) ON CONFLICT (id) DO NOTHING RETURNING revision",
+            [JSON.stringify(safeValue)],
+          )
         : await client.query<{ revision: number }>(
-          "UPDATE weji_arena_state SET revision = revision + 1, payload = $1::jsonb, updated_at = now() WHERE id = 1 AND revision = $2 RETURNING revision",
-          [JSON.stringify(safeValue), expectedRevision],
-        );
+            "UPDATE weji_arena_state SET revision = revision + 1, payload = $1::jsonb, updated_at = now() WHERE id = 1 AND revision = $2 RETURNING revision",
+            [JSON.stringify(safeValue), expectedRevision],
+          );
     if (!result.rowCount) {
       await client.query("ROLLBACK");
       return { ok: false, conflict: true };
@@ -315,8 +346,14 @@ export async function changeEventLifecycle(
         [id],
       );
       // Delete event-specific identity metadata, retaining reusable player profiles.
-      await client.query("DELETE FROM public.weji_arena_player_links WHERE event_id = $1", [id]);
-      await client.query("DELETE FROM public.weji_arena_identity_audit WHERE event_id = $1", [id]);
+      await client.query(
+        "DELETE FROM public.weji_arena_player_links WHERE event_id = $1",
+        [id],
+      );
+      await client.query(
+        "DELETE FROM public.weji_arena_identity_audit WHERE event_id = $1",
+        [id],
+      );
       // Remove uploaded banner only if no other tournament (including Trash)
       // still references it. External image URLs are never touched.
       const bannerUrl = applied.target.bannerUrl || "";

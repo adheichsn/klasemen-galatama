@@ -1,6 +1,9 @@
 import { NextRequest } from "next/server";
 import { getPublicEvents } from "@/lib/db";
-import { subscribePublicChanges } from "@/lib/public-broker";
+import {
+  listenerDatabaseUrl,
+  subscribePublicChanges,
+} from "@/lib/public-broker";
 import { validPublicEventId } from "@/lib/public-changes";
 
 export const runtime = "nodejs";
@@ -20,6 +23,12 @@ export async function GET(request: NextRequest) {
   } catch {
     return new Response("Database tidak tersedia", { status: 503 });
   }
+
+  if (!listenerDatabaseUrl())
+    return new Response(null, {
+      status: 204,
+      headers: { "Cache-Control": "no-store" },
+    });
 
   const encoder = new TextEncoder();
   let cleanup: () => void = () => {};

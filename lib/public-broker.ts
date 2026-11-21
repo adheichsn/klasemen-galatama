@@ -62,7 +62,13 @@ function stopHealthCheck() {
   broker.healthTimer = null;
 }
 function reconnectSoon() {
-  if (!broker.listeners.size || broker.retry || broker.client) return;
+  if (
+    !broker.listeners.size ||
+    broker.retry ||
+    broker.client ||
+    !listenerDatabaseUrl()
+  )
+    return;
   const delay = reconnectDelay(broker.retryAttempt++, Math.random());
   broker.retry = setTimeout(() => {
     broker.retry = null;

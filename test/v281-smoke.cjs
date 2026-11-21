@@ -85,6 +85,7 @@ async function exerciseStream() {
       getPublicEvents: async () => (visibility ? [{ id: "public-1" }] : []),
     },
     "@/lib/public-broker": {
+      listenerDatabaseUrl: () => "postgresql://test:5432/test",
       subscribePublicChanges(onUpdate, onStatus) {
         listener = onUpdate;
         status = onStatus;

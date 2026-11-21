@@ -132,7 +132,10 @@ assert.equal(
 );
 assert.equal(b.squads.find((s) => s.id === "s2").points, 1);
 assert.equal(b.netPoints, 6);
-const source = fs.readFileSync(path.join(root, "lib/db.ts"), "utf8");
+const source = fs.readFileSync(
+  path.join(root, "lib/public-event-projection.ts"),
+  "utf8",
+);
 for (const attr of [
   "fishId: entry.fishId",
   "fishName: entry.fishName",

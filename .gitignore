@@ -4,3 +4,8 @@ node_modules
 !.env.example
 *.tsbuildinfo
 .DS_Store
+
+# Local database backups must never be pushed to GitHub.
+/backups/
+*.dump
+*.backup

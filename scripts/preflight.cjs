@@ -58,6 +58,32 @@ if (process.env.VERCEL !== "1")
   warnings.push(
     "Tanpa trusted Vercel proxy, rate limit login menggunakan satu bucket bersama; terapkan WAF/reverse-proxy tepercaya untuk deployment non-Vercel.",
   );
+if (process.env.WEJI_SITE_URL) {
+  try {
+    const site = new URL(process.env.WEJI_SITE_URL.trim());
+    if (
+      site.protocol !== "https:" ||
+      site.username ||
+      site.password ||
+      site.port ||
+      site.pathname !== "/" ||
+      site.search ||
+      site.hash ||
+      !site.hostname.includes(".") ||
+      site.hostname.endsWith(".localhost") ||
+      /^[\d.]+$/.test(site.hostname)
+    )
+      throw new Error();
+  } catch {
+    errors.push(
+      "WEJI_SITE_URL harus berupa origin HTTPS production tanpa path atau query",
+    );
+  }
+} else if (!process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+  warnings.push(
+    "Domain SEO belum diisi; production perlu WEJI_SITE_URL atau VERCEL_PROJECT_PRODUCTION_URL.",
+  );
+}
 for (const warning of warnings) console.warn(`WARNING: ${warning}`);
 for (const error of errors) console.error(`ERROR: ${error}`);
 if (errors.length) {
@@ -67,5 +93,5 @@ if (errors.length) {
   process.exitCode = 1;
 } else
   console.log(
-    "PASS: konfigurasi server WEJI ARENA V3.0 terisi (koneksi database belum diuji)",
+    "PASS: konfigurasi server WEJI ARENA V3.2 terisi (koneksi database belum diuji)",
   );

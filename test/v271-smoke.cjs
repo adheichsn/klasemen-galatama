@@ -221,7 +221,11 @@ const route = fs.readFileSync(
   path.join(root, "app/api/admin/events/route.ts"),
   "utf8",
 );
-const publicEvents = fs.readFileSync(path.join(root, "lib/db.ts"), "utf8");
+const publicEvents = fs.readFileSync(
+  path.join(root, "lib/public-event-projection.ts"),
+  "utf8",
+);
+assert.match(db, /return projectPublicEvents\(data.events\)/);
 assert.match(route, /isAdminAuthenticated\(\)/);
 assert.match(route, /sameOrigin\(request\)/);
 assert.match(db, /confirmedTitle !== applied\.target\.title/);

@@ -14,10 +14,12 @@ export default function PublicAutoRefresh({
   eventId,
   intervalMs = FALLBACK_POLL_MS,
   dark = false,
+  streamingEnabled = true,
 }: {
   eventId?: string;
   intervalMs?: number;
   dark?: boolean;
+  streamingEnabled?: boolean;
 }) {
   const router = useRouter();
   const [connected, setConnected] = useState(false);
@@ -60,6 +62,7 @@ export default function PublicAutoRefresh({
         !alive ||
         !visible() ||
         !eventId ||
+        !streamingEnabled ||
         typeof EventSource === "undefined" ||
         source
       )
@@ -122,19 +125,19 @@ export default function PublicAutoRefresh({
       window.clearInterval(poll);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [eventId, intervalMs, router]);
+  }, [eventId, intervalMs, router, streamingEnabled]);
 
   return (
     <span
       role="status"
       className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[10px] font-extrabold ${dark ? "bg-white/10 text-blue-100" : "bg-blue-50 text-blue-700"}`}
     >
-      {connected ? (
+      {streamingEnabled && connected ? (
         <Radio size={13} className="text-emerald-400" />
       ) : (
         <WifiOff size={13} className="opacity-70" />
       )}
-      {connected
+      {streamingEnabled && connected
         ? "Terhubung LIVE | update otomatis"
         : `Mode cadangan | refresh ${Math.round(Math.max(5000, intervalMs) / 1000)} detik`}
     </span>

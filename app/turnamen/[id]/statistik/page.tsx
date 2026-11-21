@@ -1,3 +1,4 @@
+import { listenerDatabaseUrl } from "@/lib/public-broker";
 import { eventMetadata } from "@/lib/seo-server";
 import { eventSeoAllowed, eventPath, eventSeoPath } from "@/lib/seo-core";
 import { BreadcrumbJsonLd } from "@/components/seo-json-ld";
@@ -61,7 +62,11 @@ export default async function StatisticsPage({
               <ArrowLeft size={15} /> Kembali ke Klasemen
             </Link>
             {event.status === "live" ? (
-              <PublicAutoRefresh dark eventId={event.id} />
+              <PublicAutoRefresh
+                streamingEnabled={!!listenerDatabaseUrl()}
+                dark
+                eventId={event.id}
+              />
             ) : event.status === "finished" ? (
               <span className="inline-flex items-center gap-2 text-xs text-blue-100">
                 <LockKeyhole size={15} /> Statistik hasil final

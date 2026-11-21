@@ -1,3 +1,4 @@
+import { listenerDatabaseUrl } from "@/lib/public-broker";
 import { eventMetadata } from "@/lib/seo-server";
 import { eventSeoAllowed, eventPath } from "@/lib/seo-core";
 import { BreadcrumbJsonLd } from "@/components/seo-json-ld";
@@ -104,7 +105,10 @@ export default async function EventDetail({
         </section>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           {e.status === "live" ? (
-            <PublicAutoRefresh eventId={e.id} />
+            <PublicAutoRefresh
+              streamingEnabled={!!listenerDatabaseUrl()}
+              eventId={e.id}
+            />
           ) : (
             <span />
           )}

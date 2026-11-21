@@ -1,3 +1,4 @@
+import { listenerDatabaseUrl } from "@/lib/public-broker";
 import { publicAvatarProfiles } from "@/lib/avatar-identity-db";
 import { AvatarScope } from "@/components/player-avatar";
 import type { Metadata } from "next";
@@ -63,7 +64,11 @@ export default async function SpectatorPage({
             </Link>
             <div className="flex flex-wrap items-center gap-3">
               {event.status === "live" && (
-                <PublicAutoRefresh eventId={event.id} dark />
+                <PublicAutoRefresh
+                  streamingEnabled={!!listenerDatabaseUrl()}
+                  eventId={event.id}
+                  dark
+                />
               )}
               <Link
                 href={`/turnamen/${encodeURIComponent(event.id)}`}
