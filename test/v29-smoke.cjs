@@ -148,7 +148,7 @@ const publicPage = fs.readFileSync(
 );
 assert.match(
   publicPage,
-  /publicEvents\(\)/,
+  /publicEvents\((?:id)?\)/,
   "statistics use published-only public event source",
 );
 assert.match(publicPage, /notFound\(\)/);

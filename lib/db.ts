@@ -135,7 +135,17 @@ export async function getArenaSnapshot(): Promise<ArenaSnapshot> {
   if (!result.rows.length) return { revision: 0, data: initialArena() };
   return { data: result.rows[0].payload, revision: result.rows[0].revision };
 }
-export async function getPublicEvents() {
+export async function getPublicEvents(eventId?: string) {
+  if (eventId !== undefined) {
+    const result = await db().query<{ event: ArenaData["events"][number] }>(
+      `SELECT event FROM weji_arena_state
+       CROSS JOIN LATERAL jsonb_array_elements(payload->'events') AS items(event)
+       WHERE id = 1 AND event->>'id' = $1 AND event->'published' = 'true'::jsonb
+         AND COALESCE(event->>'trashedAt', '') = '' LIMIT 1`,
+      [eventId],
+    );
+    return projectPublicEvents(result.rows.map(row => row.event));
+  }
   const { data } = await getArenaSnapshot();
   return projectPublicEvents(data.events);
 }

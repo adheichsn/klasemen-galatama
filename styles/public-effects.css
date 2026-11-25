@@ -127,3 +127,31 @@
         display: none;
     }
 }
+
+@media (max-width: 639px) {
+    .public-ranking-table {
+        table-layout: fixed;
+        overflow-wrap: anywhere;
+    }
+
+    .public-ranking-table :is(th, td) {
+        padding: .65rem .375rem;
+    }
+
+    .public-ranking-table th:first-child {
+        width: 3.25rem;
+    }
+
+    .public-ranking-table th:last-child {
+        width: 4.75rem;
+    }
+
+    .public-ranking-table :is(th, td):nth-child(3) {
+        display: none;
+    }
+
+    .public-ranking-table td:first-child>span {
+        flex-direction: column;
+        gap: .125rem;
+    }
+}

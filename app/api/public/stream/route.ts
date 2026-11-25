@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     return new Response("Event tidak valid", { status: 400 });
   try {
     // Do not establish a subscription for a private, trashed, or non-existent event.
-    const published = await getPublicEvents();
+    const published = await getPublicEvents(eventId);
     if (!published.some((event) => event.id === eventId))
       return new Response("Event tidak tersedia", { status: 404 });
   } catch {
@@ -31,11 +31,11 @@ export async function GET(request: NextRequest) {
     });
 
   const encoder = new TextEncoder();
-  let cleanup: () => void = () => {};
+  let cleanup: () => void = () => { };
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
       let active = true;
-      let stopListening: () => void = () => {};
+      let stopListening: () => void = () => { };
       let keepalive: ReturnType<typeof setInterval> | undefined;
       let reconnect: ReturnType<typeof setTimeout> | undefined;
       const send = (message: string) => {

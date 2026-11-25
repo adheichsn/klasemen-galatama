@@ -12,9 +12,9 @@ function publicEntry(entry: ScoreEntry): ScoreEntry {
     description:
       entry.kind === "catch"
         ? [
-            entry.fishName || "Tangkapan baru",
-            ...(entry.bonuses ?? []).map((b) => b.name),
-          ].join(" + ")
+          entry.fishName || "Tangkapan baru",
+          ...(entry.bonuses ?? []).map((b) => b.name),
+        ].join(" + ")
         : "",
     createdAt: entry.createdAt,
     quantity: entry.quantity,
@@ -63,12 +63,12 @@ export function projectPublicEvents(events: ArenaEvent[]): ArenaEvent[] {
         points: b.points,
         enabled: b.enabled,
       })),
-      writtenRules: e.writtenRules.map((r) => ({
+      writtenRules: (e.writtenRules ?? []).map((r) => ({
         id: r.id,
         group: r.group,
         content: r.content,
       })),
-      faqs: e.faqs.map((f) => ({
+      faqs: (e.faqs ?? []).map((f) => ({
         id: f.id,
         question: f.question,
         answer: f.answer,

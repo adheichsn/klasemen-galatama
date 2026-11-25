@@ -50,7 +50,7 @@ export default async function EventDetail({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const { events, unavailable } = await publicEvents();
+  const { events, unavailable } = await publicEvents(id);
   if (unavailable) return <PublicEventUnavailable />;
   const e = events.find((x) => x.id === id);
   if (!e) notFound();
@@ -138,7 +138,7 @@ export default async function EventDetail({
           <LiveMatchClock event={e} />
         )}
         <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
-          <div className="space-y-7">
+          <div className="min-w-0 space-y-7">
             <PublicRanking event={e} />
             {(e.status === "live" || e.status === "finished") && (
               <LiveActivityFeed event={e} />

@@ -409,6 +409,9 @@ export default function ArenaApp() {
     return (
       <button
         key={item.id}
+        aria-label={item.label}
+        title={item.label}
+        aria-current={page === item.id ? "page" : undefined}
         className={`nav-item flex items-center gap-[13px] relative w-full p-[13px_14px] rounded-[10px] mb-[6px] text-[#aabbd9] bg-transparent text-left text-[13px] font-bold [transition:.2s_ease] ${page === item.id ? "active" : ""}`}
         onClick={() => go(item.id)}
       >
@@ -1113,7 +1116,7 @@ export default function ArenaApp() {
                       <table className="leaderboard-table [border-collapse:collapse] min-w-[600px] w-full text-left">
                         <thead>
                           <tr>
-                            <th>PERINGKAT</th>
+                            <th><span className="sm:hidden">Pos.</span><span className="hidden sm:inline">PERINGKAT</span></th>
                             <th>
                               {e.mode === "solo"
                                 ? "PESERTA"
@@ -1152,7 +1155,8 @@ export default function ArenaApp() {
                                       />
                                     )}
                                   </div>
-                                </td>
+                                <span className="mt-1 block text-[11px] text-slate-500 sm:hidden">{fmt(row.catches)} tangkapan</span>
+                  </td>
                                 <td>
                                   <span className="catch-count inline-flex items-center gap-[6px] text-[#6e829f]">
                                     <Fish size={15} />

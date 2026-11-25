@@ -315,7 +315,7 @@ export function PublicRanking({
       </div>
       {rows.length ? (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[460px] text-left">
+          <table className="public-ranking-table w-full text-left">
             <thead>
               <tr className="bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
                 <th className="px-5 py-3">Posisi</th>
@@ -347,6 +347,7 @@ export function PublicRanking({
                       subtitle={rank.subtitle}
                       team={event.mode !== "solo"}
                     />
+                  <span className="mt-1 block text-[11px] text-slate-500 sm:hidden">{fmt(rank.catches)} tangkapan</span>
                   </td>
                   <td className="px-5 py-3 text-slate-500">
                     {fmt(rank.catches)}

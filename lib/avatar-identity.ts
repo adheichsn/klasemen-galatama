@@ -3,13 +3,21 @@ import { identityRosterKey, safeAvatarUrl, validIdentityUsername, validRobloxId 
 
 /** Read-only presentation data; never included in ArenaData or score writes. */
 export type AvatarProfile = { robloxId: string; username: string; displayName: string; avatarUrl: string | null };
+
 export type AvatarTarget = string | null;
+
 export type AvatarProfiles = Record<string, AvatarProfile>;
+
 export type AvatarLinkRow = { event_id: string; participant_id: string; roster_key: string; roblox_id: string; username: string; display_name: string; avatar_url: string | null };
+
+export function participantAvatarTarget(event: ArenaEvent, p: ArenaEvent["participants"][number]): string {
+  return JSON.stringify([event.id, p.id, identityRosterKey(event, p)]);
+}
 export function avatarTarget(event: ArenaEvent, participantId: string): AvatarTarget {
   const p = event.participants.find(p => p.id === participantId);
-  return p ? JSON.stringify([event.id, p.id, identityRosterKey(event, p)]) : null;
+  return p ? participantAvatarTarget(event, p) : null;
 }
+
 export function rankAvatarTargets(event: ArenaEvent, id: string): AvatarTarget[] {
   if (event.mode === "solo") return [avatarTarget(event, id)];
   // Include legacy contributors credited to this squad by a ledger snapshot.
@@ -17,6 +25,7 @@ export function rankAvatarTargets(event: ArenaEvent, id: string): AvatarTarget[]
   for (const entry of event.entries) if (entry.squadId === id) ids.add(entry.participantId);
   return [...ids].map(participantId => avatarTarget(event, participantId));
 }
+
 export function projectAvatarProfiles(events: ArenaEvent[], rows: AvatarLinkRow[]): AvatarProfiles {
   const eligible = new Set(events.filter(e => !e.trashedAt).flatMap(e => e.participants.map(p => avatarTarget(e, p.id))));
   const profiles: AvatarProfiles = {};
@@ -27,9 +36,11 @@ export function projectAvatarProfiles(events: ArenaEvent[], rows: AvatarLinkRow[
   }
   return profiles;
 }
+
 export function avatarProfile(profiles: AvatarProfiles, target: AvatarTarget): AvatarProfile | undefined {
   return target && Object.hasOwn(profiles, target) ? profiles[target] : undefined;
 }
+
 /** Legacy aggregate is grouped by recorded username; only decorate when every
  * contributing occurrence resolves to the same confirmed Roblox ID. */
 export function consistentAvatarTarget(profiles: AvatarProfiles, targets: AvatarTarget[]): AvatarTarget {

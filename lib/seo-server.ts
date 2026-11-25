@@ -30,7 +30,7 @@ export const publicSeoDirectory = cache(async () => {
   };
 });
 export async function eventMetadata(id: string, kind: EventPageKind) {
-  const { events, unavailable } = await publicEvents();
+  const { events, unavailable } = await publicEvents(id);
   const event = events.find((e) => e.id === id && e.published && !e.trashedAt);
   if (
     unavailable ||

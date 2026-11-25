@@ -234,7 +234,7 @@ assert.equal(JSON.stringify(standings(a)), rankingBefore);
   );
   assert.match(
     source("components/arena-score-modal.tsx"),
-    /PlayerIdentity\s+target=\{avatarTarget\(e, p.id\)\}/,
+    /PlayerIdentity\s+target=\{selected.target\}/,
   );
   assert.match(
     source("components/player-avatar.tsx"),

@@ -1,3 +1,4 @@
+import { PublicEventUnavailable } from "@/components/public-auto-refresh";
 import { eventMetadata } from "@/lib/seo-server";
 import { eventSeoAllowed, eventPath, eventSeoPath } from "@/lib/seo-core";
 import { BreadcrumbJsonLd } from "@/components/seo-json-ld";
@@ -41,7 +42,8 @@ export default async function FinalResultsPage({
   const { id } = await params;
   // Use published and non-trashed events only: a direct URL cannot reveal a
   // draft, hidden, or deleted tournament, even when the ID is known.
-  const { events } = await publicEvents();
+  const { events, unavailable } = await publicEvents(id);
+  if (unavailable) return <PublicEventUnavailable />;
   const event = events.find((e) => e.id === id && e.status === "finished");
   if (!event) notFound();
   const rows = resultRows(event);

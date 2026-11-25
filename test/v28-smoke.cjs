@@ -153,7 +153,7 @@ const stream = fs.readFileSync(
 );
 assert.match(
   stream,
-  /getPublicEvents\(\)/,
+  /getPublicEvents\(eventId\)/,
   "subscriptions validate event visibility",
 );
 assert.match(stream, /subscribePublicChanges\(/);

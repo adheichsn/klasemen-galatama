@@ -27,7 +27,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const { events } = await publicEvents();
+  const { events } = await publicEvents(id);
   const event = events.find((item) => item.id === id);
   return {
     title: event ? `Spectator ${event.title}` : "Spectator",
@@ -41,7 +41,7 @@ export default async function SpectatorPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const { events, unavailable } = await publicEvents();
+  const { events, unavailable } = await publicEvents(id);
   if (unavailable) return <PublicEventUnavailable />;
   const event = events.find((item) => item.id === id);
   if (!event) notFound();
@@ -116,14 +116,14 @@ export default async function SpectatorPage({
             <LiveMatchClock event={event} />
           )}
           <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(300px,.8fr)]">
-            <div className="space-y-5">
+            <div className="min-w-0 space-y-5">
               <PublicRanking event={event} />
               <p className="flex items-center gap-2 text-xs text-slate-400">
                 <ShieldCheck size={14} /> Tampilan penonton | tidak ada akses
                 untuk mengubah poin atau aturan.
               </p>
             </div>
-            <div className="space-y-5">
+            <div className="min-w-0 space-y-5">
               <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
                 <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-blue-300">
                   <Trophy size={14} className="mr-1 inline" /> Kompetisi

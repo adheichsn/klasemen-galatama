@@ -109,6 +109,10 @@ for (const mode of ["solo", "duo", "squad"]) {
       },
     ],
   };
+  const legacy = projectPublicEvents([{ ...event, faqs: null, writtenRules: undefined }])[0];
+  assert.deepEqual(legacy.faqs, []);
+  assert.deepEqual(legacy.writtenRules, []);
+  assert.equal(standings(legacy)[0].points, standings(event)[0].points);
   const before = JSON.stringify(event);
   const publicEvents = projectPublicEvents([
     event,

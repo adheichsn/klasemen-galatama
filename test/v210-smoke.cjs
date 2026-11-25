@@ -183,7 +183,7 @@ for (const rel of [
   assert.ok(fs.existsSync(path.join(root, rel)), `${rel} exists`);
   assert.match(
     fs.readFileSync(path.join(root, rel), "utf8"),
-    /publicEvents\(\)/,
+    /publicEvents\((?:id)?\)/,
   );
 }
 const resultPage = fs.readFileSync(

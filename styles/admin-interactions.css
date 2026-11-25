@@ -1495,3 +1495,57 @@
         transition: none !important;
     }
 }
+
+@media (min-width: 761px) and (max-width: 990px) {
+    .sidebar .nav-item {
+        flex-direction: column;
+        gap: 4px;
+        padding: 8px 2px;
+    }
+
+    .sidebar .nav-item>span:first-of-type {
+        display: block;
+        font-size: 10px;
+        line-height: 1.2;
+        text-align: center;
+    }
+}
+
+@media (max-width: 639px) {
+    .leaderboard-table {
+        min-width: 0;
+        table-layout: fixed;
+        overflow-wrap: anywhere;
+    }
+
+    .leaderboard-table :is(th, td) {
+        padding: 10px 6px;
+    }
+
+    .leaderboard-table th:first-child {
+        width: 3.2rem;
+    }
+
+    .leaderboard-table th:nth-child(4) {
+        width: 4.75rem;
+    }
+
+    .leaderboard-table :is(th, td):is(:nth-child(3), :nth-child(5)) {
+        display: none;
+    }
+
+    .score-actions {
+        padding: .5rem;
+        gap: .25rem;
+    }
+
+    .score-actions button {
+        min-height: 44px;
+        padding: .5rem;
+        white-space: normal;
+    }
+
+    .score-actions button svg {
+        display: none;
+    }
+}

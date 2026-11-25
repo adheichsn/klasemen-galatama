@@ -220,7 +220,7 @@ for (const f of [
 ]) {
   const source = fs.readFileSync(path.join(root, f), "utf8");
   assert.match(source, /ChampionshipPodium/);
-  assert.match(source, /publicEvents\(\)/);
+  assert.match(source, /publicEvents\((?:id)?\)/);
 }
 console.log(
   "PASS: V3.2E public edition ordering, mode champions, per-account deduplication, historical podium, participant search, reversals, snapshot team contributions, immutable results",

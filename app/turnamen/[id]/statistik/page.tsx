@@ -26,7 +26,7 @@ export default async function StatisticsPage({
 }) {
   const { id } = await params;
   // Uses the same published, non-trashed filter as the public event page.
-  const { events, unavailable } = await publicEvents();
+  const { events, unavailable } = await publicEvents(id);
   if (unavailable) return <PublicEventUnavailable />;
   const event = events.find((item) => item.id === id);
   if (!event) notFound();

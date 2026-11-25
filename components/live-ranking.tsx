@@ -100,7 +100,7 @@ export function LiveRanking({
         </div>
       )}
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[460px] text-left">
+        <table className="public-ranking-table w-full text-left">
           <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-wider text-slate-500">
             <tr>
               <th className="px-4 py-3 sm:px-6">Rank</th>
@@ -165,6 +165,7 @@ export function LiveRanking({
                       subtitle={r.subtitle}
                       team={event.mode !== "solo"}
                     />
+                  <span className="mt-1 block text-[11px] text-slate-500 sm:hidden">{fmt(r.catches)} tangkapan</span>
                   </td>
                   <td className="px-3 py-3 tabular-nums text-slate-500">
                     {fmt(r.catches)}

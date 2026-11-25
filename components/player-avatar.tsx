@@ -6,6 +6,7 @@ import { UserRound, Users } from "lucide-react";
 import { avatarProfile, type AvatarProfiles, type AvatarTarget, type AvatarProfile } from "@/lib/avatar-identity";
 import { safeAvatarUrl, validRobloxId } from "@/lib/player-identity";
 const IdentityContext = createContext<AvatarProfiles>({});
+export function useAvatarProfiles() { return useContext(IdentityContext); }
 const PublicIdentityContext = createContext(false);
 export function AvatarScope({ profiles, children, publicLinks = false }: { profiles: AvatarProfiles; children: ReactNode; publicLinks?: boolean }) {
   return <IdentityContext.Provider value={profiles}><PublicIdentityContext.Provider value={publicLinks}>{children}</PublicIdentityContext.Provider></IdentityContext.Provider>;
