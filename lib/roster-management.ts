@@ -1,3 +1,4 @@
+import { sameJson } from "./json-equal";
 import type { ArenaData, ArenaEvent, Participant } from "./arena-types";
 import { completeDuoRoster } from "./arena-rules";
 import { newId } from "./arena-data";
@@ -73,7 +74,7 @@ export function addRosterMember(
     if (
       squadLimit(event) > 0 &&
       event.participants.filter((p) => p.squadId === squadId).length >=
-        squadLimit(event)
+      squadLimit(event)
     )
       return null;
   }
@@ -323,7 +324,7 @@ export function validateRosterChange(
     (before.status !== "draft" ||
       before.rosterLocked ||
       before.entries.length > 0) &&
-    JSON.stringify(details(before)) !== JSON.stringify(details(next))
+    !sameJson(details(before), details(next))
   ) {
     // Explicit unlock of a draft roster is allowed; never unlock once LIVE.
     if (
@@ -347,7 +348,7 @@ export function validateRosterChange(
   if (
     new Set(next.squads.map((s) => s.id)).size !== next.squads.length ||
     new Set(next.participants.map((p) => p.id)).size !==
-      next.participants.length
+    next.participants.length
   )
     return "ID roster harus unik.";
   if (next.mode !== "solo") {
@@ -368,7 +369,7 @@ export function validateRosterChange(
       next.mode !== "solo" &&
       squadLimit(next) > 0 &&
       next.participants.filter((p) => p.squadId === squad.id).length >
-        squadLimit(next)
+      squadLimit(next)
     )
       return `Squad ${squad.name} melampaui batas anggota.`;
   }

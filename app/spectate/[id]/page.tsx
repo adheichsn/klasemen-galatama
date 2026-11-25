@@ -16,7 +16,7 @@ import { publicEvents } from "@/lib/public-events";
 import { PublicRanking } from "@/components/public-site";
 import { LiveActivityFeed } from "@/components/live-activity-feed";
 import LiveMatchClock from "@/components/live-match-clock";
-import PublicAutoRefresh from "@/components/public-auto-refresh";
+import PublicAutoRefresh, { PublicEventUnavailable } from "@/components/public-auto-refresh";
 import { standings } from "@/lib/arena-utils";
 
 export const dynamic = "force-dynamic";
@@ -41,7 +41,8 @@ export default async function SpectatorPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const { events } = await publicEvents();
+  const { events, unavailable } = await publicEvents();
+  if (unavailable) return <PublicEventUnavailable />;
   const event = events.find((item) => item.id === id);
   if (!event) notFound();
   const ranking = standings(event);
@@ -63,7 +64,7 @@ export default async function SpectatorPage({
               </span>
             </Link>
             <div className="flex flex-wrap items-center gap-3">
-              {event.status === "live" && (
+              {event.status !== "finished" && (
                 <PublicAutoRefresh
                   streamingEnabled={!!listenerDatabaseUrl()}
                   eventId={event.id}
@@ -140,7 +141,7 @@ export default async function SpectatorPage({
             </div>
           </div>
           <footer className="mt-8 border-t border-white/10 pt-4 text-xs text-slate-500">
-            Perubahan baru terlihat, setelah panitia menyimpan ke server.
+            Skor mengikuti aksi pertandingan yang sudah dikonfirmasi server.
           </footer>
         </div>
       </div>

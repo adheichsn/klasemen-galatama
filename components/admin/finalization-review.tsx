@@ -15,12 +15,15 @@ export default function FinalizationReview({
   dirty,
   onClose,
   onConfirm,
+  busy,
 }: {
   event: ArenaEvent;
   dirty: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: () => Promise<string | null>;
+  busy: boolean;
 }) {
+  const [error, setError] = useState("");
   const [approved, setApproved] = useState(false);
   const leaders = standings(event).slice(0, 3);
   const catches = event.entries.filter(
@@ -33,7 +36,7 @@ export default function FinalizationReview({
     <Dialog
       open
       onOpenChange={(open) => {
-        if (!open) onClose();
+        if (!open && !busy) onClose();
       }}
     >
       <DialogContent className="!w-[min(95vw,620px)] !max-w-[620px] !p-0">
@@ -113,9 +116,15 @@ export default function FinalizationReview({
               </label>
             )}
           </div>
+          {error && (
+            <p role="alert" className="px-5 text-sm text-rose-700">
+              {error}
+            </p>
+          )}
           <footer className="flex flex-wrap justify-end gap-2 border-t border-slate-100 p-5">
             <button
               type="button"
+              disabled={busy}
               onClick={onClose}
               className="rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-bold text-slate-700"
             >
@@ -123,8 +132,14 @@ export default function FinalizationReview({
             </button>
             <button
               type="button"
-              disabled={!approved || dirty}
-              onClick={onConfirm}
+              disabled={!approved || dirty || busy}
+              onClick={async () => {
+                const message = await onConfirm();
+                if (message) {
+                  setError(message);
+                  setApproved(false);
+                }
+              }}
               className="rounded-xl bg-rose-600 px-4 py-2.5 text-xs font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-40"
             >
               <LockKeyhole className="mr-2 inline" size={15} /> Kunci Hasil

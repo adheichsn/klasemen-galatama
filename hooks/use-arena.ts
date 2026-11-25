@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import type {
   ArenaData,
   ArenaEvent,
-  EventStatus,
   EventMode,
   TieBreaker,
   FishRule,
@@ -33,13 +32,9 @@ import {
   playerKey,
   squadKey,
 } from "@/lib/roster-management";
-import {
-  startMatch,
-  pauseMatch,
-  resumeMatch,
-  finishMatch,
-  resetDraftClock,
-} from "@/lib/match-operations";
+import { resetDraftClock } from "@/lib/match-operations";
+import { useMatchClock } from "./use-match-clock";
+import type { LiveCommand } from "@/lib/live-command";
 import {
   canAssignSquad,
   completeDuoRoster,
@@ -51,7 +46,6 @@ export function useArena() {
   const [data, setData] = useState<ArenaData>(initialArena);
   const [ready, setReady] = useState(false);
   const [migrated, setMigrated] = useState(false);
-  const [now, setNow] = useState(0);
   const [revision, setRevision] = useState(0);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -95,7 +89,6 @@ export function useArena() {
           ),
         );
         setRevision(snapshot.revision);
-        setNow(Date.now());
         setReady(true);
       } catch (error) {
         if (!cancelled)
@@ -187,46 +180,114 @@ export function useArena() {
       return false;
     }
   };
-  useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
   const active =
     data.events.find((e) => e.id === data.activeEventId) || data.events[0];
+  const { now } = useMatchClock(
+    active?.id ?? "",
+    ready && active?.status === "live",
+  );
   const remaining = active ? secondsLeft(active.timer, now || Date.now()) : 0;
-  useEffect(() => {
-    if (
-      !ready ||
-      !active ||
-      active.timer.runningSince === null ||
-      remaining > 0
-    )
-      return;
-    setData((prev) => ({
-      ...prev,
-      events: prev.events.map((e) =>
-        e.id === active.id
-          ? { ...e, timer: { ...e.timer, remainingSec: 0, runningSince: null } }
-          : e,
-      ),
-    }));
-  }, [ready, active, remaining]);
+  const matchLock = useRef(false);
+  const pendingMatch = useRef<{
+    key: string;
+    revision: number;
+    operationId: string;
+  } | null>(null);
+  const [matchBusy, setMatchBusy] = useState(false);
+  const runMatch = async (command: LiveCommand): Promise<string | null> => {
+    if (dirty) return "Simpan perubahan konfigurasi terlebih dahulu.";
+    if (!ready || saving || eventBusy || matchLock.current)
+      return "Tunggu proses sebelumnya selesai.";
+    const key = JSON.stringify([active.id, command]);
+    const pending = pendingMatch.current;
+    const operation =
+      pending?.key === key && pending.revision === revision
+        ? pending
+        : { key, revision, operationId: newId() };
+    pendingMatch.current = operation;
+    matchLock.current = true;
+    setMatchBusy(true);
+    try {
+      const response = await fetch("/api/admin/match", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventId: active.id,
+          revision,
+          operationId: operation.operationId,
+          command,
+        }),
+      });
+      const result = await response.json();
+      if (
+        result.snapshot &&
+        validArena(result.snapshot.data) &&
+        Number.isSafeInteger(result.snapshot.revision)
+      ) {
+        const fresh = result.snapshot.data as ArenaData;
+        const updated = fresh.events.some(
+          (e) => e.id === active.id && !e.trashedAt,
+        )
+          ? { ...fresh, activeEventId: active.id }
+          : fresh;
+        skipDirtyEffect.current = true;
+        dataRef.current = updated;
+        setData(updated);
+        setRevision(result.snapshot.revision);
+        persistedEntryIds.current = new Set(
+          updated.events.flatMap((e) => e.entries.map((x) => x.id)),
+        );
+      } else if (response.ok) {
+        const entry: ScoreEntry | null = result.entry;
+        const updated = {
+          ...data,
+          events: data.events.map((e) =>
+            e.id === active.id
+              ? {
+                ...e,
+                status: result.status,
+                timer: result.timer,
+                startedAt: result.startedAt,
+                finishedAt: result.finishedAt,
+                entries: entry ? [entry, ...e.entries] : e.entries,
+              }
+              : e,
+          ),
+        };
+        skipDirtyEffect.current = true;
+        if (entry) persistedEntryIds.current.add(entry.id);
+        dataRef.current = updated;
+        setData(updated);
+        setRevision(result.revision);
+      }
+      if (response.status < 500) pendingMatch.current = null;
+      if (!response.ok) return result.error || "Aksi belum tersimpan.";
+      setSaveError("");
+      return null;
+    } catch {
+      return "Konfirmasi server belum diterima. Coba kirim kembali.";
+    } finally {
+      matchLock.current = false;
+      setMatchBusy(false);
+    }
+  };
   const update = (fn: (e: ArenaEvent) => ArenaEvent, allowFinished = false) =>
     setData((prev) => ({
       ...prev,
       events: prev.events.map((e) =>
         e.id === prev.activeEventId &&
-        (allowFinished || e.status !== "finished")
+          (allowFinished || e.status !== "finished")
           ? fn(e)
           : e,
       ),
     }));
-  const setActive = (id: string) =>
-    setData((prev) =>
-      prev.events.some((e) => e.id === id)
-        ? { ...prev, activeEventId: id }
-        : prev,
-    );
+  const setActive = (id: string) => {
+    if (id === data.activeEventId || !data.events.some((e) => e.id === id))
+      return;
+    skipDirtyEffect.current = true;
+    setData({ ...data, activeEventId: id });
+  };
   const create = (mode: EventMode = "solo") => {
     const e = newEvent(`Galatama ${mode.toUpperCase()} Baru`, mode);
     setData((prev) => ({
@@ -439,13 +500,6 @@ export function useArena() {
         e.historical && e.status === "draft" ? e : { ...e, published: value },
       true,
     );
-  const status = (value: EventStatus) =>
-    update((e) => {
-      if (value === "live") return startMatch(e);
-      if (value === "finished") return finishMatch(e);
-      // Finished tournaments are final. No status rollback here.
-      return e;
-    });
   const setDuration = (mins: number) =>
     update((e) => {
       const sec = Math.round(mins * 60);
@@ -454,15 +508,11 @@ export function useArena() {
         sec >= 60 &&
         sec <= 86400
         ? {
-            ...e,
-            timer: { durationSec: sec, remainingSec: sec, runningSince: null },
-          }
+          ...e,
+          timer: { durationSec: sec, remainingSec: sec, runningSince: null },
+        }
         : e;
     });
-  const toggleTimer = () =>
-    update((e) =>
-      e.timer.runningSince === null ? resumeMatch(e) : pauseMatch(e),
-    );
   const resetTimer = () => update(resetDraftClock);
   const addFish = (name: string, points: number) => {
     if (!name.trim() || !validPoints(points)) return;
@@ -470,17 +520,17 @@ export function useArena() {
       e.fish.length >= 500
         ? e
         : {
-            ...e,
-            fish: [
-              ...e.fish,
-              {
-                id: newId(),
-                name: name.trim().slice(0, 70),
-                points,
-                enabled: true,
-              },
-            ],
-          },
+          ...e,
+          fish: [
+            ...e.fish,
+            {
+              id: newId(),
+              name: name.trim().slice(0, 70),
+              points,
+              enabled: true,
+            },
+          ],
+        },
     );
   };
   const changeFish = (id: string, fields: Partial<FishRule>) =>
@@ -496,17 +546,17 @@ export function useArena() {
       e.bonuses.length >= 200
         ? e
         : {
-            ...e,
-            bonuses: [
-              ...e.bonuses,
-              {
-                id: newId(),
-                name: name.trim().slice(0, 70),
-                points,
-                enabled: true,
-              },
-            ],
-          },
+          ...e,
+          bonuses: [
+            ...e.bonuses,
+            {
+              id: newId(),
+              name: name.trim().slice(0, 70),
+              points,
+              enabled: true,
+            },
+          ],
+        },
     );
   };
   const changeBonus = (id: string, fields: Partial<BonusRule>) =>
@@ -604,8 +654,8 @@ export function useArena() {
   const setRosterLocked = (locked: boolean) =>
     update((e) =>
       e.status === "draft" &&
-      e.entries.length === 0 &&
-      (!locked || completeDuoRoster(e))
+        e.entries.length === 0 &&
+        (!locked || completeDuoRoster(e))
         ? { ...e, rosterLocked: locked }
         : e,
     );
@@ -676,15 +726,15 @@ export function useArena() {
           fields.squadId &&
           squadLimit(e) > 0 &&
           e.participants.filter((p) => p.squadId === fields.squadId).length >=
-            squadLimit(e)
+          squadLimit(e)
         )
           return e;
       }
       const nextSquads =
         fields.squadId !== undefined && fields.squadId !== existing.squadId
           ? e.squads.map((s) =>
-              s.captainId === id ? { ...s, captainId: null } : s,
-            )
+            s.captainId === id ? { ...s, captainId: null } : s,
+          )
           : e.squads;
       return {
         ...e,
@@ -692,17 +742,17 @@ export function useArena() {
         participants: e.participants.map((p) =>
           p.id === id
             ? {
-                ...p,
-                ...fields,
-                name:
-                  fields.name !== undefined ? fields.name.slice(0, 80) : p.name,
-                squadId:
-                  e.mode === "solo"
-                    ? null
-                    : fields.squadId === undefined
-                      ? p.squadId
-                      : fields.squadId,
-              }
+              ...p,
+              ...fields,
+              name:
+                fields.name !== undefined ? fields.name.slice(0, 80) : p.name,
+              squadId:
+                e.mode === "solo"
+                  ? null
+                  : fields.squadId === undefined
+                    ? p.squadId
+                    : fields.squadId,
+            }
             : p,
         ),
       };
@@ -712,12 +762,12 @@ export function useArena() {
       !rosterEditable(e) || e.entries.some((s) => s.participantId === id)
         ? e
         : {
-            ...e,
-            squads: e.squads.map((s) =>
-              s.captainId === id ? { ...s, captainId: null } : s,
-            ),
-            participants: e.participants.filter((p) => p.id !== id),
-          },
+          ...e,
+          squads: e.squads.map((s) =>
+            s.captainId === id ? { ...s, captainId: null } : s,
+          ),
+          participants: e.participants.filter((p) => p.id !== id),
+        },
     );
   const addCatch = (
     participantId: string,
@@ -903,9 +953,9 @@ export function useArena() {
     publish,
     banner,
     feature,
-    status,
+    runMatch,
+    matchBusy,
     setDuration,
-    toggleTimer,
     resetTimer,
     addFish,
     changeFish,

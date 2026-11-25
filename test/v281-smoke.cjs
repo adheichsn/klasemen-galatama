@@ -63,7 +63,7 @@ assert.match(client, /addEventListener\("connected"/);
 assert.match(client, /addEventListener\("degraded"/);
 assert.match(client, /queueRefresh\(0\)/);
 const clock = fs.readFileSync(
-  path.join(root, "components/live-match-clock.tsx"),
+  path.join(root, "hooks/use-match-clock.ts"),
   "utf8",
 );
 assert.match(clock, /performance\.now\(\)/);
@@ -76,8 +76,8 @@ assert.match(broker, /broadcastStatus\(false\)/);
 assert.match(broker, /reconnectSoon/);
 
 async function exerciseStream() {
-  let listener = () => {};
-  let status = () => {};
+  let listener = () => { };
+  let status = () => { };
   let unsubscribed = 0;
   let visibility = true;
   const { GET } = load("app/api/public/stream/route.ts", {

@@ -1,3 +1,4 @@
+import { sameJson } from "./json-equal";
 import type { ArenaData, ArenaEvent } from "./arena-types";
 
 /** Names/identifiers only: never send tournament contents or staff data on the wire. */
@@ -22,7 +23,7 @@ export function changedPublicEventIds(
     const oldEvent = oldEvents.get(id);
     const newEvent = newEvents.get(id);
     if (!publiclyVisible(oldEvent) && !publiclyVisible(newEvent)) return false;
-    return JSON.stringify(oldEvent) !== JSON.stringify(newEvent);
+    return !sameJson(oldEvent, newEvent);
   });
 }
 

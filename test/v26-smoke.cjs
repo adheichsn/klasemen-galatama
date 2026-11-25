@@ -122,6 +122,29 @@ assert.equal(
   true,
   "two legit identical fish with distinct IDs are allowed",
 );
+// PostgreSQL jsonb may return keys in a different order from the prior PUT response.
+const reordered = JSON.parse(JSON.stringify(baseline, (_key, value) =>
+  value && typeof value === "object" && !Array.isArray(value)
+    ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)))
+    : value
+));
+assert.equal(prepareSnapshot(reordered, withNew(otherCatch), t + 15_000).ok, true);
+
+if (process.env.WEJI_TEST_DATABASE_URL) {
+  // Read-only integration regression. No schema or application rows required.
+  (async () => {
+    const { Client } = require("pg");
+    const client = new Client({ connectionString: process.env.WEJI_TEST_DATABASE_URL });
+    try {
+      await client.connect();
+      const { rows } = await client.query("SELECT $1::jsonb AS snapshot", [JSON.stringify(baseline)]);
+      assert.equal(prepareSnapshot(rows[0].snapshot, withNew(otherCatch), t + 15_000).ok, true);
+      console.log("PASS: consecutive saves after PostgreSQL jsonb round trip");
+    } finally {
+      await client.end();
+    }
+  })().catch(error => { console.error(error.message); process.exitCode = 1; });
+}
 const changedHistory = data({
   ...live,
   entries: [{ ...live.entries[0], delta: 99 }],

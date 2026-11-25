@@ -33,7 +33,7 @@ export function AdminCommandCenter({
   const guidance = isHistoricalDraft
     ? "Arsip historis: masukkan tangkapan nyata dan hasil poin resmi tanpa menjalankan timer, lalu finalisasi melalui review."
     : isLive
-      ? "Pertandingan sedang berlangsung. Input skor, cek rekap, lalu simpan perubahan ke server."
+      ? "Pertandingan sedang berlangsung. Masukkan tangkapan dan cek konfirmasi skor dari server."
       : event.status === "finished"
         ? "Hasil event sudah diarsipkan. Riwayat dan aturan lama tetap tersimpan."
         : readiness.canStart

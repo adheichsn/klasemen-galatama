@@ -8,7 +8,7 @@ import { PlayerIdentity } from "@/components/player-avatar";
 import { publicAvatarProfiles } from "@/lib/avatar-identity-db";
 import Link from "next/link";
 import { LiveActivityFeed } from "@/components/live-activity-feed";
-import PublicAutoRefresh from "@/components/public-auto-refresh";
+import PublicAutoRefresh, { PublicEventUnavailable } from "@/components/public-auto-refresh";
 import LiveMatchClock from "@/components/live-match-clock";
 import { notFound } from "next/navigation";
 import {
@@ -50,7 +50,8 @@ export default async function EventDetail({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const { events } = await publicEvents();
+  const { events, unavailable } = await publicEvents();
+  if (unavailable) return <PublicEventUnavailable />;
   const e = events.find((x) => x.id === id);
   if (!e) notFound();
   return (
@@ -104,7 +105,7 @@ export default async function EventDetail({
           </div>
         </section>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          {e.status === "live" ? (
+          {e.status !== "finished" ? (
             <PublicAutoRefresh
               streamingEnabled={!!listenerDatabaseUrl()}
               eventId={e.id}

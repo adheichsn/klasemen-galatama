@@ -7,7 +7,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ChartNoAxesCombined, LockKeyhole } from "lucide-react";
 import { TournamentAnalytics } from "@/components/tournament-analytics";
-import PublicAutoRefresh from "@/components/public-auto-refresh";
+import PublicAutoRefresh, { PublicEventUnavailable } from "@/components/public-auto-refresh";
 import { Breadcrumb, PublicShell } from "@/components/public-site";
 import { publicEvents } from "@/lib/public-events";
 
@@ -26,7 +26,8 @@ export default async function StatisticsPage({
 }) {
   const { id } = await params;
   // Uses the same published, non-trashed filter as the public event page.
-  const { events } = await publicEvents();
+  const { events, unavailable } = await publicEvents();
+  if (unavailable) return <PublicEventUnavailable />;
   const event = events.find((item) => item.id === id);
   if (!event) notFound();
   return (
@@ -61,7 +62,7 @@ export default async function StatisticsPage({
             >
               <ArrowLeft size={15} /> Kembali ke Klasemen
             </Link>
-            {event.status === "live" ? (
+            {event.status !== "finished" ? (
               <PublicAutoRefresh
                 streamingEnabled={!!listenerDatabaseUrl()}
                 dark

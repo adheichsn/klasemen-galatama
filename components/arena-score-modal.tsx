@@ -80,7 +80,7 @@ export default function ScoreModal({
         (e.historical || (store.remaining > 0 && e.timer.runningSince !== null))
       : manualValid);
 
-  const submit = (keepOpen: boolean) => {
+  const submit = async (keepOpen: boolean) => {
     setError("");
     setSavedMessage("");
     if (!canSubmit) {
@@ -130,18 +130,29 @@ export default function ScoreModal({
         return;
     }
     submissionLock.current = true;
-    const success =
-      kind === "catch"
-        ? store.addCatch(player, fish, bonuses, quantity, catchRef)
-        : store.addManual(player, Number(manual), reason);
-    // The synchronous lock prevents accidental rapid clicks on both buttons.
-    window.setTimeout(() => {
-      submissionLock.current = false;
-    }, 900);
-    if (!success) {
-      setError(
-        "Gagal mencatat. Pastikan skor, peserta, dan status event valid.",
-      );
+    const message = e.historical
+      ? (
+          kind === "catch"
+            ? store.addCatch(player, fish, bonuses, quantity, catchRef)
+            : store.addManual(player, Number(manual), reason)
+        )
+        ? null
+        : "Data skor tidak valid."
+      : await store.runMatch(
+          kind === "catch"
+            ? {
+                kind,
+                player,
+                fish,
+                bonuses,
+                quantity,
+                reference: catchRef.trim(),
+              }
+            : { kind, player, points: Number(manual), reason: reason.trim() },
+        );
+    submissionLock.current = false;
+    if (message) {
+      setError(message);
       return;
     }
     if (!keepOpen || kind !== "catch") {
@@ -164,11 +175,15 @@ export default function ScoreModal({
     <Dialog
       open
       onOpenChange={(open) => {
-        if (!open) onClose();
+        if (!open && !submissionLock.current) onClose();
       }}
     >
       <DialogContent className="!w-[min(95vw,620px)] !max-w-[620px] !p-0">
-        <div className="overflow-hidden rounded-2xl bg-white">
+        <div
+          inert={store.matchBusy}
+          aria-busy={store.matchBusy}
+          className="overflow-hidden rounded-2xl bg-white"
+        >
           <header className="border-b border-blue-100 bg-gradient-to-r from-blue-50 to-white px-5 py-5 pr-16 sm:px-7">
             <div className="mb-2 flex items-center gap-2 text-[10px] font-extrabold tracking-[.15em] text-blue-600">
               <Fish size={15} /> PANITIA • SCORING
@@ -467,9 +482,11 @@ export default function ScoreModal({
               </div>
             )}
             <p className="text-[11px] leading-5 text-amber-700">
-              Simpan skor segera sebelum timer habis. Saat server menerima data,
-              waktu pencatatan ditetapkan oleh server. Klik{" "}
-              <b>Simpan ke Server</b> agar skor tampil di publik.
+              {e.historical
+                ? "Klik Simpan ke Server untuk menyimpan perubahan arsip."
+                : store.matchBusy
+                  ? "Menunggu konfirmasi server…"
+                  : "Tangkapan langsung dikirim saat ditambahkan. Waktu penerimaan mengikuti server."}
             </p>
           </div>
           <footer className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 bg-white px-5 py-4 sm:px-7">

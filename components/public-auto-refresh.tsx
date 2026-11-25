@@ -116,6 +116,8 @@ export default function PublicAutoRefresh({
       Math.max(5000, intervalMs),
     );
     document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("online", onVisibilityChange);
+    window.addEventListener("pageshow", onVisibilityChange);
     connect();
     return () => {
       alive = false;
@@ -123,6 +125,8 @@ export default function PublicAutoRefresh({
       clearRetry();
       if (refreshTimer) clearTimeout(refreshTimer);
       window.clearInterval(poll);
+      window.removeEventListener("online", onVisibilityChange);
+      window.removeEventListener("pageshow", onVisibilityChange);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [eventId, intervalMs, router, streamingEnabled]);
@@ -138,8 +142,18 @@ export default function PublicAutoRefresh({
         <WifiOff size={13} className="opacity-70" />
       )}
       {streamingEnabled && connected
-        ? "Terhubung LIVE | update otomatis"
+        ? "Terhubung | update otomatis"
         : `Mode cadangan | refresh ${Math.round(Math.max(5000, intervalMs) / 1000)} detik`}
     </span>
+  );
+}
+
+export function PublicEventUnavailable() {
+  return (
+    <main className="mx-auto max-w-lg space-y-3 p-6">
+      <h1 className="text-lg font-bold">Data pertandingan sementara tidak tersedia</h1>
+      <p>Halaman ini akan mencoba terhubung kembali secara otomatis.</p>
+      <PublicAutoRefresh streamingEnabled={false} />
+    </main>
   );
 }

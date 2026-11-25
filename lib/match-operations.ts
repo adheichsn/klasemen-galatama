@@ -1,3 +1,4 @@
+import { sameJson } from "./json-equal";
 import type { ArenaData, ArenaEvent } from "./arena-types";
 import { secondsLeft } from "./arena-utils";
 import { tournamentReadiness } from "./tournament-readiness";
@@ -95,7 +96,7 @@ export function validateMatchTransition(
       old.trashedBy !== current.trashedBy
     )
       return `Status Trash ${old.title} hanya boleh diubah melalui Recycle Bin.`;
-    if (old.trashedAt && JSON.stringify(old) !== JSON.stringify(current))
+    if (old.trashedAt && !sameJson(old, current))
       return `Event ${old.title} dalam Trash tidak boleh diedit.`;
     if (old.status === "finished") {
       const stripPresentation = (e: ArenaEvent) => {
@@ -108,8 +109,7 @@ export function validateMatchTransition(
         return locked;
       };
       if (
-        JSON.stringify(stripPresentation(old)) !==
-        JSON.stringify(stripPresentation(current))
+        !sameJson(stripPresentation(old), stripPresentation(current))
       ) {
         return `Hasil final ${old.title} terkunci. Hanya publikasi dan banner yang boleh diubah.`;
       }

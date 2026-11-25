@@ -1,3 +1,4 @@
+import { sameJson as same } from "./json-equal";
 import type { ArenaEvent, ScoreEntry } from "./arena-types";
 import { calculateCatch, completeDuoRoster } from "./arena-rules";
 import { standings } from "./arena-utils";
@@ -7,8 +8,7 @@ import { standings } from "./arena-utils";
  * match clock. The admin enters actual recorded catches and/or reconciles
  * official final totals. These adjustments are not represented as fish.
  */
-const same = (a: unknown, b: unknown) =>
-  JSON.stringify(a) === JSON.stringify(b);
+
 const referenceKey = (value: string) => value.trim().toLocaleUpperCase("id-ID");
 
 export function validHistoricalDate(value: string, now = Date.now()): boolean {

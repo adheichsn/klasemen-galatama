@@ -100,10 +100,10 @@ const mainNav: { id: Page; label: string; icon: typeof Home }[] = [
 const prettyDate = (iso: string) =>
   iso
     ? new Date(`${iso}T12:00:00`).toLocaleDateString("id-ID", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    })
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
     : "Tanggal fleksibel";
 const statusText: Record<EventStatus, string> = {
   draft: "Draft",
@@ -303,7 +303,7 @@ export default function ArenaApp() {
     store.setActive(id);
     go("home");
   };
-  const setEventStatus = (next: EventStatus) => {
+  const setEventStatus = async (next: EventStatus) => {
     if (e.status === "finished") {
       setNotice(
         "Hasil final sudah terkunci. Duplikat turnamen untuk membuat edisi baru.",
@@ -342,10 +342,11 @@ export default function ArenaApp() {
       setFinalReviewOpen(true);
       return;
     }
-    store.status(next);
-    setNotice(
-      "Perubahan status belum diterbitkan. Klik Simpan ke Server agar terlihat di website publik.",
-    );
+    if (next === "live")
+      setNotice(
+        (await store.runMatch({ kind: "start" })) ||
+          "Pertandingan dimulai. Timer sudah tersimpan di server.",
+      );
   };
   const load = async (file?: File) => {
     if (!file) return;
@@ -439,7 +440,19 @@ export default function ArenaApp() {
     );
   return (
     <AdminAvatarScope section={page}>
-      <div className="arena-root min-h-screen">
+      {store.matchBusy && (
+        <p
+          role="status"
+          className="fixed top-3 left-1/2 z-[110] -translate-x-1/2 rounded-lg bg-slate-900 px-4 py-2 text-sm text-white"
+        >
+          Menyimpan aksi pertandingan…
+        </p>
+      )}
+      <div
+        inert={store.matchBusy}
+        aria-busy={store.matchBusy}
+        className="arena-root min-h-screen"
+      >
         {mobileMenu && (
           <button
             aria-label="Tutup menu"
@@ -923,16 +936,22 @@ export default function ArenaApp() {
                               (store.remaining === 0 &&
                                 e.timer.runningSince === null)
                             }
-                            onClick={() => {
+                            onClick={async () => {
                               if (store.dirty) {
                                 setNotice(
                                   "Simpan skor dan perubahan sebelumnya ke Server sebelum Pause/Resume timer.",
                                 );
                                 return;
                               }
-                              store.toggleTimer();
+                              const kind =
+                                e.timer.runningSince === null
+                                  ? "resume"
+                                  : "pause";
                               setNotice(
-                                "Waktu server mulai berlaku setelah Simpan ke Server. Simpan segera agar sinkron dengan penonton.",
+                                (await store.runMatch({ kind })) ||
+                                  (kind === "pause"
+                                    ? "Timer dijeda."
+                                    : "Timer dilanjutkan."),
                               );
                             }}
                           >
@@ -1149,8 +1168,8 @@ export default function ArenaApp() {
                                   <span className="ranking-label text-[9px] tracking-[.5px] font-extrabold text-[#90a0b7]">
                                     {rank <= 3
                                       ? ["TOP RANK", "RUNNER-UP", "TOP 3"][
-                                      rank - 1
-                                      ]
+                                          rank - 1
+                                        ]
                                       : "COMPETING"}
                                   </span>
                                 </td>
@@ -1352,13 +1371,21 @@ export default function ArenaApp() {
                                 item.kind !== "reversal" &&
                                 !isReversed(e.entries, item.id) && (
                                   <button
-                                    onClick={() => {
+                                    onClick={async () => {
                                       if (
                                         window.confirm(
-                                          "Batalkan catatan ini? Input yang belum tersimpan akan dibuang; input yang sudah tersimpan akan dibatalkan dengan transaksi pembalik.",
+                                          "Batalkan catatan ini? Skor tersimpan akan dikoreksi dengan transaksi pembalik.",
                                         )
                                       )
-                                        store.reverse(item.id);
+                                        if (e.historical)
+                                          store.reverse(item.id);
+                                        else
+                                          setNotice(
+                                            (await store.runMatch({
+                                              kind: "reverse",
+                                              entryId: item.id,
+                                            })) || "Pembatalan tersimpan.",
+                                          );
                                     }}
                                   >
                                     Batalkan
@@ -1395,7 +1422,9 @@ export default function ArenaApp() {
                       </button>
                     </div>
                     {e.writtenRules.length ? (
-                      <div className="px-6"><RulesAccordion key={e.id} rules={e.writtenRules} /></div>
+                      <div className="px-6">
+                        <RulesAccordion key={e.id} rules={e.writtenRules} />
+                      </div>
                     ) : (
                       <Empty
                         icon={BookOpen}
@@ -1612,9 +1641,9 @@ export default function ArenaApp() {
                         onDuplicate={
                           admin
                             ? () => {
-                              store.duplicate(x.id);
-                              go("builder");
-                            }
+                                store.duplicate(x.id);
+                                go("builder");
+                              }
                             : undefined
                         }
                         onDelete={admin ? () => void moveToTrash(x) : undefined}
@@ -1911,7 +1940,9 @@ export default function ArenaApp() {
                       </div>
                     </div>
                     {e.faqs.length ? (
-                      <div className="px-[22px] pb-6"><FaqAccordion key={e.id} questions={e.faqs} /></div>
+                      <div className="px-[22px] pb-6">
+                        <FaqAccordion key={e.id} questions={e.faqs} />
+                      </div>
                     ) : (
                       <Empty
                         icon={CircleHelp}
@@ -1932,7 +1963,9 @@ export default function ArenaApp() {
                       </div>
                     </div>
                     {e.writtenRules.length ? (
-                      <div className="px-[23px] pb-[23px]"><RulesAccordion key={e.id} rules={e.writtenRules} /></div>
+                      <div className="px-[23px] pb-[23px]">
+                        <RulesAccordion key={e.id} rules={e.writtenRules} />
+                      </div>
                     ) : (
                       <Empty
                         icon={BookOpen}
@@ -1947,7 +1980,8 @@ export default function ArenaApp() {
             <footer className="site-footer mt-[35px] p-[21px_0] [border-top:1px_solid_#e3eaf5] flex items-center justify-between gap-[12px] text-[9px] tracking-[.5px] font-extrabold text-[#a1afc2]">
               <span>© WEJI ARENA • STAFF DASHBOARD</span>
               <span>
-                Perubahan tersimpan di PostgreSQL setelah klik Simpan ke Server.
+                Aksi pertandingan langsung disimpan. Gunakan Simpan ke Server
+                untuk konfigurasi.
               </span>
             </footer>
           </main>
@@ -1987,12 +2021,13 @@ export default function ArenaApp() {
             event={e}
             dirty={store.dirty}
             onClose={() => setFinalReviewOpen(false)}
-            onConfirm={() => {
-              store.status("finished");
+            busy={store.matchBusy}
+            onConfirm={async () => {
+              const error = await store.runMatch({ kind: "finish" });
+              if (error) return error;
               setFinalReviewOpen(false);
-              setNotice(
-                "Review selesai. Klik Simpan ke Server untuk mengunci hasil final secara permanen.",
-              );
+              setNotice("Hasil final sudah tersimpan dan terkunci.");
+              return null;
             }}
           />
         )}

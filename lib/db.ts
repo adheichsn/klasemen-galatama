@@ -113,8 +113,8 @@ export async function getDatabaseHealth() {
     security.every((row) => row.rls && !row.api_access);
   const size = tables?.state_ready
     ? await db().query<{ snapshot_bytes: number }>(
-        "SELECT coalesce(max(octet_length(payload::text)),0)::integer AS snapshot_bytes FROM public.weji_arena_state",
-      )
+      "SELECT coalesce(max(octet_length(payload::text)),0)::integer AS snapshot_bytes FROM public.weji_arena_state",
+    )
     : null;
   const snapshotBytes = size?.rows[0]?.snapshot_bytes ?? 0;
   return {
@@ -146,6 +146,7 @@ export type SaveResult =
 export async function saveArenaSnapshot(
   value: ArenaData,
   expectedRevision: number,
+  operationId?: string,
 ): Promise<SaveResult> {
   const client = await db().connect();
   try {
@@ -179,13 +180,13 @@ export async function saveArenaSnapshot(
     const result =
       expectedRevision === 0
         ? await client.query<{ revision: number }>(
-            "INSERT INTO weji_arena_state (id, revision, payload, updated_at) VALUES (1, 1, $1::jsonb, now()) ON CONFLICT (id) DO NOTHING RETURNING revision",
-            [JSON.stringify(safeValue)],
-          )
+          "INSERT INTO weji_arena_state (id, revision, payload, updated_at) VALUES (1, 1, $1::jsonb, now()) ON CONFLICT (id) DO NOTHING RETURNING revision",
+          [JSON.stringify(safeValue)],
+        )
         : await client.query<{ revision: number }>(
-            "UPDATE weji_arena_state SET revision = revision + 1, payload = $1::jsonb, updated_at = now() WHERE id = 1 AND revision = $2 RETURNING revision",
-            [JSON.stringify(safeValue), expectedRevision],
-          );
+          "UPDATE weji_arena_state SET revision = revision + 1, payload = $1::jsonb, updated_at = now() WHERE id = 1 AND revision = $2 RETURNING revision",
+          [JSON.stringify(safeValue), expectedRevision],
+        );
     if (!result.rowCount) {
       await client.query("ROLLBACK");
       return { ok: false, conflict: true };
@@ -210,7 +211,7 @@ export async function saveArenaSnapshot(
           change.entryId ?? null,
           change.participantId ?? null,
           change.delta ?? null,
-          JSON.stringify(change.details),
+          JSON.stringify(operationId ? { ...change.details, operationId } : change.details),
         ],
       );
     }
@@ -384,4 +385,12 @@ export async function changeEventLifecycle(
   } finally {
     client.release();
   }
+}
+
+export async function committedMatchAction(revision: number, eventId: string, operationId: string) {
+  const result = await db().query(
+    "SELECT 1 FROM weji_arena_score_audit WHERE event_id = $1 AND revision = $2 AND details->>'operationId' = $3 LIMIT 1",
+    [eventId, revision, operationId],
+  );
+  return !!result.rowCount;
 }

@@ -1,3 +1,4 @@
+import { sameJson as same } from "./json-equal";
 import type { ArenaData, ArenaEvent, ScoreEntry } from "./arena-types";
 import { calculateCatch } from "./arena-rules";
 import { secondsLeft } from "./arena-utils";
@@ -13,13 +14,13 @@ export type ScoreAuditChange = {
   eventId: string;
   eventTitle: string;
   action:
-    | "catch"
-    | "manual"
-    | "reversal"
-    | "start"
-    | "pause"
-    | "resume"
-    | "finish";
+  | "catch"
+  | "manual"
+  | "reversal"
+  | "start"
+  | "pause"
+  | "resume"
+  | "finish";
   entryId?: string;
   participantId?: string;
   delta?: number;
@@ -31,8 +32,7 @@ export type PreparedSave =
 
 const fail = (error: string): PreparedSave => ({ ok: false, error });
 const copy = <T>(item: T): T => JSON.parse(JSON.stringify(item)) as T;
-const same = (a: unknown, b: unknown) =>
-  JSON.stringify(a) === JSON.stringify(b);
+
 const referenceKey = (value: string) => value.trim().toLocaleUpperCase("id-ID");
 const validReference = (value: string) =>
   value.length >= 2 &&
@@ -401,7 +401,7 @@ export function prepareSnapshot(
           entry.delta !== -original.delta ||
           entry.participantId !== original.participantId ||
           (entry.squadId ?? null) !==
-            (original.squadId ?? player.squadId ?? null)
+          (original.squadId ?? player.squadId ?? null)
         )
           return fail(
             `Pembatalan ${entry.id} harus merujuk transaksi tersimpan yang belum pernah dibatalkan.`,
