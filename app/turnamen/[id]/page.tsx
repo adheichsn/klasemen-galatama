@@ -8,7 +8,9 @@ import { PlayerIdentity } from "@/components/player-avatar";
 import { publicAvatarProfiles } from "@/lib/avatar-identity-db";
 import Link from "next/link";
 import { LiveActivityFeed } from "@/components/live-activity-feed";
-import PublicAutoRefresh, { PublicEventUnavailable } from "@/components/public-auto-refresh";
+import PublicAutoRefresh, {
+  PublicEventUnavailable,
+} from "@/components/public-auto-refresh";
 import LiveMatchClock from "@/components/live-match-clock";
 import { notFound } from "next/navigation";
 import {
@@ -135,7 +137,9 @@ export default async function EventDetail({
           </Link>
         </div>
         {(e.status === "live" || e.status === "finished") && (
-          <LiveMatchClock event={e} />
+          <LiveMatchClock
+            event={{ id: e.id, status: e.status, timer: e.timer }}
+          />
         )}
         <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
           <div className="min-w-0 space-y-7">

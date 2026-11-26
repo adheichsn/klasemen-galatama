@@ -17,7 +17,6 @@ import { PublicRanking } from "@/components/public-site";
 import { LiveActivityFeed } from "@/components/live-activity-feed";
 import LiveMatchClock from "@/components/live-match-clock";
 import PublicAutoRefresh, { PublicEventUnavailable } from "@/components/public-auto-refresh";
-import { standings } from "@/lib/arena-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -45,7 +44,7 @@ export default async function SpectatorPage({
   if (unavailable) return <PublicEventUnavailable />;
   const event = events.find((item) => item.id === id);
   if (!event) notFound();
-  const ranking = standings(event);
+  const competitorCount = event.mode === "solo" ? event.participants.length : event.squads.length;
   return (
     <AvatarScope profiles={await publicAvatarProfiles([event])} publicLinks>
       <div className="min-h-screen bg-[#0b1731] px-4 py-5 text-white sm:px-7 lg:px-10">
@@ -89,7 +88,7 @@ export default async function SpectatorPage({
               </h1>
               <p className="mt-2 text-sm text-slate-300">
                 {event.location || "Fish It"} • {event.mode.toUpperCase()} •{" "}
-                {ranking.length}{" "}
+                {competitorCount}{" "}
                 {event.mode === "solo"
                   ? "peserta"
                   : event.mode === "duo"
@@ -113,7 +112,7 @@ export default async function SpectatorPage({
             </span>
           </div>
           {(event.status === "live" || event.status === "finished") && (
-            <LiveMatchClock event={event} />
+            <LiveMatchClock event={{ id: event.id, status: event.status, timer: event.timer }} />
           )}
           <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(300px,.8fr)]">
             <div className="min-w-0 space-y-5">
@@ -128,7 +127,7 @@ export default async function SpectatorPage({
                 <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-blue-300">
                   <Trophy size={14} className="mr-1 inline" /> Kompetisi
                 </p>
-                <p className="text-3xl font-black">{ranking.length}</p>
+                <p className="text-3xl font-black">{competitorCount}</p>
                 <p className="text-xs text-slate-300">
                   {event.mode === "solo"
                     ? "Peserta terdaftar"

@@ -3,7 +3,8 @@ import { useActionDialog } from "@/components/ui/action-dialog";
 import { avatarTarget, rankAvatarTargets } from "@/lib/avatar-identity";
 import { PlayerIdentity, RankIdentity } from "@/components/player-avatar";
 import { AdminAvatarScope } from "@/components/player-avatar";
-import { useRef, useState } from "react";
+import { useMatchRemaining } from "@/hooks/use-match-clock";
+import { useMemo, useRef, useState } from "react";
 import { FaqAccordion, RulesAccordion } from "@/components/event-accordions";
 import {
   Activity,
@@ -58,7 +59,6 @@ import { TournamentAnalytics } from "@/components/tournament-analytics";
 import {
   downloadArena,
   fmt,
-  isReversed,
   squadContribution,
   standings,
   timeLabel,
@@ -243,6 +243,72 @@ function EventTile({
     </motion.article>
   );
 }
+function AdminClock({ event: e }: { event: ArenaEvent }) {
+  const remaining = useMatchRemaining(e);
+  return (
+    <>
+      <div className="panel-heading p-[23px_23px_15px] flex items-center justify-between gap-[15px]">
+        <div>
+          <div className="kicker text-[10px] text-[#477bce] tracking-[1.6px] font-extrabold mb-[8px]">
+            MATCH CONTROL
+          </div>
+          <h2>
+            <Clock3 size={19} /> Waktu Pertandingan
+          </h2>
+        </div>
+        <div
+          className={`live-indicator flex gap-[7px] items-center text-[10px] text-[#90a1b6] font-extrabold ${e.status === "live" ? "is-live" : ""}`}
+        >
+          <span />
+          {e.status === "finished"
+            ? "FINAL"
+            : e.status === "live"
+              ? remaining === 0
+                ? "TIME UP"
+                : e.timer.runningSince === null
+                  ? "PAUSED"
+                  : "LIVE"
+              : "DRAFT"}
+        </div>
+      </div>
+      <div className="timer-face m-[3px_23px_13px] [background:linear-gradient(135deg,_#f4f8ff,_#eef5ff)] [border:1px_solid_#e5eefc] rounded-[13px] p-[15px_12px] text-center flex flex-col gap-[3px]">
+        <span>COUNTDOWN TIMER</span>
+        <strong>{timeLabel(remaining)}</strong>
+        <div>
+          Durasi {fmt(e.timer.durationSec / 60)} menit •{" "}
+          {e.mode.toUpperCase()}
+        </div>
+        <div
+          className="mt-3 h-2 w-full overflow-hidden rounded-full bg-blue-100"
+          aria-label="Progres waktu pertandingan"
+        >
+          <div
+            className={`h-full rounded-full transition-[width] duration-500 ${remaining === 0 ? "bg-rose-500" : "bg-blue-600"}`}
+            style={{
+              width: `${Math.min(100, Math.max(0, (100 * remaining) / Math.max(1, e.timer.durationSec)))}%`,
+            }}
+          />
+        </div>
+        {e.historical && (
+          <p className="mt-2 text-xs font-bold text-blue-700">
+            Arsip historis · pertandingan asli{" "}
+            {e.eventDate || "belum diberi tanggal"} · tidak
+            memakai timer LIVE
+          </p>
+        )}
+        {e.status === "finished" && (
+          <div className="mt-3 inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-[11px] font-bold text-emerald-700">
+            <LockKeyhole size={14} /> Hasil final terkunci{" "}
+            {e.finishedAt
+              ? `• ${new Date(e.finishedAt).toLocaleDateString("id-ID")}`
+              : ""}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
 export default function ArenaApp() {
   const ask = useActionDialog();
   const store = useArena();
@@ -266,7 +332,8 @@ export default function ArenaApp() {
   );
   const [selectedSquad, setSelectedSquad] = useState("");
   const [notice, setNotice] = useState("");
-  const [historyOpen, setHistoryOpen] = useState(false);
+  const [history, setHistory] = useState({ eventId: e.id, limit: 6 });
+  const historyLimit = history.eventId === e.id ? history.limit : 6;
   const fileRef = useRef<HTMLInputElement>(null);
   const manageEvent = async (
     id: string,
@@ -387,7 +454,7 @@ export default function ArenaApp() {
       if (fileRef.current) fileRef.current.value = "";
     }
   };
-  const ranking = standings(e);
+  const ranking = useMemo(() => standings(e), [e]);
   const found = ranking.filter((p) =>
     `${p.name} ${p.subtitle}`.toLowerCase().includes(search.toLowerCase()),
   );
@@ -398,7 +465,6 @@ export default function ArenaApp() {
   const catchCount = e.entries
     .filter((x) => x.kind === "catch" && !cancelled.has(x.id))
     .reduce((a, x) => a + (x.quantity || 1), 0);
-  const recent = e.entries.slice(0, 6);
   const trashedEvents = store.data.events.filter((x) => !!x.trashedAt);
   const finished = store.data.events.filter(
     (x) => !x.trashedAt && x.status === "finished" && (admin || x.published),
@@ -898,71 +964,14 @@ export default function ArenaApp() {
                   </section>
                   <div className="right-rail grid gap-[17px]">
                     <section className="panel bg-[#fff] [border:1px_solid_var(--line)] rounded-[17px] shadow-[var(--shadow)] min-w-[0] timer-panel pb-[16px]">
-                      <div className="panel-heading p-[23px_23px_15px] flex items-center justify-between gap-[15px]">
-                        <div>
-                          <div className="kicker text-[10px] text-[#477bce] tracking-[1.6px] font-extrabold mb-[8px]">
-                            MATCH CONTROL
-                          </div>
-                          <h2>
-                            <Clock3 size={19} /> Waktu Pertandingan
-                          </h2>
-                        </div>
-                        <div
-                          className={`live-indicator flex gap-[7px] items-center text-[10px] text-[#90a1b6] font-extrabold ${e.status === "live" ? "is-live" : ""}`}
-                        >
-                          <span />
-                          {e.status === "finished"
-                            ? "FINAL"
-                            : e.status === "live"
-                              ? store.remaining === 0
-                                ? "TIME UP"
-                                : e.timer.runningSince === null
-                                  ? "PAUSED"
-                                  : "LIVE"
-                              : "DRAFT"}
-                        </div>
-                      </div>
-                      <div className="timer-face m-[3px_23px_13px] [background:linear-gradient(135deg,_#f4f8ff,_#eef5ff)] [border:1px_solid_#e5eefc] rounded-[13px] p-[15px_12px] text-center flex flex-col gap-[3px]">
-                        <span>COUNTDOWN TIMER</span>
-                        <strong>{timeLabel(store.remaining)}</strong>
-                        <div>
-                          Durasi {fmt(e.timer.durationSec / 60)} menit •{" "}
-                          {e.mode.toUpperCase()}
-                        </div>
-                        <div
-                          className="mt-3 h-2 w-full overflow-hidden rounded-full bg-blue-100"
-                          aria-label="Progres waktu pertandingan"
-                        >
-                          <div
-                            className={`h-full rounded-full transition-[width] duration-500 ${store.remaining === 0 ? "bg-rose-500" : "bg-blue-600"}`}
-                            style={{
-                              width: `${Math.min(100, Math.max(0, (100 * store.remaining) / Math.max(1, e.timer.durationSec)))}%`,
-                            }}
-                          />
-                        </div>
-                        {e.historical && (
-                          <p className="mt-2 text-xs font-bold text-blue-700">
-                            Arsip historis · pertandingan asli{" "}
-                            {e.eventDate || "belum diberi tanggal"} · tidak
-                            memakai timer LIVE
-                          </p>
-                        )}
-                        {e.status === "finished" && (
-                          <div className="mt-3 inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-[11px] font-bold text-emerald-700">
-                            <LockKeyhole size={14} /> Hasil final terkunci{" "}
-                            {e.finishedAt
-                              ? `• ${new Date(e.finishedAt).toLocaleDateString("id-ID")}`
-                              : ""}
-                          </div>
-                        )}
-                      </div>
+                      <AdminClock event={e} />
                       {admin && !e.historical && (
                         <div className="timer-controls flex gap-[9px] m-[0_23px]">
                           <button
                             className="btn inline-flex items-center justify-center gap-[9px] [border:1px_solid_transparent] rounded-[10px] min-h-[41px] p-[0_16px] whitespace-nowrap text-[12px] font-extrabold [transition:background_.2s,_transform_.2s,_box-shadow_.2s] primary"
                             disabled={
                               e.status !== "live" ||
-                              (store.remaining === 0 &&
+                              (e.timer.remainingSec === 0 &&
                                 e.timer.runningSince === null)
                             }
                             onClick={async () => {
@@ -1350,18 +1359,14 @@ export default function ArenaApp() {
                         >
                           <ShieldCheck size={15} /> Audit Skor
                         </button>
-                        <button
-                          className="text-action bg-transparent text-[#2864ee] inline-flex items-center gap-[8px] p-[7px_0] text-[12px] font-extrabold"
-                          onClick={() => setHistoryOpen((v) => !v)}
-                        >
-                          {historyOpen ? "Lebih sedikit" : "Lihat semua"}{" "}
-                          <ArrowRight size={15} />
-                        </button>
+                        {historyLimit > 6 && <button className="text-action" onClick={() => setHistory({eventId: e.id, limit: 6})}>
+                          Lebih sedikit
+                        </button>}
                       </div>
                     </div>
                     {e.entries.length ? (
                       <div className="activity-list p-[0_23px_12px]">
-                        {(historyOpen ? e.entries : recent).map((item) => (
+                        {e.entries.slice(0, historyLimit).map((item) => (
                           <div
                             className="activity-item flex items-center gap-[12px] [border-bottom:1px_solid_#f0f3f9] p-[13px_0]"
                             key={item.id}
@@ -1413,7 +1418,7 @@ export default function ArenaApp() {
                                 (e.status === "live" ||
                                   (e.historical && e.status === "draft")) &&
                                 item.kind !== "reversal" &&
-                                !isReversed(e.entries, item.id) && (
+                                !cancelled.has(item.id) && (
                                   <button
                                     onClick={async () => {
                                       const recipient =
@@ -1447,6 +1452,11 @@ export default function ArenaApp() {
                             </div>
                           </div>
                         ))}
+                        {historyLimit < e.entries.length && (
+                          <button className="text-action" onClick={() => setHistory({eventId: e.id, limit: historyLimit + 25})}>
+                            Muat lebih banyak
+                          </button>
+                        )}
                       </div>
                     ) : (
                       <Empty

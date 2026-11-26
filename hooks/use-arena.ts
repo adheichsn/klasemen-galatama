@@ -33,7 +33,6 @@ import {
   squadKey,
 } from "@/lib/roster-management";
 import { resetDraftClock } from "@/lib/match-operations";
-import { useMatchClock } from "./use-match-clock";
 import type { LiveCommand } from "@/lib/live-command";
 import {
   canAssignSquad,
@@ -184,11 +183,6 @@ export function useArena() {
   };
   const active =
     data.events.find((e) => e.id === data.activeEventId) || data.events[0];
-  const { now } = useMatchClock(
-    active?.id ?? "",
-    ready && active?.status === "live",
-  );
-  const remaining = active ? secondsLeft(active.timer, now || Date.now()) : 0;
   const matchLock = useRef(false);
   const pendingMatch = useRef<{
     key: string;
@@ -945,7 +939,6 @@ export function useArena() {
     saveError,
     save,
     restoreBrowserBackup,
-    remaining,
     setActive,
     create,
     createHistorical,

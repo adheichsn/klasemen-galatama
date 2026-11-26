@@ -1,24 +1,24 @@
 "use client";
-import { rankAvatarTargets } from "@/lib/avatar-identity";
+import type { AvatarTarget } from "@/lib/avatar-identity";
 import { RankIdentity } from "@/components/player-avatar";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { ArrowDownRight, ArrowUpRight, Minus, Trophy } from "lucide-react";
 import type { ArenaEvent } from "@/lib/arena-types";
-import { fmt, standings } from "@/lib/arena-utils";
+import { fmt, type standings } from "@/lib/arena-utils";
 
 type RankChange = { position: number; points: number };
 type RankSnapshot = Record<string, RankChange>;
 
 export function LiveRanking({
-  event,
-  max,
+  eventId, mode, ranking, max,
 }: {
-  event: ArenaEvent;
+  eventId: string;
+  mode: ArenaEvent["mode"];
+  ranking: (ReturnType<typeof standings>[number] & { targets: AvatarTarget[] })[];
   max?: number;
 }) {
-  const ranking = useMemo(() => standings(event), [event]);
   const signature = ranking
     .map((r) => `${r.id}:${r.points}:${r.catches}`)
     .join("|");
@@ -26,7 +26,7 @@ export function LiveRanking({
   const [hadPrevious, setHadPrevious] = useState(false);
   useEffect(() => {
     // Session-only comparison: no extra APIs, account data, or shared server state.
-    const key = `weji-live-ranking:${event.id}`;
+    const key = `weji-live-ranking:${eventId}`;
     const next: RankSnapshot = Object.fromEntries(
       ranking.map((r, i) => [r.id, { position: i + 1, points: r.points }]),
     );
@@ -43,24 +43,24 @@ export function LiveRanking({
     }
     // Rank signature tracks score or position changes after Next router.refresh().
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [event.id, signature]);
+  }, [eventId, signature]);
   const rows = typeof max === "number" ? ranking.slice(0, max) : ranking;
   return (
     <section
       className="overflow-hidden rounded-2xl border border-blue-100 bg-white shadow-[0_10px_40px_rgba(32,77,150,.05)]"
-      aria-label={`Klasemen LIVE ${event.mode.toUpperCase()}`}
+      aria-label={`Klasemen LIVE ${mode.toUpperCase()}`}
     >
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-blue-100 px-4 py-4 sm:px-6">
         <h2 className="flex items-center gap-2 text-base font-black text-[#142A55]">
           <Trophy size={20} className="text-blue-600" /> Live Leaderboard •{" "}
-          {event.mode.toUpperCase()}
+          {mode.toUpperCase()}
         </h2>
         <span className="inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-1 text-[11px] font-black text-red-600">
           <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />{" "}
           LIVE • {ranking.length}{" "}
-          {event.mode === "solo"
+          {mode === "solo"
             ? "Peserta"
-            : event.mode === "duo"
+            : mode === "duo"
               ? "Pasangan"
               : "Squad"}
         </span>
@@ -81,10 +81,10 @@ export function LiveRanking({
                 </span>
                 {r ? (
                   <RankIdentity
-                    targets={rankAvatarTargets(event, r.id)}
+                    targets={r.targets}
                     name={r.name}
                     subtitle={r.subtitle}
-                    team={event.mode !== "solo"}
+                    team={mode !== "solo"}
                     centered
                     size="lg"
                   />
@@ -105,9 +105,9 @@ export function LiveRanking({
             <tr>
               <th className="px-4 py-3 sm:px-6">Rank</th>
               <th className="px-3 py-3">
-                {event.mode === "solo"
+                {mode === "solo"
                   ? "Pemain"
-                  : event.mode === "duo"
+                  : mode === "duo"
                     ? "Pasangan"
                     : "Squad"}
               </th>
@@ -160,10 +160,10 @@ export function LiveRanking({
                   </td>
                   <td className="px-3 py-3">
                     <RankIdentity
-                      targets={rankAvatarTargets(event, r.id)}
+                      targets={r.targets}
                       name={r.name}
                       subtitle={r.subtitle}
-                      team={event.mode !== "solo"}
+                      team={mode !== "solo"}
                     />
                   <span className="mt-1 block text-[11px] text-slate-500 sm:hidden">{fmt(r.catches)} tangkapan</span>
                   </td>

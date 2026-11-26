@@ -1,4 +1,6 @@
 "use client";
+import type { ArenaEvent } from "@/lib/arena-types";
+import { secondsLeft } from "@/lib/arena-utils";
 import { useEffect, useRef, useState } from "react";
 import {
   clockFromAnchor,
@@ -67,4 +69,10 @@ export function useMatchClock(id: string, enabled = true) {
   }, [id, enabled]);
 
   return { now, synced };
+}
+
+export function useMatchRemaining(event: ArenaEvent) {
+  const ticking = event.status === "live" && event.timer.runningSince !== null;
+  const { now } = useMatchClock(event.id, ticking);
+  return secondsLeft(event.timer, now ?? Date.now());
 }

@@ -1,8 +1,7 @@
-"use client";
 import { avatarTarget } from "@/lib/avatar-identity";
 import { PlayerIdentity } from "@/components/player-avatar";
 
-import { motion } from "motion/react";
+import * as motion from "motion/react-client";
 import { Activity, Fish, RotateCcw, SlidersHorizontal } from "lucide-react";
 import type { ArenaEvent } from "@/lib/arena-types";
 import { recentPublicActivity } from "@/lib/live-activity";

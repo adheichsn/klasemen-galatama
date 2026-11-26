@@ -1,5 +1,6 @@
 "use client";
 import { useActionDialog } from "@/components/ui/action-dialog";
+import { useMatchRemaining } from "@/hooks/use-match-clock";
 import { avatarProfile, participantAvatarTarget } from "@/lib/avatar-identity";
 import { PlayerIdentity, useAvatarProfiles } from "@/components/player-avatar";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -39,6 +40,7 @@ export default function ScoreModal({
 }) {
   const ask = useActionDialog();
   const e = store.active;
+  const remaining = useMatchRemaining(e);
   const profiles = useAvatarProfiles();
   const searchRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -130,7 +132,7 @@ export default function ScoreModal({
     (e.status === "live" || (e.historical && e.status === "draft")) &&
     (kind === "catch"
       ? !!calculated &&
-        (e.historical || (store.remaining > 0 && e.timer.runningSince !== null))
+        (e.historical || (remaining > 0 && e.timer.runningSince !== null))
       : manualValid);
 
   const submit = async (keepOpen: boolean) => {
@@ -140,7 +142,7 @@ export default function ScoreModal({
       setError(
         kind === "catch" &&
           !e.historical &&
-          (store.remaining === 0 || e.timer.runningSince === null)
+          (remaining === 0 || e.timer.runningSince === null)
           ? "Timer harus berjalan dan belum habis untuk mencatat tangkapan. Koreksi manual tersedia sebelum finalisasi."
           : "Pilih peserta dan lengkapi data. Arsip historis bisa diisi saat Draft; turnamen biasa harus LIVE.",
       );

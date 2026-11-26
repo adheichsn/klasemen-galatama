@@ -246,7 +246,20 @@ export function PublicRanking({
 }) {
   const ranking = standings(event);
   const rows = typeof max === "number" ? ranking.slice(0, max) : ranking;
-  if (event.status === "live") return <LiveRanking event={event} max={max} />;
+  if (event.status === "live") {
+    const liveRows = ranking.map((row) => ({
+      ...row,
+      targets: rankAvatarTargets(event, row.id),
+    }));
+    return (
+      <LiveRanking
+        eventId={event.id}
+        mode={event.mode}
+        ranking={liveRows}
+        max={max}
+      />
+    );
+  }
   return (
     <div className="overflow-hidden rounded-2xl border border-blue-100 bg-white">
       {event.status === "finished" && (
@@ -347,7 +360,9 @@ export function PublicRanking({
                       subtitle={rank.subtitle}
                       team={event.mode !== "solo"}
                     />
-                  <span className="mt-1 block text-[11px] text-slate-500 sm:hidden">{fmt(rank.catches)} tangkapan</span>
+                    <span className="mt-1 block text-[11px] text-slate-500 sm:hidden">
+                      {fmt(rank.catches)} tangkapan
+                    </span>
                   </td>
                   <td className="px-5 py-3 text-slate-500">
                     {fmt(rank.catches)}

@@ -5,7 +5,7 @@ import type { ArenaEvent } from "@/lib/arena-types";
 import { secondsLeft, timeLabel } from "@/lib/arena-utils";
 import { useMatchClock } from "@/hooks/use-match-clock";
 /** The match is driven by saved server timestamps, never by this display. */
-export default function LiveMatchClock({ event }: { event: ArenaEvent }) {
+export default function LiveMatchClock({ event }: { event: Pick<ArenaEvent, "id" | "status" | "timer"> }) {
   const { now, synced } = useMatchClock(event.id);
   const left = now === null ? null : secondsLeft(event.timer, now);
   const percent = Math.max(
