@@ -1,4 +1,5 @@
 "use client";
+import { useActionDialog } from "@/components/ui/action-dialog";
 import { RotateCcw, ClipboardList } from "lucide-react";
 import Dialog from "./dialog";
 import { formatPoints, isReversed } from "@/lib/scoring";
@@ -12,6 +13,7 @@ export default function HistoryDialog({
   onClose: () => void;
   playerId?: string;
 }) {
+  const ask = useActionDialog();
   const entries = store.data.entries.filter(
     (e) => !playerId || e.playerId === playerId,
   );
@@ -62,11 +64,15 @@ export default function HistoryDialog({
                   title="Batalkan transaksi dengan catatan pembalik"
                   className="icon-button w-[35px] h-[35px] inline-flex items-center justify-center rounded-[10px] bg-transparent text-[#7c8da8]"
                   aria-label="Batalkan transaksi"
-                  onClick={() => {
+                  onClick={async () => {
                     if (
-                      window.confirm(
-                        "Batalkan transaksi poin ini? Aksi pembatalan akan tercatat di riwayat.",
-                      )
+                      await ask({
+                        title: "Batalkan transaksi poin?",
+                        description:
+                          "Pembatalan akan tercatat di riwayat pertandingan.",
+                        accept: "Batalkan skor",
+                        destructive: true,
+                      })
                     )
                       store.reverseEntry(e.id);
                   }}

@@ -1,4 +1,5 @@
 "use client";
+import { useActionDialog } from "@/components/ui/action-dialog";
 import { useState } from "react";
 import {
   BookOpen,
@@ -49,11 +50,12 @@ const sections: { id: EditorSection; text: string; icon: typeof Fish }[] = [
 ];
 const parsePoints = (text: string) =>
   text.trim() !== "" &&
-    Number.isSafeInteger(Number(text)) &&
-    validPoints(Number(text))
+  Number.isSafeInteger(Number(text)) &&
+  validPoints(Number(text))
     ? Number(text)
     : null;
 export default function ArenaBuilder({ store }: { store: ArenaStore }) {
+  const ask = useActionDialog();
   const e = store.active;
   const [tab, setTab] = useState<EditorSection>("general");
   const [name, setName] = useState("");
@@ -548,11 +550,11 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                     onChange={(v) =>
                       tab === "fish"
                         ? store.changeFish(item.id, {
-                          enabled: v.target.checked,
-                        })
+                            enabled: v.target.checked,
+                          })
                         : store.changeBonus(item.id, {
-                          enabled: v.target.checked,
-                        })
+                            enabled: v.target.checked,
+                          })
                     }
                   />
                   <input
@@ -586,11 +588,15 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                     disabled={locked}
                     className="icon-button w-[35px] h-[35px] inline-flex items-center justify-center rounded-[10px] bg-transparent text-[#7c8da8] danger"
                     title="Hapus"
-                    onClick={() => {
+                    onClick={async () => {
                       if (
-                        window.confirm(
-                          `Hapus ${item.name}? Catatan lama tetap tersimpan.`,
-                        )
+                        await ask({
+                          title: `Hapus ${item.name}?`,
+                          description:
+                            "Catatan tangkapan sebelumnya tetap tersimpan.",
+                          accept: "Hapus aturan",
+                          destructive: true,
+                        })
                       ) {
                         if (tab === "fish") store.removeFish(item.id);
                         else store.removeBonus(item.id);
@@ -653,7 +659,8 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                 <h3>Peraturan Tertulis</h3>
                 <p>
                   Aturan pengunjung (diizinkan, dilarang, teknis, atau kategori
-                  bebas). Terpisah dari mesin hitung skor. Setiap kategori tampil sebagai accordion.
+                  bebas). Terpisah dari mesin hitung skor. Setiap kategori
+                  tampil sebagai accordion.
                 </p>
                 <FormatHelp />
               </div>
@@ -724,10 +731,14 @@ export default function ArenaBuilder({ store }: { store: ArenaStore }) {
                       value={ruleText}
                       maxLength={1000}
                       onChange={(v) => setRuleText(v.target.value)}
-                      placeholder={"1. Peraturan pertama\n2. Peraturan kedua\n3. Peraturan ketiga"}
+                      placeholder={
+                        "1. Peraturan pertama\n2. Peraturan kedua\n3. Peraturan ketiga"
+                      }
                     />
                   </label>
-                  <div className="col-span-full"><FormatPreview text={ruleText} /></div>
+                  <div className="col-span-full">
+                    <FormatPreview text={ruleText} />
+                  </div>
                 </div>
                 <button
                   disabled={locked || !ruleText.trim()}

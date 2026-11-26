@@ -1,4 +1,5 @@
 "use client";
+import { useActionDialog } from "@/components/ui/action-dialog";
 import { Plus, Trash2 } from "lucide-react";
 import Dialog from "./dialog";
 import type { TournamentStore } from "@/hooks/use-tournament";
@@ -9,6 +10,7 @@ export default function TeamsDialog({
   store: TournamentStore;
   onClose: () => void;
 }) {
+  const ask = useActionDialog();
   return (
     <Dialog
       title="Pengaturan Clan"
@@ -45,8 +47,15 @@ export default function TeamsDialog({
                 }
                 disabled={locked || store.data.teams.length <= 1}
                 className="icon-button w-[35px] h-[35px] inline-flex items-center justify-center rounded-[10px] bg-transparent text-[#7c8da8] danger-icon"
-                onClick={() => {
-                  if (window.confirm(`Hapus ${team.name}?`))
+                onClick={async () => {
+                  if (
+                    await ask({
+                      title: `Hapus ${team.name}?`,
+                      description: "Clan ini akan dihapus dari daftar event.",
+                      accept: "Hapus clan",
+                      destructive: true,
+                    })
+                  )
                     store.removeTeam(team.id);
                 }}
               >

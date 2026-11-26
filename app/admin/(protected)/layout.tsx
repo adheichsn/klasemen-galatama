@@ -1,3 +1,4 @@
+import { ActionDialogProvider } from "@/components/ui/action-dialog";
 import "@/styles/admin-interactions.css";
 import { redirect } from "next/navigation";
 import { isAdminAuthenticated } from "@/lib/auth";
@@ -12,5 +13,5 @@ export default async function ProtectedLayout({
   children: React.ReactNode;
 }) {
   if (!(await isAdminAuthenticated())) redirect("/admin/login");
-  return children;
+  return <ActionDialogProvider>{children}</ActionDialogProvider>;
 }

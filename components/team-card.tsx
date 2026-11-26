@@ -1,4 +1,5 @@
 "use client";
+import { useActionDialog } from "@/components/ui/action-dialog";
 import {
   Check,
   Fish,
@@ -28,6 +29,7 @@ export default function TeamCard({
   onManual,
   onHistory,
 }: Props) {
+  const ask = useActionDialog();
   const total = teamScore(entries, team.id);
   return (
     <article
@@ -138,8 +140,16 @@ export default function TeamCard({
                     aria-label="Hapus peserta"
                     className="small-action muted-action remove-action"
                     disabled={entries.some((e) => e.playerId === player.id)}
-                    onClick={() => {
-                      if (window.confirm("Hapus peserta ini?"))
+                    onClick={async () => {
+                      if (
+                        await ask({
+                          title: `Hapus ${player.displayName || player.username}?`,
+                          description:
+                            "Peserta akan dikeluarkan dari roster tim.",
+                          accept: "Hapus peserta",
+                          destructive: true,
+                        })
+                      )
                         store.removePlayer(team.id, player.id);
                     }}
                   >

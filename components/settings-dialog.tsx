@@ -1,4 +1,5 @@
 "use client";
+import { useActionDialog } from "@/components/ui/action-dialog";
 import { useRef, useState } from "react";
 import {
   Download,
@@ -17,34 +18,60 @@ export default function SettingsDialog({
   store: TournamentStore;
   onClose: () => void;
 }) {
+  const ask = useActionDialog();
   const [minutes, setMinutes] = useState(
     String(store.data.timer.durationSec / 60),
   );
   const fileRef = useRef<HTMLInputElement>(null);
   const duration = Number(minutes);
-  const changeDuration = () => {
+  const changeDuration = async () => {
     if (!Number.isFinite(duration) || duration < 1 || duration > 1440) return;
-    if (window.confirm("Ubah durasi? Timer yang sedang berjalan akan direset."))
+    if (
+      await ask({
+        title: "Ubah durasi pertandingan?",
+        description: "Timer yang berjalan akan direset.",
+        accept: "Ubah durasi",
+      })
+    )
       store.setDuration(duration);
   };
   const load = async (file?: File) => {
     if (!file) return;
     if (
-      !window.confirm(
-        "Memuat backup akan mengganti seluruh data event saat ini. Lanjutkan?",
-      )
+      !(await ask({
+        title: "Muat backup event?",
+        description:
+          "Seluruh data event saat ini akan diganti dengan isi file.",
+        accept: "Muat backup",
+        destructive: true,
+      }))
     )
       return;
     try {
       const content: unknown = JSON.parse(await file.text());
       if (!store.importData(content))
-        window.alert("Format backup tidak valid atau tidak kompatibel.");
+        await ask({
+          title: "Backup gagal dimuat",
+          description: "Format backup tidak valid atau tidak kompatibel.",
+          accept: "Mengerti",
+          notice: true,
+        });
       else {
-        window.alert("Backup berhasil dimuat.");
+        await ask({
+          title: "Backup berhasil dimuat",
+          description: "Data event sudah dimuat dari file backup.",
+          accept: "Selesai",
+          notice: true,
+        });
         onClose();
       }
     } catch {
-      window.alert("File tidak dapat dibaca. Pastikan format JSON valid.");
+      await ask({
+        title: "File gagal dibaca",
+        description: "Periksa apakah file berisi JSON yang valid.",
+        accept: "Mengerti",
+        notice: true,
+      });
     }
     if (fileRef.current) fileRef.current.value = "";
   };
@@ -141,11 +168,15 @@ export default function SettingsDialog({
       <div className="settings-actions">
         <button
           className="danger-button"
-          onClick={() => {
+          onClick={async () => {
             if (
-              window.confirm(
-                "PERINGATAN: semua catatan skor akan dihapus. Export backup terlebih dahulu. Lanjutkan reset skor?",
-              )
+              await ask({
+                title: "Reset semua poin?",
+                description:
+                  "Semua catatan skor akan dihapus. Ekspor backup jika masih diperlukan.",
+                accept: "Reset poin",
+                destructive: true,
+              })
             )
               store.resetScores();
           }}
@@ -154,14 +185,22 @@ export default function SettingsDialog({
         </button>
         <button
           className="danger-button"
-          onClick={() => {
+          onClick={async () => {
             if (
-              window.confirm(
-                "PERINGATAN: SEMUA data, clan, peserta, aturan, dan skor akan diganti default. Lanjutkan?",
-              ) &&
-              window.confirm(
-                "Konfirmasi terakhir: hapus seluruh data saat ini?",
-              )
+              (await ask({
+                title: "Ganti seluruh data event?",
+                description:
+                  "Clan, peserta, aturan, dan skor akan diganti dengan data awal.",
+                accept: "Lanjutkan",
+                destructive: true,
+              })) &&
+              (await ask({
+                title: "Hapus data saat ini?",
+                description:
+                  "Konfirmasi terakhir untuk mengembalikan seluruh data ke kondisi awal.",
+                accept: "Hapus dan reset",
+                destructive: true,
+              }))
             ) {
               store.restoreDefaults();
               onClose();

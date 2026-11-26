@@ -116,9 +116,11 @@ export function useArena() {
     }
     setDirty(true);
   }, [ready, data]);
+  const confirmedExit = useRef(false);
   useEffect(() => {
     if (!dirty) return;
     const warn = (event: BeforeUnloadEvent) => {
+      if (confirmedExit.current) return;
       event.preventDefault();
       event.returnValue = "";
     };
@@ -245,13 +247,13 @@ export function useArena() {
           events: data.events.map((e) =>
             e.id === active.id
               ? {
-                ...e,
-                status: result.status,
-                timer: result.timer,
-                startedAt: result.startedAt,
-                finishedAt: result.finishedAt,
-                entries: entry ? [entry, ...e.entries] : e.entries,
-              }
+                  ...e,
+                  status: result.status,
+                  timer: result.timer,
+                  startedAt: result.startedAt,
+                  finishedAt: result.finishedAt,
+                  entries: entry ? [entry, ...e.entries] : e.entries,
+                }
               : e,
           ),
         };
@@ -277,7 +279,7 @@ export function useArena() {
       ...prev,
       events: prev.events.map((e) =>
         e.id === prev.activeEventId &&
-          (allowFinished || e.status !== "finished")
+        (allowFinished || e.status !== "finished")
           ? fn(e)
           : e,
       ),
@@ -508,9 +510,9 @@ export function useArena() {
         sec >= 60 &&
         sec <= 86400
         ? {
-          ...e,
-          timer: { durationSec: sec, remainingSec: sec, runningSince: null },
-        }
+            ...e,
+            timer: { durationSec: sec, remainingSec: sec, runningSince: null },
+          }
         : e;
     });
   const resetTimer = () => update(resetDraftClock);
@@ -520,17 +522,17 @@ export function useArena() {
       e.fish.length >= 500
         ? e
         : {
-          ...e,
-          fish: [
-            ...e.fish,
-            {
-              id: newId(),
-              name: name.trim().slice(0, 70),
-              points,
-              enabled: true,
-            },
-          ],
-        },
+            ...e,
+            fish: [
+              ...e.fish,
+              {
+                id: newId(),
+                name: name.trim().slice(0, 70),
+                points,
+                enabled: true,
+              },
+            ],
+          },
     );
   };
   const changeFish = (id: string, fields: Partial<FishRule>) =>
@@ -546,17 +548,17 @@ export function useArena() {
       e.bonuses.length >= 200
         ? e
         : {
-          ...e,
-          bonuses: [
-            ...e.bonuses,
-            {
-              id: newId(),
-              name: name.trim().slice(0, 70),
-              points,
-              enabled: true,
-            },
-          ],
-        },
+            ...e,
+            bonuses: [
+              ...e.bonuses,
+              {
+                id: newId(),
+                name: name.trim().slice(0, 70),
+                points,
+                enabled: true,
+              },
+            ],
+          },
     );
   };
   const changeBonus = (id: string, fields: Partial<BonusRule>) =>
@@ -654,8 +656,8 @@ export function useArena() {
   const setRosterLocked = (locked: boolean) =>
     update((e) =>
       e.status === "draft" &&
-        e.entries.length === 0 &&
-        (!locked || completeDuoRoster(e))
+      e.entries.length === 0 &&
+      (!locked || completeDuoRoster(e))
         ? { ...e, rosterLocked: locked }
         : e,
     );
@@ -726,15 +728,15 @@ export function useArena() {
           fields.squadId &&
           squadLimit(e) > 0 &&
           e.participants.filter((p) => p.squadId === fields.squadId).length >=
-          squadLimit(e)
+            squadLimit(e)
         )
           return e;
       }
       const nextSquads =
         fields.squadId !== undefined && fields.squadId !== existing.squadId
           ? e.squads.map((s) =>
-            s.captainId === id ? { ...s, captainId: null } : s,
-          )
+              s.captainId === id ? { ...s, captainId: null } : s,
+            )
           : e.squads;
       return {
         ...e,
@@ -742,17 +744,17 @@ export function useArena() {
         participants: e.participants.map((p) =>
           p.id === id
             ? {
-              ...p,
-              ...fields,
-              name:
-                fields.name !== undefined ? fields.name.slice(0, 80) : p.name,
-              squadId:
-                e.mode === "solo"
-                  ? null
-                  : fields.squadId === undefined
-                    ? p.squadId
-                    : fields.squadId,
-            }
+                ...p,
+                ...fields,
+                name:
+                  fields.name !== undefined ? fields.name.slice(0, 80) : p.name,
+                squadId:
+                  e.mode === "solo"
+                    ? null
+                    : fields.squadId === undefined
+                      ? p.squadId
+                      : fields.squadId,
+              }
             : p,
         ),
       };
@@ -762,12 +764,12 @@ export function useArena() {
       !rosterEditable(e) || e.entries.some((s) => s.participantId === id)
         ? e
         : {
-          ...e,
-          squads: e.squads.map((s) =>
-            s.captainId === id ? { ...s, captainId: null } : s,
-          ),
-          participants: e.participants.filter((p) => p.id !== id),
-        },
+            ...e,
+            squads: e.squads.map((s) =>
+              s.captainId === id ? { ...s, captainId: null } : s,
+            ),
+            participants: e.participants.filter((p) => p.id !== id),
+          },
     );
   const addCatch = (
     participantId: string,
@@ -928,6 +930,9 @@ export function useArena() {
     return true;
   };
   return {
+    allowConfirmedExit: () => {
+      confirmedExit.current = true;
+    },
     data,
     active,
     ready,

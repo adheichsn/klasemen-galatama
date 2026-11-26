@@ -1,4 +1,5 @@
 "use client";
+import { useActionDialog } from "@/components/ui/action-dialog";
 import { avatarTarget, rankAvatarTargets } from "@/lib/avatar-identity";
 import { PlayerIdentity, RankIdentity } from "@/components/player-avatar";
 import { AdminAvatarScope } from "@/components/player-avatar";
@@ -243,6 +244,7 @@ function EventTile({
   );
 }
 export default function ArenaApp() {
+  const ask = useActionDialog();
   const store = useArena();
   const e = store.active;
   const [page, setPage] = useState<Page>("home");
@@ -286,9 +288,13 @@ export default function ArenaApp() {
   };
   const moveToTrash = async (event: ArenaEvent) => {
     if (
-      !window.confirm(
-        `Pindahkan "${event.title}" ke Trash?\n\nEvent akan langsung disembunyikan dari publik, termasuk leaderboard dan Hall of Fame. Skor tetap tersimpan dan bisa dipulihkan.`,
-      )
+      !(await ask({
+        title: `Pindahkan ${event.title} ke Trash?`,
+        description:
+          "Event akan disembunyikan dari publik. Skor tersimpan dan event dapat dipulihkan.",
+        accept: "Pindahkan ke Trash",
+        destructive: true,
+      }))
     )
       return;
     await manageEvent(event.id, "trash");
@@ -331,9 +337,12 @@ export default function ArenaApp() {
         return;
       }
       if (
-        !window.confirm(
-          "Mulai pertandingan dan langsung jalankan hitung mundur? Setelah mulai, durasi tidak bisa diubah.",
-        )
+        !(await ask({
+          title: `Mulai pertandingan ${e.title}?`,
+          description:
+            "Hitung mundur dimulai setelah server mengonfirmasi. Durasi akan dikunci.",
+          accept: "Mulai pertandingan",
+        }))
       )
         return;
     }
@@ -355,9 +364,13 @@ export default function ArenaApp() {
         throw new Error("File terlalu besar (maksimum 15 MB).");
       const parsed: unknown = JSON.parse(await file.text());
       if (
-        !window.confirm(
-          "Import backup akan mengganti data yang sedang diedit. Data server belum berubah sampai klik Simpan ke Server. Lanjutkan?",
-        )
+        !(await ask({
+          title: "Muat backup turnamen?",
+          description:
+            "Data editor akan diganti dengan isi file. Klik Simpan ke Server untuk menerbitkannya.",
+          accept: "Muat backup",
+          destructive: true,
+        }))
       )
         return;
       if (!store.importBackup(parsed))
@@ -580,12 +593,25 @@ export default function ArenaApp() {
                 onClick={async () => {
                   if (
                     store.dirty &&
-                    !window.confirm(
-                      "Ada perubahan belum disimpan. Logout sekarang akan membuang perubahan tersebut. Tetap logout?",
-                    )
+                    !(await ask({
+                      title: "Keluar dari dashboard?",
+                      description:
+                        "Perubahan konfigurasi yang belum disimpan akan hilang.",
+                      accept: "Keluar",
+                      destructive: true,
+                    }))
                   )
                     return;
-                  await fetch("/api/admin/logout", { method: "POST" });
+                  try {
+                    const response = await fetch("/api/admin/logout", {
+                      method: "POST",
+                    });
+                    if (!response.ok) throw new Error();
+                  } catch {
+                    setNotice("Gagal keluar dari dashboard. Coba lagi.");
+                    return;
+                  }
+                  store.allowConfirmedExit();
                   window.location.assign("/admin/login");
                 }}
               >
@@ -971,8 +997,15 @@ export default function ArenaApp() {
                             className="icon-button w-[35px] h-[35px] inline-flex items-center justify-center rounded-[10px] bg-transparent text-[#7c8da8] bordered"
                             title="Reset timer"
                             disabled={e.status !== "draft"}
-                            onClick={() => {
-                              if (window.confirm("Reset durasi draft ke awal?"))
+                            onClick={async () => {
+                              if (
+                                await ask({
+                                  title: "Reset timer draft?",
+                                  description:
+                                    "Timer kembali ke durasi awal turnamen.",
+                                  accept: "Reset timer",
+                                })
+                              )
                                 store.resetTimer();
                             }}
                           >
@@ -1116,7 +1149,12 @@ export default function ArenaApp() {
                       <table className="leaderboard-table [border-collapse:collapse] min-w-[600px] w-full text-left">
                         <thead>
                           <tr>
-                            <th><span className="sm:hidden">Pos.</span><span className="hidden sm:inline">PERINGKAT</span></th>
+                            <th>
+                              <span className="sm:hidden">Pos.</span>
+                              <span className="hidden sm:inline">
+                                PERINGKAT
+                              </span>
+                            </th>
                             <th>
                               {e.mode === "solo"
                                 ? "PESERTA"
@@ -1155,8 +1193,10 @@ export default function ArenaApp() {
                                       />
                                     )}
                                   </div>
-                                <span className="mt-1 block text-[11px] text-slate-500 sm:hidden">{fmt(row.catches)} tangkapan</span>
-                  </td>
+                                  <span className="mt-1 block text-[11px] text-slate-500 sm:hidden">
+                                    {fmt(row.catches)} tangkapan
+                                  </span>
+                                </td>
                                 <td>
                                   <span className="catch-count inline-flex items-center gap-[6px] text-[#6e829f]">
                                     <Fish size={15} />
@@ -1376,20 +1416,29 @@ export default function ArenaApp() {
                                 !isReversed(e.entries, item.id) && (
                                   <button
                                     onClick={async () => {
-                                      if (
-                                        window.confirm(
-                                          "Batalkan catatan ini? Skor tersimpan akan dikoreksi dengan transaksi pembalik.",
-                                        )
-                                      )
-                                        if (e.historical)
-                                          store.reverse(item.id);
-                                        else
-                                          setNotice(
-                                            (await store.runMatch({
-                                              kind: "reverse",
-                                              entryId: item.id,
-                                            })) || "Pembatalan tersimpan.",
-                                          );
+                                      const recipient =
+                                        e.squads.find(
+                                          (s) => s.id === item.squadId,
+                                        )?.name ||
+                                        e.participants.find(
+                                          (p) => p.id === item.participantId,
+                                        )?.name ||
+                                        "Peserta lama";
+                                      const confirmed = await ask({
+                                        title: `Batalkan ${fmt(item.delta)} poin untuk ${recipient}?`,
+                                        description: `${item.description}\nSkor tersimpan akan dikoreksi dengan transaksi pembalik.`,
+                                        accept: "Batalkan skor",
+                                        destructive: true,
+                                      });
+                                      if (!confirmed) return;
+                                      if (e.historical) store.reverse(item.id);
+                                      else
+                                        setNotice(
+                                          (await store.runMatch({
+                                            kind: "reverse",
+                                            entryId: item.id,
+                                          })) || "Pembatalan tersimpan.",
+                                        );
                                     }}
                                   >
                                     Batalkan
@@ -2066,11 +2115,15 @@ export default function ArenaApp() {
             </button>
             <button
               title="Pulihkan data V2.1 dari localStorage browser"
-              onClick={() => {
+              onClick={async () => {
                 if (
-                  window.confirm(
-                    "Pulihkan data dari browser versi lama? Data kerja yang belum disimpan akan terganti. Segera simpan ke server setelah memeriksa hasilnya.",
-                  )
+                  await ask({
+                    title: "Pulihkan data dari browser?",
+                    description:
+                      "Data kerja editor akan diganti dengan backup lokal. Periksa hasilnya sebelum menyimpan ke server.",
+                    accept: "Pulihkan data",
+                    destructive: true,
+                  })
                 ) {
                   const ok = store.restoreBrowserBackup();
                   setNotice(

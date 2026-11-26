@@ -16,7 +16,11 @@ export default function Dialog({
 }) {
   useEffect(() => {
     const listener = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (
+        event.key === "Escape" &&
+        !document.querySelector('[role="alertdialog"]')
+      )
+        onClose();
     };
     document.addEventListener("keydown", listener);
     return () => document.removeEventListener("keydown", listener);

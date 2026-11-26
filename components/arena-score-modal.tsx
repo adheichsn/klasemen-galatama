@@ -1,4 +1,5 @@
 "use client";
+import { useActionDialog } from "@/components/ui/action-dialog";
 import { avatarProfile, participantAvatarTarget } from "@/lib/avatar-identity";
 import { PlayerIdentity, useAvatarProfiles } from "@/components/player-avatar";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -36,6 +37,7 @@ export default function ScoreModal({
   store: ArenaStore;
   onClose: () => void;
 }) {
+  const ask = useActionDialog();
   const e = store.active;
   const profiles = useAvatarProfiles();
   const searchRef = useRef<HTMLInputElement>(null);
@@ -174,9 +176,12 @@ export default function ScoreModal({
       if (
         recentDuplicate &&
         !catchRef.trim() &&
-        !window.confirm(
-          "Ada tangkapan identik untuk peserta ini dalam 45 detik terakhir. Yakin ini tangkapan BARU, bukan input ganda?",
-        )
+        !(await ask({
+          title: "Catat sebagai tangkapan baru?",
+          description: `Tangkapan yang sama untuk ${selected?.label ?? player} sudah dicatat dalam 45 detik terakhir. Konfirmasi jika ini laporan ikan lain.`,
+          accept: "Catat tangkapan",
+          cancel: "Periksa lagi",
+        }))
       )
         return;
     }
@@ -350,7 +355,13 @@ export default function ScoreModal({
                     </p>
                   )}
                   {matches.length > resultLimit && (
-                    <button type="button" className="w-full p-3 text-sm font-bold text-blue-700" onClick={() => setResultLimit(limit => limit + 20)}>Lihat hasil lainnya ({matches.length - resultLimit})</button>
+                    <button
+                      type="button"
+                      className="w-full p-3 text-sm font-bold text-blue-700"
+                      onClick={() => setResultLimit((limit) => limit + 20)}
+                    >
+                      Lihat hasil lainnya ({matches.length - resultLimit})
+                    </button>
                   )}
                 </div>
               ) : (

@@ -1,4 +1,5 @@
 "use client";
+import { useActionDialog } from "@/components/ui/action-dialog";
 import { useState } from "react";
 import { Plus, Trash2, SlidersHorizontal } from "lucide-react";
 import Dialog from "./dialog";
@@ -12,6 +13,7 @@ export default function RulesDialog({
   onSave: (rules: ScoringRule[]) => void;
   onClose: () => void;
 }) {
+  const ask = useActionDialog();
   const [draft, setDraft] = useState<ScoringRule[]>(() =>
     rules.map((r) => ({ ...r })),
   );
@@ -104,11 +106,15 @@ export default function RulesDialog({
             <button
               className="icon-button w-[35px] h-[35px] inline-flex items-center justify-center rounded-[10px] bg-transparent text-[#7c8da8] danger-icon"
               aria-label={`Hapus ${rule.name}`}
-              onClick={() => {
+              onClick={async () => {
                 if (
-                  window.confirm(
-                    `Hapus aturan "${rule.name}"? Riwayat poin lama tetap tersimpan.`,
-                  )
+                  await ask({
+                    title: `Hapus aturan ${rule.name}?`,
+                    description:
+                      "Riwayat poin yang sudah dicatat tetap tersimpan.",
+                    accept: "Hapus aturan",
+                    destructive: true,
+                  })
                 )
                   setDraft((p) => p.filter((r) => r.id !== rule.id));
               }}

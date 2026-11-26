@@ -1,4 +1,8 @@
 "use client";
+import {
+  useActionDialog,
+  ActionDialogProvider,
+} from "@/components/ui/action-dialog";
 import { useState } from "react";
 import {
   ArrowUpRight,
@@ -28,6 +32,14 @@ import TeamsDialog from "./teams-dialog";
 import HistoryDialog from "./history-dialog";
 import SettingsDialog from "./settings-dialog";
 export default function EventDashboard() {
+  return (
+    <ActionDialogProvider>
+      <Dashboard />
+    </ActionDialogProvider>
+  );
+}
+function Dashboard() {
+  const ask = useActionDialog();
   const store = useTournament();
   const [modal, setModal] = useState<ModalName>(null);
   const [catchSelection, setCatchSelection] = useState<Selection | null>(null);
@@ -122,7 +134,11 @@ export default function EventDashboard() {
               <span>
                 <Clock3 size={16} /> MATCH TIMER
               </span>
-              <strong className={store.remaining === 0 ? "danger-text !text-[#df4b61]" : ""}>
+              <strong
+                className={
+                  store.remaining === 0 ? "danger-text !text-[#df4b61]" : ""
+                }
+              >
                 {formatTime(store.remaining)}
               </strong>
             </div>
@@ -150,8 +166,14 @@ export default function EventDashboard() {
               <button
                 title="Reset timer"
                 aria-label="Reset timer"
-                onClick={() => {
-                  if (window.confirm("Reset timer ke durasi awal?"))
+                onClick={async () => {
+                  if (
+                    await ask({
+                      title: "Reset timer pertandingan?",
+                      description: "Timer kembali ke durasi awal.",
+                      accept: "Reset timer",
+                    })
+                  )
                     store.resetTimer();
                 }}
               >
